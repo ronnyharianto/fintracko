@@ -52,13 +52,13 @@ const CreateWorkspaceSchema = zod.object({
   3. Injects a matching entry into `WorkspaceMember` with `role: "OWNER"`.
   4. Evaluates the `templateName` static constant to parse default Category (Level 1) and SubCategory (Level 2) configurations. Batches insertions into the database pre-bound to the newly created `workspaceId`.
 
-#### `POST /api/v1/workspaces/invite`
-* **Description:** Invites a collaborator by email to participate in the active workspace.
+#### `POST /api/v1/workspaces/[workspaceId]/invite`
+* **Description:** Invites a collaborator by email to participate in the active workspace identified by the `[workspaceId]` path segment.
 * **Zod Payload Schema:**
 const InviteMemberSchema = zod.object({
-  workspaceId: zod.string().uuid(),
   email: zod.string().email()
 });
+* **Path Parameter Note:** The `workspaceId` is extracted from the dynamic route segment (`params.workspaceId`) and validated against the authenticated user's `WorkspaceMember` membership prior to any database mutation, in accordance with the Anti-IDOR guard. It is intentionally omitted from the request body.
 * **Behavior:** 1. Looks up the recipient user via `User` table indexes using the `email` key. 
   2. If the user does not exist, returns a `404 Not Found` response containing the code `NOT_FOUND` and message `"Email not registered"`.
   3. If found, inserts a new `WorkspaceMember` record with `role: "COLLABORATOR"`.

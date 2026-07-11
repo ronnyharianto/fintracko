@@ -5,6 +5,7 @@ You are an expert software engineer and architect AI agent responsible for build
 ## 1. General Principles
 - **Conciseness & Completeness:** Write clean, production-ready, and well-structured code. Do not omit necessary logic or use placeholders like `// TODO: implement later` unless explicitly requested.
 - **English Language Consistency:** All source code components—including variable names, function names, class names, file names, database tables/columns, API endpoints, code comments, and inline documentation—MUST be written in English.
+- **Internationalization (i18n) Discipline:** All user-facing display strings on private authenticated screens (onboarding, dashboard, profile) MUST be wrapped via the i18n message accessor (e.g., `t('key')`) and resolved from static JSON catalogs under `src/locales/{lang}/`. Hardcoded English literals as user-facing text are prohibited on those screens. REST API Route Handlers return locale-independent data contracts and delegate formatting (currency, dates, labels) to the client. The active language is determined by the `Profile.languagePreference` field, not by URL path segments.
 
 ## 2. Tech Stack & Architecture Baseline
 - **Framework:** Next.js (App Router). Leverage Server Components by default, and use Client Components (`'use client'`) strictly when interactivity or browser APIs are required.

@@ -33,6 +33,7 @@ Stores comprehensive user profile details. The presence of a record in this tabl
 * **dateOfBirth:** DateTime (Nullable)
 * **gender:** String (Nullable) (Enum: "MALE", "FEMALE", "OTHER")
 * **currencyPreference:** String (Default: "USD", e.g., "IDR", "USD", "EUR")
+* **languagePreference:** String (Default: "en", e.g., "en", "id", "es". Stores the user's preferred UI display language code for client-side internationalization resolution.)
 * **createdAt:** DateTime
 * **updatedAt:** DateTime
 
@@ -58,6 +59,8 @@ Tracks financial nodes (e.g., Bank, Cash) with explicit initial balance decoupli
 * **name:** String
 * **initialBalance:** Decimal (Precision: 18, Scale: 4. Editable by user for adjustments).
 * **netTransactionSum:** Decimal (Precision: 18, Scale: 4. Automatically adjusted on every transaction mutation. Represents the total delta accumulated from all transactions associated with this account).
+* **createdAt:** DateTime
+* **updatedAt:** DateTime (Tracks the most recent adjustment to the account configuration or balance delta.)
     * *Formula:* `Final Balance = initialBalance + netTransactionSum`.
 * **Compound Unique Key:** [workspaceId, name] (Prevents duplicate account names in the same workspace)
 
@@ -67,6 +70,8 @@ Parent classification for transactions.
 * **workspaceId:** String (Foreign Key -> Workspace.id, On Delete Cascade, Indexed)
 * **name:** String
 * **type:** String (Enum: "INCOME", "EXPENSE", "TRANSFER", Indexed for filtering)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime
 
 ### SubCategory Table (Level 2)
 Detailed classification for transactions and budget targets.
@@ -74,6 +79,8 @@ Detailed classification for transactions and budget targets.
 * **workspaceId:** String (Foreign Key -> Workspace.id, On Delete Cascade, Indexed)
 * **categoryId:** String (Foreign Key -> Category.id, On Delete Cascade, Indexed)
 * **name:** String
+* **createdAt:** DateTime
+* **updatedAt:** DateTime
 
 ### Budget Table
 Enforces spending limits strictly on Level 2 sub-categories.
@@ -83,6 +90,8 @@ Enforces spending limits strictly on Level 2 sub-categories.
 * **amount:** Decimal (Precision: 18, Scale: 4)
 * **interval:** String (Enum: "MONTHLY", "YEARLY")
 * **Compound Unique Key:** [subCategoryId, interval] (Ensures only one active budget per interval for a specific sub-category)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime (Tracks threshold adjustments for audit traceability.)
 
 ### Transaction Table
 Core ledger for financial mutations.
@@ -98,6 +107,8 @@ Core ledger for financial mutations.
 * **payeePayer:** String (Nullable, Indexed for autocomplete text search)
 * **tags:** String[] (Array of strings, optionally indexed using GIN in PostgreSQL for array searches)
 * **attachmentUrl:** String (Nullable, references external Imgur URLs)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime (Critical for financial audit trails; the application will prefer immutable ledger append reversal patterns where possible, but any direct PUT/PATCH mutation must stamp this field.)
 
 ---
 
@@ -129,8 +140,16 @@ Core ledger for financial mutations.
 ### Autocomplete Architecture for Optional Fields
 To provide real-time autocomplete inputs for optional parameters like `payeePayer` and `tags` without overloading the database tier:
 * **Database Optimization:** The `payeePayer` field is indexed to facilitate high-speed `DISTINCT` keyword scan queries.
-* **Debounced API Fetching:** The frontend input field implements a strict `debounce` handler (e.g., 300ms window delay). The application will only trigger a `GET /api/workspaces/[workspaceId]/autocomplete?field=payeePayer&query=xyz` request after the user pauses typing.
+* **Debounced API Fetching:** The frontend input field implements a strict `debounce` handler (e.g., 300ms window delay). The application will only trigger a `GET /api/v1/workspaces/[workspaceId]/autocomplete?field=payeePayer&query=xyz` request after the user pauses typing.
 * **Client-Side Caching:** Fetched suggestions are cached in memory on the client side using a state synchronization library (e.g., TanStack Query / SWR) with a short Time-To-Live (TTL) configuration to drastically minimize redundant network rounds.
+
+### Internationalization (i18n) Architecture
+Fintracko respects the per-user `languagePreference` stored on the `Profile` table to deliver a localized experience.
+* **Preference Source of Truth:** The `languagePreference` field (default `"en"`) is collected during mandatory onboarding and is editable via Profile Management. Supported language codes initially include `en` (English) and `id` (Bahasa Indonesia), with the list extensible as new translations are contributed.
+* **Translation Catalog Storage:** Translation message catalogs MUST be stored as static JSON files inside the application codebase (e.g., `src/locales/{lang}/common.json`, `src/locales/{lang}/dashboard.json`) — never in the database — to preserve build-time optimization and version-controlled rollback capability.
+* **Client-Side Resolution:** The application resolves the active language on route segment mount inside the `(dashboard)` and `(onboarding)` route groups. The resolved `languagePreference` is passed into the Next.js `locale` context, hydrating a lightweight i18n client (e.g., `next-intl` or equivalent) bound globally via the root layout session provider.
+* **Server Component Compliance:** All user-facing strings rendered inside Server Components MUST be wrapped via the i18n message accessor (e.g., `t('key')`) — hardcoded English fallbacks are prohibited on private authenticated screens.
+* **Backend Independence:** REST API Route Handlers return locale-independent data contracts (string-serialized decimals, ISO timestamps, enum codes) and NEVER perform server-side translation. The client is solely responsible for formatting currency, dates, and labels according to the active `languagePreference`.
 
 ---
 

@@ -206,32 +206,6 @@ All spacing follows a consistent 4px scale:
 - **Badge** - Status indicators (future)
 - **Select** - Dropdown component (future)
 
-## File Organization
-
-```
-components/
-├── ui/
-│   ├── button.tsx
-│   └── input.tsx
-├── layout/
-│   ├── header.tsx
-│   ├── footer.tsx
-│   └── navigation.tsx
-└── features/
-    ├── hero.tsx
-    ├── features-grid.tsx
-    └── pricing-cards.tsx
-
-app/
-├── page.tsx (Landing page)
-├── login/
-│   └── page.tsx
-├── signup/
-│   └── page.tsx
-└── dashboard/
-    └── page.tsx (Future)
-```
-
 ## Design Tokens (CSS Variables)
 
 All design tokens are defined in `globals.css` using CSS variables:

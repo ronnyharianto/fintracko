@@ -17,8 +17,7 @@ fintracko/
 │   ├── components/        # Reusable UI components
 │   ├── features/          # Domain-driven core business logic
 │   ├── lib/               # Shared utilities, clients, and configurations
-│   ├── types/             # Global TypeScript type definitions
-│   └── proxy.ts           # Next.js edge-network session validation layer
+│   └── types/             # Global TypeScript type definitions
 ├── vitest.config.ts       # Vitest unit testing configuration
 ├── package.json           # Project dependency configuration map
 └── tsconfig.json          # TypeScript configuration
@@ -45,7 +44,8 @@ This layer manages HTTP request endpoints and page structural renders. All secur
 * src/app/api/v1/ - Hardened REST API Route Handlers providing unified success/failure envelopes.
   * src/app/api/v1/auth/[...better-auth]/route.ts - Native handler managing identity states for Better Auth.
   * src/app/api/v1/workspaces/route.ts - Creates workspaces and seeds default categories.
-  * src/app/api/v1/workspaces/invite/route.ts - Generates workspace member invitations.
+  * src/app/api/v1/workspaces/[workspaceId]/route.ts - Retrieves or updates a specific workspace.
+  * src/app/api/v1/workspaces/[workspaceId]/invite/route.ts - Generates workspace member invitations.
   * src/app/api/v1/accounts/route.ts - Instantiates specific financial asset nodes.
   * src/app/api/v1/transactions/route.ts - Processes ledger changes inside isolated transactions.
   * src/app/api/v1/budgets/route.ts - Modifies category threshold spending rules.
@@ -58,7 +58,7 @@ To prevent fragmented code distribution, all validations, database updates, and 
 ```text
 src/features/
 ├── workspaces/
-│   ├── actions/         # Server Actions (e.g., createWorkspace, inviteMember)
+│   ├── handlers/        # HTTP request handler logic invoked by REST API Route Handlers (e.g., createWorkspace, inviteMember)
 │   ├── components/      # Reusable UI components for this module
 │   ├── schemas/         # Zod schemas for input validation
 │   └── services/        # Direct Prisma DB query abstractions
