@@ -5,10 +5,10 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
 ---
 
 ## Phase 1: Project Initialization & Configuration
-- [ ] **Task 1.1: Next.js Foundation Setup**
+- [v] **Task 1.1: Next.js Foundation Setup**
   - Initialize the Next.js application with TypeScript, Tailwind CSS, and the structured `src/` directory layout.
   - Set up `tsconfig.json` and verify absolute path mapping (`@/*`).
-- [ ] **Task 1.2: Testing Environment Config**
+- [v] **Task 1.2: Testing Environment Config**
   - Configure `vitest.config.ts` and set up the sample environment sanity tests.
   - Enforce the rule: All unit tests must be co-located directly next to their target files using the explicit `*.test.ts` or `*.test.tsx` naming pattern.
 - [ ] **Task 1.3: Prisma Database Schema Definition**
