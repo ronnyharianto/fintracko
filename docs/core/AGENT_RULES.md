@@ -24,3 +24,5 @@ To minimize production errors and ensure safe continuous deployment, enforce the
 - **Test Scenarios:** Ensure test suites cover both happy paths (expected behavior) and edge cases/error scenarios (invalid inputs, unauthorized access, database failures).
 - **Error Handling:** Use standard HTTP status codes or explicit failure states for Server Actions and Route Handlers. Never let unhandled exceptions leak to the client.
 - **Performance Optimization:** Optimize database fetching to avoid N+1 query problems by using appropriate ORM relations and select fields.
+- **Code Coverage:** Maintain a minimum of 80% code coverage for critical business logic and utility functions.
+- **Location Test File:** All test files MUST be co-located directly next to their target files using the explicit `*.test.ts` or `*.test.tsx` naming pattern.
