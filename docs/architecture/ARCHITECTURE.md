@@ -16,12 +16,42 @@
 ## 2. Database Schema Design (Prisma-Compliant)
 
 ### User Table
-Tracks authenticated users.
+Tracks authenticated users. This table doubles as the Better Auth identity table; its field contract is intentionally aligned with Better Auth's Prisma adapter requirements so that the OAuth integration (Task 2.2) operates against the same source-of-truth table without a parallel identity store.
 * **id:** String (UUID, Primary Key)
 * **email:** String (Unique Key, Indexed for login lookups)
 * **name:** String
+* **emailVerified:** DateTime (Nullable. Presence of a non-null value indicates the OAuth provider confirmed the email. Per the security enforcement pipeline, OAuth payloads with `email_verified === false` MUST NOT have this field stamped, and the session is rejected in Task 2.2.)
 * **image:** String (Nullable)
 * **createdAt:** DateTime (Indexed for chronological sorting)
+* **updatedAt:** DateTime (Required by Better Auth for session refresh / touch-on-login behavior.)
+
+### AuthAccount Table
+Stores OAuth provider identity linkage records. This table is owned and mutated exclusively by Better Auth; application code must never write to it directly. The name `AuthAccount` (not `Account`) is intentional — it avoids a naming collision with the financial `Account` table below. The mapping is wired via Better Auth's `modelMapping` configuration during Task 2.2.
+* **id:** String (UUID, Primary Key)
+* **userId:** String (Foreign Key -> User.id, On Delete Cascade, Indexed)
+* **providerId:** String (OAuth provider identifier, e.g., "google" | "github")
+* **accountId:** String (OAuth provider's internal user id)
+* **accessToken:** String (Nullable)
+* **refreshToken:** String (Nullable)
+* **accessTokenExpiresAt:** DateTime (Nullable)
+* **refreshTokenExpiresAt:** DateTime (Nullable)
+* **scope:** String (Nullable)
+* **idToken:** String (Nullable)
+* **password:** String (Nullable. Always `null` for Fintracko — passwords are explicitly disabled per the OAuth-only login policy in `PRD_MVP1.md`. The column is retained to satisfy the Better Auth adapter's compiled schema contract.)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime
+* **Compound Unique Key:** [providerId, accountId] (Prevents duplicate identity linkage for the same provider-user pair.)
+
+### Session Table
+Stores HttpOnly authenticated session tokens issued by Better Auth. Owned and managed exclusively by the Better Auth runtime; application code reads the active session via Better Auth's server session helper, not via direct Prisma queries against this table.
+* **id:** String (UUID, Primary Key)
+* **userId:** String (Foreign Key -> User.id, On Delete Cascade, Indexed)
+* **token:** String (Unique Key, the HttpOnly cookie value)
+* **expiresAt:** DateTime
+* **ipAddress:** String (Nullable)
+* **userAgent:** String (Nullable)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime
 
 ### Profile Table
 Stores comprehensive user profile details. The presence of a record in this table implicitly indicates that the user has successfully completed the onboarding process.
@@ -155,3 +185,20 @@ Fintracko respects the per-user `languagePreference` stored on the `Profile` tab
 
 ## 5. Required Environment Variables (.env.local)
 (Configuration variables for Better Auth client secrets, Supabase connection strings, and Imgur API keys are managed here).
+
+* **`DATABASE_URL`** — PostgreSQL connection string consumed by Prisma. For local development, this points to the Supabase CLI Docker instance (`postgresql://postgres:postgres@localhost:54322/postgres`). For staging/production, this points to the Supabase Cloud project connection string (e.g., `postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres`).
+* Better Auth client secrets (`AUTH_GOOGLE_*`, `AUTH_GITHUB_*`) and `BETTER_AUTH_SECRET` — populated in Task 2.2.
+* `IMGUR_CLIENT_ID` — populated in Task 5.2.
+* See `.env.example` in the repository root for the authoritative placeholder list; `.env.local` is git-ignored per `.rooignore`.
+
+---
+
+## 6. Local Development Database Workflow (Supabase CLI + Docker)
+
+To provide a fast, isolated, and deterministic local development loop without depending on remote infrastructure:
+
+1. **Engine:** The Supabase CLI (installed as a project devDependency) orchestrates a local PostgreSQL instance inside Docker. The developer does not need a cloud account for local schema iteration.
+2. **Bootstrap:** Run `npm run supabase:start` (which executes `supabase start`) to provision the local Postgres container. The CLI writes its configuration under the version-controlled `supabase/` directory (created via `supabase init`).
+3. **Migration Sync:** Schema migrations are authored in Prisma (`prisma migrate dev --name <change>`) and applied against the local Postgres. The same migration files apply verbatim against the Supabase Cloud project via `prisma migrate deploy`, guaranteeing zero drift between environments.
+4. **Reset:** `npm run supabase:stop` tears down the Docker stack; `npm run db:reset` issues `prisma migrate reset` for a clean-slate test state.
+5. **Production Parity:** Local Supabase ships the same PostgreSQL major version as Supabase Cloud, ensuring migration compatibility. Supabase Auth/Storage/Realtime features are not exercised locally in MVP1 (Better Auth manages its own OAuth flow); only the Postgres engine is required.
