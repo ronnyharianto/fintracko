@@ -21,9 +21,12 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Verify primary keys, compound unique indexes, and cascade delete logic on local/Supabase development instances.
   - Add npm scripts: `prisma:generate`, `prisma:migrate`, `prisma:studio`, `db:push`, `db:reset`, `supabase:start`, `supabase:stop`.
   - Add a co-located `src/lib/db.test.ts` unit test asserting the generated Prisma Client exposes all 11 model delegates and the expected enum values. (Vitest's `include` is restricted to `src/**`, so the test sits beside the singleton `db.ts` — the import target — rather than under `prisma/`.)
-- [ ] **Task 1.4: Design System Ingestion**
-  - Initialize `shadcn/ui` atomic visual components within `src/components/ui/` (button, card, dialog, input, form, table, toast).
-  - Enforce component isolation: code injection in `src/components/ui/` must remain completely generic.
+- [x] **Task 1.4: Design System Ingestion**
+  - Initialize `shadcn/ui` atomic visual components within `src/components/ui/` (button, card, dialog, input, form, label, table, toast). All components carry `data-slot` attributes for deterministic DOM querying and are styled via the new-york variant.
+  - Replace shadcn's default slate CSS variables in `src/app/globals.css` with Fintracko's teal design tokens per `docs/core/DESIGN_SYSTEM.md` §Color Palette. Light mode uses `#0f766e` (primary: `175 77% 26%`), dark mode uses `#14b8a6` (primary: `173 80% 40%`). Added `@custom-variant dark (&:is(.dark *))` for explicit dark-mode toggling alongside `prefers-color-scheme`.
+  - Integrate `sonner` toast notification provider into root layout (`src/app/layout.tsx`) with `richColors`, `closeButton`, and `position="top-right"`. Update metadata to Fintracko branding ("Fintracko — Smart Financial Tracker").
+  - Add a co-located smoke test at `src/components/ui/ui-components.test.tsx` asserting every installed component renders without throwing and exposes the expected `data-slot` attribute.
+  - Enforce component isolation: code injection in `src/components/ui/` must remain completely generic; no business-state parsing occurs inside these files.
 
 ## Phase 2: Core Authentication & Security Gateway Pipeline
 - [ ] **Task 2.1: Public Pages & SEO Setup**

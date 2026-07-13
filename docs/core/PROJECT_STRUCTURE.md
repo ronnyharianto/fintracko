@@ -7,6 +7,7 @@ To maintain clean modularity, strict multi-tenancy isolation, database integrity
 fintracko/
 ├── .gitignore             # Git ignore file
 ├── .env.local             # Local environment variables (do not commit)
+├── components.json        # shadcn/ui registry — aliases, style, icon-library config
 ├── next.config.mjs        # Next.js configuration
 ├── package.json           # Dependencies and test scripts
 ├── prisma/                # Database migrations and ORM schema (source-of-truth data contract)
@@ -16,7 +17,9 @@ fintracko/
 ├── supabase/              # Supabase CLI config + local Docker Postgres seeding (created via `supabase init`)
 ├── src/                   # Main application source code
 │   ├── app/               # Next.js App Router (Routing layer)
+│   │   └── globals.css    # Tailwind v4 base layer + Fintracko design tokens (HSL CSS variables)
 │   ├── components/        # Reusable UI components
+│   │   └── ui/            # shadcn/ui atomic components (button, card, dialog, input, form, label, table, toast)
 │   ├── features/          # Domain-driven core business logic
 │   ├── lib/               # Shared utilities, clients, and configurations
 │   └── types/             # Global TypeScript type definitions

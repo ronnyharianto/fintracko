@@ -108,6 +108,7 @@ Open [http://localhost:3000](http://localhost:3000) — the app is live.
 
 ```
 fintracko/
+├── components.json            # shadcn/ui registry configuration
 ├── prisma/
 │   ├── schema.prisma          # Database schema (source of truth)
 │   ├── migrations/            # Auto-generated migration SQL
@@ -116,9 +117,12 @@ fintracko/
 │   └── config.toml            # Local Supabase service configuration
 ├── src/
 │   ├── app/                   # Next.js App Router pages & layouts
-│   │   ├── layout.tsx         # Root layout
+│   │   ├── layout.tsx         # Root layout (+ Toaster provider)
 │   │   ├── page.tsx           # Public landing page
-│   │   └── globals.css        # Tailwind + design tokens
+│   │   └── globals.css        # Tailwind v4 + Fintracko teal design tokens (HSL)
+│   ├── components/
+│   │   └── ui/                # shadcn/ui atomic components (button, card, dialog, input, form, label, table, toast)
+│   │       └── ui-components.test.tsx  # Component smoke tests
 │   ├── lib/                   # Shared utilities & singletons
 │   │   ├── db.ts              # Prisma client singleton
 │   │   ├── db.test.ts         # DB contract unit test
@@ -137,7 +141,6 @@ fintracko/
 ├── vitest.config.mts          # Vitest configuration
 ├── tsconfig.json              # TypeScript configuration
 ├── next.config.ts             # Next.js configuration
-├── tailwind.config.ts         # Tailwind CSS configuration
 └── package.json               # Dependencies & scripts
 ```
 
@@ -212,4 +215,4 @@ Per [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md), all tests must be:
 
 ---
 
-*Last updated: Phase 1 (Project Initialization) — Task 1.3 complete*
+*Last updated: Phase 1 (Project Initialization) — Task 1.4 complete*
