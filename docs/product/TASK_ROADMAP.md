@@ -29,9 +29,10 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Enforce component isolation: code injection in `src/components/ui/` must remain completely generic; no business-state parsing occurs inside these files.
 
 ## Phase 2: Core Authentication & Security Gateway Pipeline
-- [ ] **Task 2.1: Public Pages & SEO Setup**
+- [x] **Task 2.1: Public Pages & SEO Setup**
   - Construct the responsive public marketing Landing Page (`src/app/page.tsx`).
   - Add accessible static legal routes for compliance: `/privacy-policy` and `/terms-of-service`.
+  - **Resolution (2026-07-13):** ✅ Complete. 14 files created/rewritten. Landing page composed of 6 modular Server Component sections under `src/components/shared/landing/` (NavBar, HeroSection, FeatureGrid, HowItWorks, CtaSection, Footer). All sections follow Fintracko's teal design system (DESIGN_SYSTEM.md), are mobile-first responsive, and have semantic HTML. `/privacy-policy` and `/terms-of-service` live inside the `(marketing)` route group with a shared layout providing NavBar + Footer wrappers. All 4 pages carry proper SEO metadata (title, description, openGraph, robots). 4 co-located unit test files (79 tests total) validate rendering, content presence, CTA links, and metadata exports. Build verified — all 4 routes compile as static pages.
 - [ ] **Task 2.2: Better Auth Integration**
   - Install and initialize Better Auth bindings inside `src/lib/auth.ts` using strictly OAuth-only login mechanisms (Google and GitHub Providers). Disable standard password credentials.
   - Implement the security enforcement pipeline: Explicitly reject incoming OAuth payloads if `email_verified` is false. Disable unsafe global account linking.

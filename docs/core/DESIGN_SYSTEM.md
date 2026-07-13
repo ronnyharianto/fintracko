@@ -112,32 +112,35 @@ All spacing follows a consistent 4px scale:
 ## Layout Patterns
 
 ### Hero Section
-- Max-width: 64rem (1024px)
-- Padding: 5rem top/bottom, 1rem sides
-- Centered text with aligned CTAs
-- Decorative background elements (blur circles)
+- Max-width: 80rem (1280px)
+- Padding: 8rem top, 10rem bottom (desktop) for breathable gradients
+- Centered high-impact text with multi-stop brand gradient (`bg-clip-text text-transparent bg-gradient-to-r from-primary via-teal-500 to-emerald-500`)
+- Floating background elements (animated pulse blobs in `emerald-400/20` and `teal-500/15` with `blur-3xl`)
 
-### Feature Grid
-- **Desktop**: 3 columns, 2rem gap
-- **Tablet**: 2 columns, 2rem gap
-- **Mobile**: 1 column, 1.5rem gap
-- Cards: p-6 rounded-lg with border
+### Feature Bento Grid
+- **Desktop**: Multi-column Bento Grid (`grid-cols-1 md:grid-cols-3` with row spans)
+  - Key sections: Multi-Workspace spans 2x2 with vertical layout
+  - Bank-Grade Security: Full width with horizontal content split
+- **Mobile**: Stacks into 1 column
+- Cards: `bg-card/50 backdrop-blur-sm border border-primary/10 hover:border-primary/20 hover:from-primary/10 hover:to-emerald-500/10 hover:shadow-2xl hover:scale-[1.02] transition-all`
 
-### Pricing Cards
-- Base: border-slate-200 bg-slate-50
-- Highlighted: ring-2 ring-primary/20 with shadow
-- **Desktop**: 2 columns, 2rem gap
+### How It Works Timeline
+- **Desktop**: 3 horizontal items with a connecting gradient path line (`bg-gradient-to-r from-primary/40 via-emerald-500/40 to-primary/40`)
+- **Mobile**: Vertically stacked items
+- Accents: High-impact gradient numbered badges (`bg-gradient-to-br from-primary to-emerald-500 text-white`) and `bg-card` icon frames with subtle `ring-1 ring-primary/15`
 
 ### Navigation
-- Sticky header with backdrop blur
+- Sticky header with backdrop blur and glassmorphism gradient (`from-primary/5 via-accent/5 to-primary/5 backdrop-blur-md`)
+- Theme switch toggle (Moon/Sun SVG, standard interactive role)
 - Logo + branding on left
 - Navigation links (hidden on mobile)
 - Auth buttons on right
 
 ### Footer
 - 4-column grid (desktop), 2-column (tablet), 1-column (mobile)
-- Light gray background (slate-50)
-- Small font size for legal text
+- Subtle teal-tinted background with bottom-shading (`bg-gradient-to-b from-primary/5 to-muted/30`)
+- High-contrast envelope and location pin SVG icon rows, properly aligned in the Contact section
+- Small font size for legal text with a gradient center accent line
 
 ## Form Design
 
@@ -208,14 +211,21 @@ All spacing follows a consistent 4px scale:
 
 ## Design Tokens (CSS Variables)
 
-All design tokens are defined in `globals.css` using CSS variables:
+All design tokens are defined in `globals.css` using CSS variables. In Tailwind v4, HSL-channel-based variables are mapped inside the `@theme inline` block wrapped in the standard `hsl()` function:
 - `--primary`: Brand color (teal)
-- `--accent`: Secondary action color
+- `--accent`: Secondary action color (bright teal)
 - `--background`: Primary surface
-- `--foreground`: Primary text
+- `--foreground`: Primary text (resolves to bright slate in dark mode and dark navy in light mode)
 - `--muted`: Subtle elements
 - `--border`: Divider lines
 - `--radius`: Border radius base unit
+
+### Theme Management
+Fintracko features a custom, high-performance **Default Dark** theme setup:
+- Default dark theme via `.dark` utility on the standard HTML template (`suppressHydrationWarning`).
+- Pre-hydration inline script running synchronously inside the `<head>` of `RootLayout` to check `localStorage.theme` and prevent FOUC (flash of unstyled content).
+- An accessible `ThemeToggle` component with `role="switch"` and standard Sun/Moon SVG icons.
+- Auto-themed scrollbars and form elements via `color-scheme` in CSS.
 
 ## Usage Guidelines
 

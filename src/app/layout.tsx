@@ -3,6 +3,16 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+/**
+ * Pre-hydration theme script — runs synchronously before React hydrates to
+ * avoid a flash of the wrong theme. It honours the user's persisted choice in
+ * `localStorage.theme`; otherwise it defaults to the dark theme (the app's
+ * default). The script applies/removes the `.dark` class on <html>, which is
+ * what Tailwind's `dark:` variant and the design tokens in `globals.css`
+ * react to.
+ */
+const themeInitScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();`;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -27,9 +37,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full bg-background text-foreground antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
         <Toaster
           richColors
