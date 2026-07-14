@@ -36,7 +36,7 @@ fintracko/
 
 This layer manages HTTP request endpoints and page structural renders. All security pipeline logic executes here before business mutations are called.
 
-* src/app/layout.tsx - Root layout initializing design themes, Better Auth session providers, and global notification toast contexts.
+* src/app/layout.tsx - Root layout injecting a pre-hydration inline script that reads the persisted light/dark theme from localStorage and sets the `.dark` class on <html> before paint (prevents flash of unstyled content / FOUC, default dark). Will additionally initialize Better Auth session providers and the global notification toast context in later phases.
 * src/app/page.tsx - Public marketing landing page optimized for search engine optimization (SEO).
 * src/app/(auth)/ - Route group containing dedicated paths for OAuth validation entry points like /login and /register.
 * src/app/(marketing)/ - Static layout paths enforcing legal accessibility compliance like /privacy-policy and /terms-of-service.
@@ -84,7 +84,8 @@ src/features/
 UI components are clearly divided by responsibility to isolate logic from generic markup designs.
 
 * src/components/ui/ - Atomic visual design components built via shadcn/ui such as button.tsx, dialog.tsx, and table.tsx. Code injection here remains generic; business states must never be parsed inside these files.
-* src/components/shared/ - Complex layout structures utilized by multiple private screens such as sidebar.tsx, navbar.tsx, and workspace-picker.tsx.
+* src/components/shared/ - Reusable composed components shared across multiple routes (private screens + marketing pages). Currently houses fintracko-logo.tsx (SVG wallet + chart-bars logo with light/dark variants) and theme-toggle.tsx (accessible client-side ThemeToggle using `role="switch"` + `localStorage` persistence). Future private-screen widgets (sidebar.tsx, navbar.tsx, workspace-picker.tsx) will also live here.
+* src/components/shared/landing/ - Landing page section Server Components rendered by `src/app/page.tsx`: nav-bar.tsx, hero-section.tsx, feature-grid.tsx, how-it-works.tsx, cta-section.tsx, footer.tsx. Each is independently testable and follows the Fintracko teal design system (see DESIGN_SYSTEM.md).
 * src/components/guards/ - Pure server wrapper blocks like OnboardingGuardWrapper.tsx that implicitly check profile database records before displaying child views.
 
 ### 2.4 src/lib/ (Infrastructure & Constants)

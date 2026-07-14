@@ -117,10 +117,30 @@ fintracko/
 │   └── config.toml            # Local Supabase service configuration
 ├── src/
 │   ├── app/                   # Next.js App Router pages & layouts
-│   │   ├── layout.tsx         # Root layout (+ Toaster provider)
-│   │   ├── page.tsx           # Public landing page
-│   │   └── globals.css        # Tailwind v4 + Fintracko teal design tokens (HSL)
+│   │   ├── layout.tsx         # Root layout (pre-hydration theme script + Toaster provider)
+│   │   ├── page.tsx           # Color-enhanced public landing page (renders marketing sections)
+│   │   ├── globals.css        # Tailwind v4 + Fintracko teal design tokens (HSL channels, hsl()-wrapped in @theme inline)
+│   │   └── (marketing)/       # Marketing route group (shared NavBar + Footer layout)
+│   │       ├── layout.tsx        # Marketing layout (NavBar + <main> + Footer)
+│   │       ├── layout.test.tsx   # Marketing layout render & link contract tests
+│   │       ├── privacy-policy/
+│   │       │   ├── page.tsx       # Privacy policy legal page (metadata-driven)
+│   │       │   └── page.test.tsx  # Privacy page render tests
+│   │       └── terms-of-service/
+│   │           ├── page.tsx       # Terms of service legal page (metadata-driven)
+│   │           └── page.test.tsx  # Terms page render tests
 │   ├── components/
+│   │   ├── shared/            # Shared, composed UI used across routes
+│   │   │   ├── fintracko-logo.tsx     # SVG wallet + chart-bars logo (light/dark variants)
+│   │   │   ├── theme-toggle.tsx      # Accessible light/dark ThemeToggle (role="switch", localStorage)
+│   │   │   ├── theme-toggle.test.tsx # ThemeToggle mount & aria tests
+│   │   │   └── landing/              # Landing page section components
+│   │   │       ├── nav-bar.tsx         # Glassmorphism NavBar + ThemeToggle
+│   │   │       ├── hero-section.tsx   # Hero headline, CTAs, animated blur blobs
+│   │   │       ├── feature-grid.tsx   # 6-card feature bento grid
+│   │   │       ├── how-it-works.tsx   # 3-step timeline with gradient connecting line
+│   │   │       ├── cta-section.tsx    # Bottom call-to-action band
+│   │   │       └── footer.tsx         # Teal-tinted footer with aligned contact info
 │   │   └── ui/                # shadcn/ui atomic components (button, card, dialog, input, form, label, table, toast)
 │   │       └── ui-components.test.tsx  # Component smoke tests
 │   ├── lib/                   # Shared utilities & singletons
@@ -215,4 +235,4 @@ Per [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md), all tests must be:
 
 ---
 
-*Last updated: Phase 1 (Project Initialization) — Task 1.4 complete*
+*Last updated: Phase 2 (Public Pages & SEO Setup) — Task 2.1 complete*
