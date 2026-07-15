@@ -13,11 +13,15 @@
  * performs only fetch calls and is safe to ship to the browser.
  *
  * Configuration:
- *   - `baseURL` points at the Better Auth route handler origin. In the
- *     browser it defaults to the current origin, so we omit it and let
- *     Better Auth resolve relative to `window.location.origin`.
+ *   - `baseURL` is omitted so Better Auth resolves the origin to
+ *     `window.location.origin` in the browser.
+ *   - `basePath` MUST mirror `auth.basePath` in `src/lib/auth.ts` and the
+ *     mounted route handler (`src/app/api/v1/auth/[...better-auth]`).
+ *     Better Auth's default is "/api/auth", but this project serves the
+ *     handler under the versioned "/api/v1/auth" path. Without this the
+ *     client would POST to `/api/auth/sign-in/social` and 404.
  */
-
+ 
 import { createAuthClient } from "better-auth/client";
 
 /**
@@ -36,7 +40,9 @@ import { createAuthClient } from "better-auth/client";
  *   - `signOut()`                   — invalidate the current session and clear the cookie
  *   - `getSession()`                — fetch the active session (or null)
  */
-export const authClient = createAuthClient();
+export const authClient = createAuthClient({
+  basePath: "/api/v1/auth",
+});
 
 /**
  * Convenience alias for the union of OAuth providers enabled in

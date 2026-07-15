@@ -25,6 +25,13 @@ import { db } from "./db";
  *   - Account linking (disableAccountLinking: true)
  */
 export const auth = betterAuth({
+  // Base path matches the Next.js route handler at
+  // src/app/api/v1/auth/[...better-auth]/route.ts. Both the server and
+  // the browser client MUST use the same basePath so that sign-in requests
+  // and OAuth callback URLs resolve to the mounted handler. The default
+  // is "/api/auth", which would 404 against the project's versioned
+  // /api/v1/auth/* handler.
+  basePath: "/api/v1/auth",
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
