@@ -4,20 +4,21 @@
 // This schema implements the multi-tenant data contract defined in
 // docs/architecture/ARCHITECTURE.md §2 ("Database Schema Design").
 //
-// Models (11 total):
+// Models (12 total):
 //   1. User             — Authenticated user. Doubles as the Better Auth
 //                         identity table; field contract aligned with the
 //                         Better Auth Prisma adapter (Task 2.2).
 //   2. AuthAccount      — OAuth provider identity linkage (Better Auth owned).
 //   3. Session          — HttpOnly session tokens (Better Auth owned).
-//   4. Profile          — Onboarding-completion marker + user preferences.
-//   5. Workspace        — Root multi-tenancy isolation boundary.
-//   6. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR).
-//   7. Account          — Financial ledger node (Bank, Cash, Wallet).
-//   8. Category         — Level 1 transaction classification.
-//   9. SubCategory      — Level 2 transaction classification.
-//  10. Budget           — Spending limit bound to a SubCategory (L2) + interval.
-//  11. Transaction      — Core financial mutation ledger entry.
+//   4. Verification     — OAuth/email verification tokens (Better Auth owned).
+//   5. Profile          — Onboarding-completion marker + user preferences.
+//   6. Workspace        — Root multi-tenancy isolation boundary.
+//   7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR).
+//   8. Account          — Financial ledger node (Bank, Cash, Wallet).
+//   9. Category         — Level 1 transaction classification.
+//  10. SubCategory      — Level 2 transaction classification.
+//  11. Budget           — Spending limit bound to a SubCategory (L2) + interval.
+//  12. Transaction      — Core financial mutation ledger entry.
 //
 // Conventions enforced everywhere:
 //   - UUID primary keys via native PostgreSQL `@db.Uuid`.
@@ -177,7 +178,34 @@ model Session {
 }
 
 // ----------------------------------------------------------------------------
-// 4. Profile — Onboarding completion marker + user preferences
+// 4. Verification — OAuth/email verification tokens (Better Auth owned)
+// ----------------------------------------------------------------------------
+// Stores short-lived verification tokens used by Better Auth during OAuth
+// flows (e.g. OAuth state round-trip callbacks) and email-verification flows.
+// Field contract mirrors Better Auth's `verificationSchema` exactly:
+//   { id, value, identifier, expiresAt, createdAt, updatedAt }
+// Created by Task 2.2 fix: the Better Auth Prisma adapter previously failed
+// OAuth sign-in with "Model verification does not exist in the database"
+// because neither the model nor a backing table existed. Like `AuthAccount`
+// and `Session`, this table is *exclusively* mutated by the Better Auth
+// runtime; application code must never write to it directly.
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  value      String
+  // A stable identifier Better Auth uses to look up a pending verification,
+  // typically `<provider>:<userId>` or an email hash.
+  identifier String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt @default(now())
+
+  // Index for fast lookups by identifier during the OAuth callback path.
+  @@index([identifier])
+}
+
+// ----------------------------------------------------------------------------
+// 5. Profile — Onboarding completion marker + user preferences
 // ----------------------------------------------------------------------------
 // The presence of a `Profile` row linked to a `User` is the implicit signal
 // that the user has completed onboarding (see OnboardingGuardWrapper, Task 3.1).

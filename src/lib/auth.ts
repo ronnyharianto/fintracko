@@ -48,11 +48,37 @@ export const auth = betterAuth({
       clientSecret: process.env.AUTH_GITHUB_SECRET!,
     },
   },
+  // ---- Database model mapping (Task 2.2) -------------------------------------
+  // Better Auth's Prisma adapter expects four core tables named
+  // `user` / `account` / `session` / `verification` by default. This project
+  // uses different physical table names:
+  //   - `User` (same name, mapped here for clarity)
+  //   - `AuthAccount` (renamed to avoid the financial `Account` table
+  //     collision — see ARCHITECTURE.md §AuthAccount; the schema comment
+  //     calls this "modelMapping wired during Task 2.2", which this block now
+  //     actually does)
+  //   - `Session` (same name)
+  //   - `Verification` (new table backing Better Auth's `verification` model)
+  // Without `modelName` on each entry, the adapter queried the default
+  // names — e.g. `account` does not exist (it is `AuthAccount`), and
+  // `verification` had no backing table at all, producing
+  // "Model verification does not exist in the database" during OAuth sign-in.
+  user: {
+    modelName: "User",
+  },
   account: {
+    modelName: "AuthAccount",
     accountLinking: {
       enabled: false,
     },
   },
+  session: {
+    modelName: "Session",
+  },
+  verification: {
+    modelName: "Verification",
+  },
+  // ------------------------------------------------------------------
   callbacks: {
     /**
      * Enforce email verification for OAuth sign-ins.

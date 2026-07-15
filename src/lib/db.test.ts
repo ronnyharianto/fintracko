@@ -35,6 +35,7 @@ const EXPECTED_MODELS = [
   "user",
   "authAccount",
   "session",
+  "verification",
   "profile",
   "workspace",
   "workspaceMember",
@@ -46,7 +47,7 @@ const EXPECTED_MODELS = [
 ] as const;
 
 describe("Prisma Client singleton (db)", () => {
-  it("exposes all 11 model delegates from the FINtracko schema", () => {
+  it("exposes all 12 model delegates from the FINtracko schema", () => {
     for (const modelName of EXPECTED_MODELS) {
       // Each Prisma model delegate is an object exposing findUnique, findMany,
       // create, update, delete, etc. We assert presence + a couple of method
@@ -62,7 +63,7 @@ describe("Prisma Client singleton (db)", () => {
     }
   });
 
-  it("exposes exactly the 11 expected model delegates (no rogue models)", () => {
+  it("exposes exactly the 12 expected model delegates (no rogue models)", () => {
     // Prisma attaches a few non-model utility properties (e.g. `$transaction`,
     // `$connect`, `$disconnect`, `$on`, `$use`). We filter those out by
     // checking the shape (object with `findMany`).
