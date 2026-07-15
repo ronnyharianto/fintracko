@@ -2,14 +2,16 @@
 
 ## 1. Tech Stack (Production Ready - $0 Cost Infrastructure)
 
-* **Framework:** Next.js (App Router) deployed on Vercel (Free Tier).
-* **Styling:** Tailwind CSS (Utility-first CSS, processed at build-time).
-* **UI Components:** shadcn/ui (Radix UI primitives + Tailwind, directly injected into the source code for maximum customizability and Server Components compatibility).
-* **Database:** PostgreSQL hosted on Supabase (Free Tier, 500MB Baseline + Realtime capability).
-* **Authentication:** Better Auth leveraging Google & GitHub OAuth.
-    * **Security Enforcement:** Explicitly reject OAuth payloads if `email_verified` is false. Do NOT use unsafe global account linking.
-* **Database Access:** Prisma ORM for schema-first modeling and type-safe queries.
-* **Testing Framework:** Vitest + React Testing Library (Chosen for ultra-fast ESM performance, native TypeScript support, and seamless Next.js testing integration).
+* **Framework:** Next.js 16 (App Router, React 19) deployed on Vercel (Free Tier).
+* **Styling:** Tailwind CSS 4 (Utility-first CSS, processed at build-time via `@tailwindcss/postcss`).
+* **UI Components:** shadcn/ui (Radix UI primitives + Tailwind, new-york variant, directly injected into the source code for maximum customizability and Server Components compatibility). All components carry `data-slot` attributes for deterministic DOM querying.
+* **Database:** PostgreSQL 17 hosted on Supabase (Free Tier, 500MB Baseline). Local development uses the Supabase CLI Docker stack; non-MVP services (Auth, Realtime, Storage, Analytics, Connection Pooler) are trimmed in [`supabase/config.toml`](supabase/config.toml:1).
+* **Authentication:** Better Auth (v1.x) leveraging Google & GitHub OAuth, bound to Prisma via the `prismaAdapter` (`postgresql` provider).
+    * **Security Enforcement:** Explicitly reject OAuth payloads if `email_verified` is false. Account linking disabled (`account.accountLinking.enabled: false`).
+    * **Verification Model:** A dedicated `Verification` table backs Better Auth's `verification` model (OAuth/email verification token round-trip). It is owned and mutated exclusively by the Better Auth runtime.
+* **Database Access:** Prisma 7 ORM for schema-first modeling and type-safe queries. The client is emitted to `./generated/prisma/` (git-ignored) and connection management uses the `@prisma/adapter-pg` driver adapter (`PrismaPg`); CLI configuration lives in [`prisma.config.ts`](prisma.config.ts:1) (the `datasource.url` block was removed from the schema in Prisma 7).
+* **Validation:** Zod 4 for request payload schema validation.
+* **Testing Framework:** Vitest 4 + React Testing Library + jest-dom (Chosen for ultra-fast ESM performance, native TypeScript support, and seamless Next.js testing integration). All tests are co-located next to their target files using the `*.test.ts` / `*.test.tsx` naming pattern.
 
 ---
 
@@ -50,6 +52,15 @@ Stores HttpOnly authenticated session tokens issued by Better Auth. Owned and ma
 * **expiresAt:** DateTime
 * **ipAddress:** String (Nullable)
 * **userAgent:** String (Nullable)
+* **createdAt:** DateTime
+* **updatedAt:** DateTime
+
+### Verification Table
+Stores short-lived verification tokens used by Better Auth during OAuth flows (e.g. OAuth state round-trip callbacks) and email-verification flows. Like `AuthAccount` and `Session`, this table is owned and mutated exclusively by the Better Auth runtime; application code must never write to it directly. It was added as a Task 2.2 fix — the Better Auth Prisma adapter previously failed OAuth sign-in with "Model verification does not exist in the database" because neither the model nor a backing table existed.
+* **id:** String (UUID, Primary Key)
+* **value:** String (The verification token value)
+* **identifier:** String (A stable identifier Better Auth uses to look up a pending verification, typically `<provider>:<userId>` or an email hash. Indexed for fast lookups during the OAuth callback path.)
+* **expiresAt:** DateTime
 * **createdAt:** DateTime
 * **updatedAt:** DateTime
 

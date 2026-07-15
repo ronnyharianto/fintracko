@@ -250,7 +250,7 @@ Better Auth powers OAuth-only sign-in (no email/password). Task 2.2 is complete 
 
 ### Server instance — [`src/lib/auth.ts`](src/lib/auth.ts:1)
 
-The `betterAuth({...})` instance binds to Prisma via the `prismaAdapter` (PostgreSQL provider), disables email/password, enables Google + GitHub social providers from env vars, and **disables account linking** so each OAuth provider maps to a distinct user record.
+The `betterAuth({...})` instance binds to Prisma via the `prismaAdapter` (PostgreSQL provider), disables email/password, enables Google + GitHub social providers from env vars, and **disables account linking** so each OAuth provider maps to a distinct user record. It exposes the auth handler at [`basePath: "/api/v1/auth"`](src/lib/auth.ts:34) (consumed by the catch-all route at [`src/app/api/v1/auth/[...better-auth]/route.ts`](src/app/api/v1/auth/[...better-auth]/route.ts:1)) and uses an explicit `modelMapping` to bind Better Auth's internal models to the **12** Prisma tables — including the [`Verification`](prisma/schema.prisma:193) table added by migration `20260715141409_add_better_auth_verification_model`.
 
 ```typescript
 import { betterAuth } from "better-auth";
@@ -258,13 +258,19 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "./db";
 
 export const auth = betterAuth({
+  basePath: "/api/v1/auth",
   database: prismaAdapter(db, { provider: "postgresql" }),
   emailAndPassword: { enabled: false },
+  // Map Better Auth internal models → Prisma models explicitly
+  // (user→User, account→AuthAccount, session→Session, verification→Verification)
+  user: { modelName: "user" },
+  account: { modelName: "account", accountLinking: { enabled: false } },
+  session: { modelName: "session" },
+  verification: { modelName: "verification" },
   socialProviders: {
     google: { clientId: process.env.AUTH_GOOGLE_ID, clientSecret: process.env.AUTH_GOOGLE_SECRET },
     github: { clientId: process.env.AUTH_GITHUB_ID, clientSecret: process.env.AUTH_GITHUB_SECRET },
   },
-  account: { accountLinking: { enabled: false } },
   callbacks: {
     signIn: async ({ user }: { user: { emailVerified: boolean | null | undefined } }) => {
       // In production, reject only when the OAuth provider reports emailVerified === false.
@@ -281,7 +287,7 @@ export type AuthClient = typeof auth;
 
 > **Account linking**: configured as `account.accountLinking.enabled: false` (the v1.x Better Auth key path), **not** the older `advanced.disableAccountLinking: true`.
 
-> **Email verification callback**: production rejects only `emailVerified === false` and passes through `null`/`undefined` (treats them as "unknown"). The test helper in [`src/lib/auth.test.ts`](src/lib/auth.test.ts:46) additionally rejects `null` for unit-test determinism (`should handle null emailVerified as unverified`) and allows `undefined` (`should allow sign-in when emailVerified is undefined`).
+> **Email verification callback**: production rejects only `emailVerified === false` and passes through `null`/`undefined` (treats them as "unknown"). The test helper in [`src/lib/auth.test.ts`](src/lib/auth.test.ts:112) additionally rejects `null` for unit-test determinism (`should handle null emailVerified as unverified`) and allows `undefined` (`should allow sign-in when emailVerified is undefined`). The `signIn` callback itself lives at [`src/lib/auth.ts:91`](src/lib/auth.ts:91).
 
 ### Browser client — [`src/lib/auth-client.ts`](src/lib/auth-client.ts:1)
 
@@ -354,7 +360,7 @@ const { data: session, error } = await authClient.getSession();
 | [`src/app/(auth)/login/page.test.tsx`](src/app/(auth)/login/page.test.tsx:1) | 6 | "Welcome back" heading, OAuthButtons rendered, register link → `/register`, indexing disabled + correct title/description metadata |
 | [`src/app/(auth)/register/page.test.tsx`](src/app/(auth)/register/page.test.tsx:1) | 6 | "Create your account" heading, OAuthButtons rendered, sign-in link → `/login`, indexing disabled + correct title/description metadata |
 
-Deeper design notes: [`docs/README.md`](docs/README.md:1) — Better Auth integration reference (Task 2.2). Status: **✅ Complete**.
+Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md:1) (§ Better Auth + Verification table) and [`docs/product/TASK_ROADMAP.md`](docs/product/TASK_ROADMAP.md:1) (Task 2.2 resolution) — Better Auth integration reference. Status: **✅ Complete**.
 
 ---
 
@@ -378,4 +384,4 @@ Deeper design notes: [`docs/README.md`](docs/README.md:1) — Better Auth integr
 
 ---
 
-*Last updated: Phase 2 (Auth & Onboarding) — Task 2.2 complete — Better Auth integration (OAuth Google + GitHub, account linking disabled, email verification callback, 45 passing tests).*
+*Last updated: Phase 2 (Auth & Onboarding) — Task 2.2 complete — Better Auth integration (OAuth Google + GitHub, `basePath: /api/v1/auth`, explicit Prisma `modelMapping` incl. `Verification` table, account linking disabled, email verification callback, 45 passing tests). Follow-up migration `20260715141409_add_better_auth_verification_model` bumped the schema to 12 models.*
