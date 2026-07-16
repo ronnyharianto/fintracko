@@ -5,6 +5,7 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
 ---
 
 ## Phase 1: Project Initialization & Configuration
+
 - [x] **Task 1.1: Next.js Foundation Setup**
   - Initialize the Next.js application with TypeScript, Tailwind CSS, and the structured `src/` directory layout.
   - Set up `tsconfig.json` and verify absolute path mapping (`@/*`).
@@ -12,10 +13,10 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Configure `vitest.config.ts` and set up the sample environment sanity tests.
   - Enforce the rule: All unit tests must be co-located directly next to their target files using the explicit `*.test.ts` or `*.test.tsx` naming pattern.
 - [x] **Task 1.3: Prisma Database Schema Definition**
-  - Initialize Prisma ORM. Implement the full multi-tenant schema matching `ARCHITECTURE.md` §2. Models (12 total): `User`, `Profile`, `Workspace`, `WorkspaceMember`, `Account` (financial), `Category`, `SubCategory`, `Budget`, `Transaction`, plus the Better Auth–aligned `AuthAccount` and `Session` tables reconciled into the schema here (not deferred to Task 2.2) to guarantee migration continuity. (The `Verification` table was added later during Task 2.2 — see Task 2.2 resolution.)
-  - Use PostgreSQL `UUID` primary keys, `Decimal(18,4)` for all financial fields, `String[]` for `Transaction.tags`, and Prisma enums for `WorkspaceRole`, `CategoryType`, `BudgetInterval`, `Gender`, and `TransactionType`.
-  - Enforce compound unique keys: `WorkspaceMember[workspaceId, userId]`, `Account[workspaceId, name]`, `Budget[subCategoryId, interval]`, and `AuthAccount[providerId, accountId]`.
-  - Enforce `On Delete: Cascade` per the architecture spec; add performance indexes on foreign keys, `User.email`, `Transaction.date`, `Transaction.payeePayer`, and `Category(type)`.
+  - Initialize Prisma ORM. Implement the full multi-tenant schema matching `ARCHITECTURE.md` §2. Models (12 total): `User`, `Profile`, `Workspace`, `WorkspaceMember`, `FinancialAccount` (financial ledger node), `Category`, `SubCategory`, `Budget`, `FinancialTransaction` (core ledger entry), plus the Better Auth–aligned `AuthAccount`, `Session`, and `Verification` tables reconciled into the schema here to guarantee migration continuity. (`User.email` is uniquely indexed by Prisma via `@unique`; `Verification` was added later during Task 2.2 — see Task 2.2 resolution.)
+  - Use PostgreSQL `UUID` primary keys, `Decimal(18,4)` for all financial fields, `String[]` for `FinancialTransaction.tags`, and Prisma enums for `WorkspaceRole`, `CategoryType`, `BudgetInterval`, `Gender`, and `TransactionType`.
+  - Enforce compound unique keys: `WorkspaceMember[workspaceId, userId]`, `FinancialAccount[workspaceId, name]`, `Budget[subCategoryId, interval]`, and `AuthAccount[providerId, accountId]`.
+  - Enforce `On Delete: Cascade` per the architecture spec; add performance indexes on foreign keys, `User.createdAt`, `FinancialTransaction.date`, `FinancialTransaction.payeePayer`, and `Category[workspaceId, type]`.
   - Create the Prisma client singleton at `src/lib/db.ts` (cached on `globalThis` to survive Next.js dev hot-reload without exhausting the connection pool).
   - Bootstrap a local Supabase Postgres via the Supabase CLI (Docker) for development; apply the initial migration and verify primary keys, compound uniques, and cascade behavior against this instance.
   - Verify primary keys, compound unique indexes, and cascade delete logic on local/Supabase development instances.
@@ -29,6 +30,7 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Enforce component isolation: code injection in `src/components/ui/` must remain completely generic; no business-state parsing occurs inside these files.
 
 ## Phase 2: Core Authentication & Security Gateway Pipeline
+
 - [x] **Task 2.1: Public Pages & SEO Setup**
   - Construct the responsive public marketing Landing Page (`src/app/page.tsx`).
   - Add accessible static legal routes for compliance: `/privacy-policy` and `/terms-of-service`.
@@ -37,12 +39,13 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
 - [x] **Task 2.2: Better Auth Integration**
   - Install and initialize Better Auth bindings inside `src/lib/auth.ts` using strictly OAuth-only login mechanisms (Google and GitHub Providers). Disable standard password credentials.
   - Implement the security enforcement pipeline: Explicitly reject incoming OAuth payloads if `email_verified` is false. Disable unsafe global account linking.
-  - **Resolution (2026-07-15):** ✅ Complete. 7 files created/updated. [`src/lib/auth.ts`](src/lib/auth.ts) configures Better Auth with the Prisma adapter (`postgresql`), `basePath: "/api/v1/auth"` (matched to the versioned route handler — the default `/api/auth` 404s against it), `emailAndPassword.enabled: false`, Google + GitHub social providers, `account.accountLinking.enabled: false` (linking disabled), and a [`signIn`](src/lib/auth.ts:91) callback rejecting any payload where `emailVerified === false`. It also declares explicit Better Auth `modelMapping` (`user`→`User`, `account`→`AuthAccount`, `session`→`Session`, `verification`→`Verification`) so the adapter queries the project's renamed tables instead of the default ones. Exports `AuthClient = typeof auth` for type-safe server usage. [`src/lib/auth-client.ts`](src/lib/auth-client.ts) ships a browser-safe `createAuthClient()` instance (no `baseURL` — resolves to `window.location.origin`) plus an `OAuthProvider` (`"google" | "github"`) type union. The route handler at [`src/app/api/v1/auth/[...better-auth]/route.ts`](src/app/api/v1/auth/[...better-auth]/route.ts) mounts explicit `GET`/`POST` async functions that delegate to `auth.handler`. Frontend surfaces live in the `(auth)` route group: [`layout.tsx`](src/app/(auth)/layout.tsx) (centered brand shell importing [`FintrackoLogo`](src/components/shared/fintracko-logo.tsx), `robots: { index: false, follow: false }` metadata), [`login/page.tsx`](src/app/(auth)/login/page.tsx) ("Welcome back" card with `CardDescription`, link to `/register`), and [`register/page.tsx`](src/app/(auth)/register/page.tsx) ("Create your account" card with `CardDescription`, link to `/login`); both pages render the [`OAuthButtons`](src/components/shared/auth/oauth-buttons.tsx) client component (`title` + `className` props, Google/GitHub buttons, per-provider pending state with "Redirecting…" UX, `callbackURL = {origin}/onboarding`). 44 co-located unit tests across 5 files all pass (auth 17, oauth-buttons 10, layout 5, login 6, register 6). Build green; runtime redirect target is `/onboarding`. **Follow-up fix (2026-07-15):** Added a new `Verification` model to [`prisma/schema.prisma`](prisma/schema.prisma) (12 models total) backed by migration `20260715141409_add_better_auth_verification_model`, which resolved the "Model verification does not exist in the database" error that aborted OAuth sign-in. Full technical documentation in [`docs/README.md`](docs/README.md).
+  - **Resolution (2026-07-15):** ✅ Complete. 7 files created/updated. [`src/lib/auth.ts`](src/lib/auth.ts) configures Better Auth with the Prisma adapter (`postgresql`), `basePath: "/api/v1/auth"` (matched to the versioned route handler — the default `/api/auth` 404s against it), `emailAndPassword.enabled: false`, Google + GitHub social providers, `account.accountLinking.enabled: false` (linking disabled), and a [`signIn`](src/lib/auth.ts:91) callback rejecting any payload where `emailVerified === false`. It also declares explicit Better Auth `modelMapping` (`user`→`User`, `account`→`AuthAccount`, `session`→`Session`, `verification`→`Verification`) so the adapter queries the project's renamed tables instead of the default ones. Exports `AuthClient = typeof auth` for type-safe server usage. [`src/lib/auth-client.ts`](src/lib/auth-client.ts) ships a browser-safe `createAuthClient()` instance (no `baseURL` — resolves to `window.location.origin`) plus an `OAuthProvider` (`"google" | "github"`) type union. The route handler at [`src/app/api/v1/auth/[...better-auth]/route.ts`](src/app/api/v1/auth/[...better-auth]/route.ts) mounts explicit `GET`/`POST` async functions that delegate to `auth.handler`. Frontend surfaces live in the `(auth)` route group: [`layout.tsx`](<src/app/(auth)/layout.tsx>) (centered brand shell importing [`FintrackoLogo`](src/components/shared/fintracko-logo.tsx), `robots: { index: false, follow: false }` metadata), [`login/page.tsx`](<src/app/(auth)/login/page.tsx>) ("Welcome back" card with `CardDescription`, link to `/register`), and [`register/page.tsx`](<src/app/(auth)/register/page.tsx>) ("Create your account" card with `CardDescription`, link to `/login`); both pages render the [`OAuthButtons`](src/components/shared/auth/oauth-buttons.tsx) client component (`title` + `className` props, Google/GitHub buttons, per-provider pending state with "Redirecting…" UX, `callbackURL = {origin}/onboarding`). 44 co-located unit tests across 5 files all pass (auth 17, oauth-buttons 10, layout 5, login 6, register 6). Build green; runtime redirect target is `/onboarding`. **Follow-up fix (2026-07-15):** Added a new `Verification` model to [`prisma/schema.prisma`](prisma/schema.prisma) (12 models total) backed by migration `20260715141409_add_better_auth_verification_model`, which resolved the "Model verification does not exist in the database" error that aborted OAuth sign-in. Full technical documentation in [`docs/README.md`](docs/README.md).
 - [ ] **Task 2.3: Rest API Hardened Envelope & Pipeline**
   - Develop the base REST API route handling utility to wrap all network outputs inside the standardized global success/failure JSON envelopes.
   - Build the global pipeline handlers for API Route Handlers: session extraction, Zod input validation schema validation, and rigorous input HTML/JS sanitization via `isomorphic-dompurify` to neutralize XSS vectors.
 
 ## Phase 3: Implicit Onboarding & Multi-Tenancy Framework
+
 - [ ] **Task 3.1: Profile Implicit Onboarding Guard**
   - Create the `OnboardingGuardWrapper.tsx` Server Component at the layout level enclosing all private dashboard pages (`src/app/(dashboard)/`).
   - Perform direct Prisma database verification to check for the existence of a `Profile` record linked to the `userId`. If no profile exists, gracefully intercept and render the onboarding wizard interface without global edge middleware block constraints.
@@ -57,22 +60,25 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Implement secure multi-tenancy Anti-IDOR validation across all workspace endpoints by performing compound query verification inside `WorkspaceMember` matching both `workspaceId` and `userId`.
 
 ## Phase 4: Financial Node Structure & Delta Account Balances
-- [ ] **Task 4.1: Account Delta Invariant Processing**
-  - Construct `src/app/(dashboard)/workspaces` and management UIs to handle Account CRUD.
-  - Enforce the architectural balance formula: Final Account Balance = `initialBalance` + `netTransactionSum` (where `netTransactionSum` tracks the accumulated delta of all transaction mutations).
+
+- [ ] **Task 4.1: FinancialAccount Delta Invariant Processing**
+  - Construct `src/app/(dashboard)/workspaces` and management UIs to handle `FinancialAccount` CRUD.
+  - Enforce the architectural balance formula: Final Account Balance = `initialBalance` + `netTransactionSum` (where `netTransactionSum` tracks the accumulated delta of all transaction mutations on the `FinancialAccount`).
 - [ ] **Task 4.2: Two-Level Category Framework**
   - Develop the nested hierarchy structure separating primary Category (Level 1) from SubCategory (Level 2).
   - Enforce structural constraints via backend guards: preventing users from assigning budgets or raw transactions directly onto Level 1 parents.
 
 ## Phase 5: Transaction Ledger & Precision Math Safety
+
 - [ ] **Task 5.1: Transaction Processing Core Engine**
-  - Implement the unified route ledger mapping `POST`, `PUT`, `DELETE` operations for transaction records (Income, Expense, Transfer).
-  - Enforce strict database mathematical invariants using a unified Prisma `$transaction` block: every transaction insertion, removal, or update must mutate the `netTransactionSum` fields of the corresponding source and destination accounts.
+  - Implement the unified route ledger mapping `POST`, `PUT`, `DELETE` operations for `FinancialTransaction` records (Income, Expense, Transfer).
+  - Enforce strict database mathematical invariants using a unified Prisma `$transaction` block: every transaction insertion, removal, or update must mutate the `netTransactionSum` fields of the corresponding source and destination `FinancialAccount` rows.
 - [ ] **Task 5.2: Precision Decimal & Storage Optimization Pipeline**
   - Enforce decimal safety across the core business tier using Prisma `Decimal` mapping onto PostgreSQL `Decimal(18,4)`. All client payloads must pass numbers as string-serialized numeric values to prevent JavaScript floating-point rounding degradation.
   - Implement the backend image upload pipeline: Intercept receipt attachments, validate file sizes under 2MB, route payloads directly to the Imgur API Free Tier, and store the resulting public image URL string into the database.
 
 ## Phase 6: Budget Constraint System
+
 - [ ] **Task 6.1: SubCategory Level 2 Budget Engine**
   - Implement `POST /api/v1/budgets` to configure spending limits strictly mapping onto Level 2 SubCategories for Monthly or Yearly intervals.
   - Build backend database validation checks rejecting budget creations if the `categoryId` refers to a primary Level 1 parent node (`parentId === null`).
@@ -80,6 +86,7 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Create a dynamic UI progress element tracking utilization percentages against live expense aggregations in the corresponding categories.
 
 ## Phase 7: Analytical Performance Dashboard
+
 - [ ] **Task 7.1: Exhausted Budget Analytics Lookups**
   - Construct optimized database aggregation queries serving the Top 5 Monthly and Top 5 Yearly budgets closest to exhaustion.
 - [ ] **Task 7.2: Graphical Categorized Breakdown & Net Worth Trends**

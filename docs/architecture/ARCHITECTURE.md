@@ -7,7 +7,7 @@
 - **UI Components:** shadcn/ui (Radix UI primitives + Tailwind, new-york variant, directly injected into the source code for maximum customizability and Server Components compatibility). All components carry `data-slot` attributes for deterministic DOM querying.
 - **Database:** PostgreSQL 17 hosted on Supabase (Free Tier, 500MB Baseline). Local development uses the Supabase CLI Docker stack; non-MVP services (Auth, Realtime, Storage, Analytics, Connection Pooler) are trimmed in [`supabase/config.toml`](supabase/config.toml:1).
 - **Authentication:** Better Auth (v1.x) leveraging Google & GitHub OAuth, bound to Prisma via the `prismaAdapter` (`postgresql` provider).
-  - **Security Enforcement:** The production `signIn` callback ([`src/lib/auth.ts:91`](src/lib/auth.ts:91)) rejects OAuth payloads strictly when `emailVerified === false` and passes `null`/`undefined` through unmolested (treating them as "unknown"). The co-located unit-test helper in [`src/lib/auth.test.ts:112`](src/lib/auth.test.ts:112) additionally rejects `null` for deterministic test outcomes, while still allowing `undefined`. Account linking disabled (`account.accountLinking.enabled: false`).
+  - **Security Enforcement:** The production `signIn` callback ([`src/lib/auth.ts:92`](src/lib/auth.ts:92)) rejects OAuth payloads strictly when `emailVerified === false` and passes `null`/`undefined` through unmolested (treating them as "unknown"). The co-located unit-test helper in [`src/lib/auth.test.ts:112`](src/lib/auth.test.ts:112) additionally rejects `null` for deterministic test outcomes, while still allowing `undefined`. Account linking disabled (`account.accountLinking.enabled: false`).
   - **Verification Model:** A dedicated `Verification` table backs Better Auth's `verification` model (OAuth/email verification token round-trip). It is owned and mutated exclusively by the Better Auth runtime.
 - **Database Access:** Prisma 7 ORM for schema-first modeling and type-safe queries. The client is emitted to `./generated/prisma/` (git-ignored) and connection management uses the `@prisma/adapter-pg` driver adapter (`PrismaPg`); CLI configuration lives in [`prisma.config.ts`](prisma.config.ts:1) (the `datasource.url` block was removed from the schema in Prisma 7).
 - **Validation:** Zod 4 for request payload schema validation.
@@ -31,7 +31,7 @@ Tracks authenticated users. This table doubles as the Better Auth identity table
 - **id:** String (UUID, Primary Key)
 - **email:** String (Unique Key, Indexed for login lookups)
 - **name:** String
-- **emailVerified:** DateTime (Nullable. Presence of a non-null value indicates the OAuth provider confirmed the email. Per the security enforcement pipeline, OAuth payloads with `email_verified === false` MUST NOT have this field stamped, and the session is rejected in Task 2.2.)
+- **emailVerified:** Boolean (Non-nullable. Stamps the `email_verified` claim returned by the OAuth provider — `true` when the provider confirmed the email, `false` otherwise. Per the security enforcement pipeline, the [`signIn`](src/lib/auth.ts:92) callback rejects payloads where `emailVerified === false`, aborting the session in Task 2.2.)
 - **image:** String (Nullable)
 - **createdAt:** DateTime (Indexed for chronological sorting)
 - **updatedAt:** DateTime (Required by Better Auth for session refresh / touch-on-login behavior.)
@@ -91,7 +91,7 @@ Stores comprehensive user profile details. The presence of a record in this tabl
 - **company:** String (Nullable)
 - **bio:** String (Nullable)
 - **dateOfBirth:** DateTime (Nullable)
-- **gender:** String (Nullable) (Enum: "MALE", "FEMALE", "OTHER")
+- **gender:** String (Nullable) (Type: `Gender` enum → "MALE", "FEMALE", "OTHER". Declared as a Prisma `enum Gender` in [`schema.prisma`](prisma/schema.prisma:92), not a free-form string.)
 - **currencyPreference:** String (Default: "USD", e.g., "IDR", "USD", "EUR")
 - **languagePreference:** String (Default: "en", e.g., "en", "id", "es". Stores the user's preferred UI display language code for client-side internationalization resolution.)
 - **createdAt:** DateTime
@@ -175,8 +175,8 @@ Core ledger for financial mutations.
 - **amount:** Decimal (Precision: 18, Scale: 4)
 - **subCategoryId:** String (Foreign Key -> SubCategory.id, Indexed)
 - **date:** DateTime (Indexed for time-series aggregation and reporting)
-- **sourceAccountId:** String (Nullable, Foreign Key -> Account.id, Indexed, mandatory for Expense/Transfer)
-- **destinationAccountId:** String (Nullable, Foreign Key -> Account.id, Indexed, mandatory for Income/Transfer)
+- **sourceAccountId:** String (Nullable, Foreign Key -> `FinancialAccount.id`, Indexed, mandatory for Expense/Transfer, `On Delete: Restrict`)
+- **destinationAccountId:** String (Nullable, Foreign Key -> `FinancialAccount.id`, Indexed, mandatory for Income/Transfer, `On Delete: Restrict`)
 - **description:** String (Nullable)
 - **payeePayer:** String (Nullable, Indexed for autocomplete text search)
 - **tags:** String[] (Array of strings, optionally indexed using GIN in PostgreSQL for array searches)
@@ -199,7 +199,7 @@ Core ledger for financial mutations.
   - All data mutations and retrievals MUST utilize standard REST APIs via Next.js Route Handlers (`app/api/...`) instead of Server Actions to ensure modular decoupling and effortless extensibility for future platforms (e.g., MVP 2 Mobile App).
   - **API Security Protocol:** All endpoints require strict Session validation (Better Auth tokens), rate limiting implementation, request payload validation using Zod schemas, and strict CORS configuration restricting external domain access.
 - **Query Hardening (Anti-IDOR):** Every database query within the Route Handlers MUST look up records using BOTH the specific resource ID and the validated active `workspaceId` derived from the session membership check to prevent Insecure Direct Object Reference vulnerabilities.
-- **Atomic Balance Updates:** Balance updates must follow strict mathematical invariants within a Prisma `$transaction` block. Any transaction creation, deletion, or adjustment must modify the `netTransactionSum` of the associated `Account`. The `initialBalance` remains separate and is only touched when the user explicitly modifies the account settings.
+- **Atomic Balance Updates:** Balance updates must follow strict mathematical invariants within a Prisma `$transaction` block. Any transaction creation, deletion, or adjustment must modify the `netTransactionSum` of the associated `FinancialAccount`. The `initialBalance` remains separate and is only touched when the user explicitly modifies the account settings.
 - **Financial Precision:** All financial mutations and calculations MUST use database `Decimal(18,4)` fields to eliminate JavaScript floating-point rounding errors.
 - **Database Transaction:** All financial mutations and calculations MUST be wrapped in a Prisma `$transaction` block to ensure atomicity and consistency.
 
