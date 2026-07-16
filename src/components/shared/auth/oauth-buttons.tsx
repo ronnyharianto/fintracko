@@ -50,6 +50,20 @@ export function OAuthButtons({
           typeof window !== "undefined"
             ? window.location.origin + "/onboarding"
             : undefined,
+        // When the OAuth callback fails server-side (e.g.
+        // `account_not_linked` because account linking is disabled in
+        // `src/lib/auth.ts` and the email already belongs to an account
+        // signed up via a different provider), Better Auth appends
+        // `?error=<code>` to this URL and redirects the browser here.
+        // We route failures to the dedicated `/error` page
+        // (`src/app/error/page.tsx`) so the user sees a friendly
+        // [`StatusScreen`](src/components/shared/status-screen.tsx)
+        // message instead of being dropped on the homepage with a raw
+        // `?error=account_not_linked` query string and no feedback.
+        errorCallbackURL:
+          typeof window !== "undefined"
+            ? window.location.origin + "/error"
+            : undefined,
       });
 
       if (error) {
