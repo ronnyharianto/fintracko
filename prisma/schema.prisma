@@ -5,20 +5,18 @@
 // docs/architecture/ARCHITECTURE.md §2 ("Database Schema Design").
 //
 // Models (12 total):
-//   1. User             — Authenticated user. Doubles as the Better Auth
-//                         identity table; field contract aligned with the
-//                         Better Auth Prisma adapter (Task 2.2).
-//   2. AuthAccount      — OAuth provider identity linkage (Better Auth owned).
-//   3. Session          — HttpOnly session tokens (Better Auth owned).
-//   4. Verification     — OAuth/email verification tokens (Better Auth owned).
-//   5. Profile          — Onboarding-completion marker + user preferences.
-//   6. Workspace        — Root multi-tenancy isolation boundary.
-//   7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR).
-//   8. Account          — Financial ledger node (Bank, Cash, Wallet).
-//   9. Category         — Level 1 transaction classification.
-//  10. SubCategory      — Level 2 transaction classification.
-//  11. Budget           — Spending limit bound to a SubCategory (L2) + interval.
-//  12. Transaction      — Core financial mutation ledger entry.
+//   1. User             — Authenticated user. (Schema: ft_auth)
+//   2. AuthAccount      — OAuth provider identity linkage. (Schema: ft_auth)
+//   3. Session          — HttpOnly session tokens. (Schema: ft_auth)
+//   4. Verification     — OAuth/email verification tokens. (Schema: ft_auth)
+//   5. Profile          — Onboarding-completion marker + user preferences. (Schema: ft_core)
+//   6. Workspace        — Root multi-tenancy isolation boundary. (Schema: ft_core)
+//   7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR). (Schema: ft_core)
+//   8. FinancialAccount — Financial ledger node (Bank, Cash, Wallet). (Schema: ft_core)
+//   9. Category         — Level 1 transaction classification. (Schema: ft_core)
+//  10. SubCategory      — Level 2 transaction classification. (Schema: ft_core)
+//  11. Budget           — Spending limit bound to a SubCategory (L2) + interval. (Schema: ft_core)
+//  12. FinancialTransaction — Core financial mutation ledger entry. (Schema: ft_core)
 //
 // Conventions enforced everywhere:
 //   - UUID primary keys via native PostgreSQL `@db.Uuid`.
@@ -51,6 +49,7 @@ datasource db {
   // `DATABASE_URL` environment variable via `dotenv/config`. See
   // ARCHITECTURE.md §5 and §6 for the local Supabase dev workflow.
   provider = "postgresql"
+  schemas  = ["ft_auth", "ft_core"]
 }
 
 // ----------------------------------------------------------------------------
@@ -61,6 +60,7 @@ datasource db {
 enum WorkspaceRole {
   OWNER
   COLLABORATOR
+  @@schema("ft_core")
 }
 
 /// Transaction or budget parent classification type.
@@ -68,6 +68,7 @@ enum CategoryType {
   INCOME
   EXPENSE
   TRANSFER
+  @@schema("ft_core")
 }
 
 /// Identical to `CategoryType`; declared separately for the `Transaction.type`
@@ -77,12 +78,14 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+  @@schema("ft_core")
 }
 
 /// Budget evaluation window.
 enum BudgetInterval {
   MONTHLY
   YEARLY
+  @@schema("ft_core")
 }
 
 /// Optional user demographic captured during onboarding.
@@ -90,6 +93,7 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
@@ -111,17 +115,18 @@ model User {
 
   // --- Relations ---
   // One-to-one: a user has at most one profile. Deleting the user cascades.
-  profile Profile?
+  profile      Profile?
   // One-to-many: OAuth identity records owned by Better Auth.
   authAccounts AuthAccount[]
   // One-to-many: active session tokens owned by Better Auth.
-  sessions Session[]
+  sessions     Session[]
   // Workspaces this user owns (via `Workspace.ownerId`).
   ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
   // Workspaces this user is a member of.
-  memberships WorkspaceMember[]
+  memberships  WorkspaceMember[]
 
   @@index([createdAt]) // Chronological sorting of users
+  @@schema("ft_auth")
 }
 
 // ----------------------------------------------------------------------------
@@ -156,6 +161,7 @@ model AuthAccount {
 
   @@unique([providerId, accountId])
   @@index([userId])
+  @@schema("ft_auth")
 }
 
 // ----------------------------------------------------------------------------
@@ -175,6 +181,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@schema("ft_auth")
 }
 
 // ----------------------------------------------------------------------------
@@ -202,6 +209,7 @@ model Verification {
 
   // Index for fast lookups by identifier during the OAuth callback path.
   @@index([identifier])
+  @@schema("ft_auth")
 }
 
 // ----------------------------------------------------------------------------
@@ -213,7 +221,7 @@ model Verification {
 model Profile {
   id                  String   @id @default(uuid()) @db.Uuid
   userId              String   @unique @db.Uuid
-  phoneNumber          String?
+  phoneNumber         String?
   company             String?
   bio                 String?
   dateOfBirth         DateTime?
@@ -224,10 +232,11 @@ model Profile {
   updatedAt           DateTime @updatedAt @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 5. Workspace — Root multi-tenancy isolation boundary
+// 6. Workspace — Root multi-tenancy isolation boundary
 // ----------------------------------------------------------------------------
 
 model Workspace {
@@ -241,17 +250,18 @@ model Workspace {
 
   // Members with explicit roles for access control.
   members         WorkspaceMember[]
-  accounts        Account[]
+  accounts        FinancialAccount[]
   categories      Category[]
   subCategories   SubCategory[]
   budgets         Budget[]
-  transactions    Transaction[]
+  transactions    FinancialTransaction[]
 
-  @@index([ownerId]) // Quick lookup of owned workspaces
+  @@index([ownerId])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 6. WorkspaceMember — Collaboration access control
+// 7. WorkspaceMember — Collaboration access control
 // ----------------------------------------------------------------------------
 
 model WorkspaceMember {
@@ -268,10 +278,11 @@ model WorkspaceMember {
   @@unique([workspaceId, userId])
   @@index([workspaceId])
   @@index([userId])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 7. Account — Financial ledger node (Bank, Cash, Digital Wallet, ...)
+// 8. FinancialAccount — Financial ledger node (Bank, Cash, Digital Wallet, ...)
 // ----------------------------------------------------------------------------
 // Balance invariant (ARCHITECTURE.md §3 — Atomic Balance Updates):
 //   Final Balance = initialBalance + netTransactionSum
@@ -279,7 +290,7 @@ model WorkspaceMember {
 // affected source/destination account inside a Prisma `$transaction` block.
 // `initialBalance` is only touched when the user edits account settings.
 
-model Account {
+model FinancialAccount {
   id                 String   @id @default(uuid()) @db.Uuid
   workspaceId        String   @db.Uuid
   name               String
@@ -292,18 +303,19 @@ model Account {
 
   // Transactions where this account is the source (mandatory for
   // EXPENSE / TRANSFER).
-  outgoingTransactions Transaction[] @relation("TransactionSourceAccount")
+  outgoingTransactions FinancialTransaction[] @relation("TransactionSourceAccount")
   // Transactions where this account is the destination (mandatory for
   // INCOME / TRANSFER).
-  incomingTransactions Transaction[] @relation("TransactionDestinationAccount")
+  incomingTransactions FinancialTransaction[] @relation("TransactionDestinationAccount")
 
   // Prevents duplicate account names within the same workspace.
   @@unique([workspaceId, name])
   @@index([workspaceId])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 8. Category — Level 1 transaction classification
+// 9. Category — Level 1 transaction classification
 // ----------------------------------------------------------------------------
 
 model Category {
@@ -320,10 +332,11 @@ model Category {
   // Composite index for filtering categories by workspace AND type in a
   // single index range scan (e.g. dashboard "Expense Breakdown" query).
   @@index([workspaceId, type])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 9. SubCategory — Level 2 transaction classification
+// 10. SubCategory — Level 2 transaction classification
 // ----------------------------------------------------------------------------
 
 model SubCategory {
@@ -338,14 +351,15 @@ model SubCategory {
   category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   budgets      Budget[]
-  transactions Transaction[]
+  transactions FinancialTransaction[]
 
   @@index([workspaceId])
   @@index([categoryId])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 10. Budget — Spending limit on a SubCategory (Level 2) for an interval
+// 11. Budget — Spending limit on a SubCategory (Level 2) for an interval
 // ----------------------------------------------------------------------------
 // Per ARCHITECTURE.md / PRD_MVP1.md, budgets are scoped strictly to Level 2
 // SubCategories. The backend guard (Task 6.1) rejects budget creation if the
@@ -367,24 +381,25 @@ model Budget {
   @@unique([subCategoryId, interval])
   @@index([subCategoryId])
   @@index([workspaceId])
+  @@schema("ft_core")
 }
 
 // ----------------------------------------------------------------------------
-// 11. Transaction — Core financial mutation ledger
+// 12. FinancialTransaction — Core financial mutation ledger
 // ----------------------------------------------------------------------------
 // Account direction safeguards (enforced in the POST handler, Task 5.1):
 //   - INCOME    => destinationAccountId mandatory
 //   - EXPENSE   => sourceAccountId      mandatory
 //   - TRANSFER  => both source & destination mandatory
 
-model Transaction {
+model FinancialTransaction {
   id                 String          @id @default(uuid()) @db.Uuid
   workspaceId        String          @db.Uuid
   type               TransactionType
   amount             Decimal         @db.Decimal(18, 4)
   subCategoryId      String          @db.Uuid
   date               DateTime
-  sourceAccountId      String?        @db.Uuid
+  sourceAccountId    String?         @db.Uuid
   destinationAccountId String?       @db.Uuid
   description        String?
   payeePayer         String?
@@ -395,8 +410,8 @@ model Transaction {
 
   workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   subCategory  SubCategory  @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
-  sourceAccount      Account? @relation("TransactionSourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
-  destinationAccount Account? @relation("TransactionDestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  sourceAccount      FinancialAccount? @relation("TransactionSourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  destinationAccount FinancialAccount? @relation("TransactionDestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
 
   // Index declarations for the hot query paths enumerated in
   // ARCHITECTURE.md §3 / §4 (time-series aggregation, type filtering,
@@ -406,5 +421,6 @@ model Transaction {
   @@index([subCategoryId])
   @@index([sourceAccountId])
   @@index([destinationAccountId])
-  @@index([payeePayer]) // Autocomplete `DISTINCT` scan
+  @@index([payeePayer])
+  @@schema("ft_core")
 }

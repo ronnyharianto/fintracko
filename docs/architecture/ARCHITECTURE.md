@@ -15,9 +15,16 @@
 
 ---
 
-## 2. Database Schema Design (Prisma-Compliant)
+## 2. Database Schema Design (Prisma-Compliant, Multi-Schema)
 
-### User Table
+The database utilizes a multi-schema strategy to separate authentication data from core business logic:
+
+- **`ft_auth`**: Stores Better Auth-owned tables (`User`, `AuthAccount`, `Session`, `Verification`).
+- **`ft_core`**: Stores Fintracko business logic tables (`Profile`, `Workspace`, `WorkspaceMember`, `FinancialAccount`, `Category`, `SubCategory`, `Budget`, `FinancialTransaction`).
+
+### ft_auth Schema (Better Auth)
+
+#### User Table
 
 Tracks authenticated users. This table doubles as the Better Auth identity table; its field contract is intentionally aligned with Better Auth's Prisma adapter requirements so that the OAuth integration (Task 2.2) operates against the same source-of-truth table without a parallel identity store.
 
@@ -29,7 +36,7 @@ Tracks authenticated users. This table doubles as the Better Auth identity table
 - **createdAt:** DateTime (Indexed for chronological sorting)
 - **updatedAt:** DateTime (Required by Better Auth for session refresh / touch-on-login behavior.)
 
-### AuthAccount Table
+#### AuthAccount Table
 
 Stores OAuth provider identity linkage records. This table is owned and mutated exclusively by Better Auth; application code must never write to it directly. The name `AuthAccount` (not `Account`) is intentional — it avoids a naming collision with the financial `Account` table below. The mapping is wired via Better Auth's `modelMapping` configuration during Task 2.2.
 
@@ -48,7 +55,7 @@ Stores OAuth provider identity linkage records. This table is owned and mutated 
 - **updatedAt:** DateTime
 - **Compound Unique Key:** [providerId, accountId] (Prevents duplicate identity linkage for the same provider-user pair.)
 
-### Session Table
+#### Session Table
 
 Stores HttpOnly authenticated session tokens issued by Better Auth. Owned and managed exclusively by the Better Auth runtime; application code reads the active session via Better Auth's server session helper, not via direct Prisma queries against this table.
 
@@ -61,7 +68,7 @@ Stores HttpOnly authenticated session tokens issued by Better Auth. Owned and ma
 - **createdAt:** DateTime
 - **updatedAt:** DateTime
 
-### Verification Table
+#### Verification Table
 
 Stores short-lived verification tokens used by Better Auth during OAuth flows (e.g. OAuth state round-trip callbacks) and email-verification flows. Like `AuthAccount` and `Session`, this table is owned and mutated exclusively by the Better Auth runtime; application code must never write to it directly. It was added as a Task 2.2 fix — the Better Auth Prisma adapter previously failed OAuth sign-in with "Model verification does not exist in the database" because neither the model nor a backing table existed.
 
@@ -72,7 +79,9 @@ Stores short-lived verification tokens used by Better Auth during OAuth flows (e
 - **createdAt:** DateTime
 - **updatedAt:** DateTime
 
-### Profile Table
+### ft_core Schema (Business Logic)
+
+#### Profile Table
 
 Stores comprehensive user profile details. The presence of a record in this table implicitly indicates that the user has successfully completed the onboarding process.
 
@@ -88,7 +97,7 @@ Stores comprehensive user profile details. The presence of a record in this tabl
 - **createdAt:** DateTime
 - **updatedAt:** DateTime
 
-### Workspace Table
+#### Workspace Table
 
 The root boundary for multi-tenancy isolation.
 
@@ -97,7 +106,7 @@ The root boundary for multi-tenancy isolation.
 - **createdAt:** DateTime
 - **ownerId:** String (Foreign Key -> User.id, Indexed for quick lookup of owned workspaces)
 
-### WorkspaceMember Table
+#### WorkspaceMember Table
 
 Handles collaboration access control.
 
@@ -107,7 +116,7 @@ Handles collaboration access control.
 - **role:** String (Enum: "OWNER", "COLLABORATOR")
 - **Compound Unique Key:** [workspaceId, userId] (Ensures a user is only added once per workspace)
 
-### Account Table
+#### FinancialAccount Table (Formerly Account)
 
 Tracks financial nodes (e.g., Bank, Cash) with explicit initial balance decoupling and delta tracking.
 
@@ -121,7 +130,7 @@ Tracks financial nodes (e.g., Bank, Cash) with explicit initial balance decoupli
   - _Formula:_ `Final Balance = initialBalance + netTransactionSum`.
 - **Compound Unique Key:** [workspaceId, name] (Prevents duplicate account names in the same workspace)
 
-### Category Table (Level 1)
+#### Category Table (Level 1)
 
 Parent classification for transactions.
 
@@ -132,7 +141,7 @@ Parent classification for transactions.
 - **createdAt:** DateTime
 - **updatedAt:** DateTime
 
-### SubCategory Table (Level 2)
+#### SubCategory Table (Level 2)
 
 Detailed classification for transactions and budget targets.
 
@@ -143,7 +152,7 @@ Detailed classification for transactions and budget targets.
 - **createdAt:** DateTime
 - **updatedAt:** DateTime
 
-### Budget Table
+#### Budget Table
 
 Enforces spending limits strictly on Level 2 sub-categories.
 
@@ -156,7 +165,7 @@ Enforces spending limits strictly on Level 2 sub-categories.
 - **createdAt:** DateTime
 - **updatedAt:** DateTime (Tracks threshold adjustments for audit traceability.)
 
-### Transaction Table
+#### FinancialTransaction Table (Formerly Transaction)
 
 Core ledger for financial mutations.
 
