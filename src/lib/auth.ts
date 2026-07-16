@@ -35,6 +35,7 @@ export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+  trustedOrigins: ["http://localhost:3000"],
   emailAndPassword: {
     enabled: false,
   },
@@ -66,14 +67,14 @@ export const auth = betterAuth({
   user: {
     modelName: "User",
   },
+  session: {
+    modelName: "Session",
+  },
   account: {
     modelName: "AuthAccount",
     accountLinking: {
       enabled: false,
     },
-  },
-  session: {
-    modelName: "Session",
   },
   verification: {
     modelName: "Verification",
@@ -88,7 +89,11 @@ export const auth = betterAuth({
      * by the provider, as unverified emails could belong to any user who
      * can receive mail at that address.
      */
-    signIn: async ({ user }: { user: { emailVerified: boolean | null | undefined } }) => {
+    signIn: async ({
+      user,
+    }: {
+      user: { emailVerified: boolean | null | undefined };
+    }) => {
       if (user.emailVerified === false) {
         throw new Error("Email is not verified by the OAuth provider.");
       }
@@ -97,6 +102,11 @@ export const auth = betterAuth({
           emailVerified: user.emailVerified,
         },
       };
+    },
+  },
+  advanced: {
+    database: {
+      generateId: () => crypto.randomUUID(),
     },
   },
 });

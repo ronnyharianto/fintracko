@@ -33,8 +33,8 @@ Fintracko follows a **Modern Minimalist** design aesthetic focused on clarity, t
 
 ### Font Families
 - **Headings**: System fonts (Geist, Segoe UI, Roboto)
-- **Body**: System fonts for optimal performance
-- **Monospace**: System monospace for data tables and code (future)
+- **Body**: System fonts for optimal performance. Loaded via the `Geist` variable (`--font-geist-sans`) exposed in [`src/app/layout.tsx`](src/app/layout.tsx:16).
+- **Monospace**: `Geist Mono`, loaded via `Geist_Mono` and exposed as the `--font-geist-mono` CSS variable in [`src/app/layout.tsx`](src/app/layout.tsx:21). Used for data tables and code/numeric displays.
 
 ### Sizing
 - **H1**: 2rem (32px) - Page titles, hero sections

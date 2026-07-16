@@ -7,9 +7,27 @@ import {
 } from "lucide-react";
 
 const STEPS: Step[] = [
-  { number: 1, icon: UserPlus, title: "Sign Up & Onboard", description: "Create your account in seconds using Google or GitHub. Complete a quick one-time profile setup and choose your first workspace template." },
-  { number: 2, icon: FolderOpen, title: "Configure Your Workspace", description: "Add financial accounts (bank, cash, wallet), set up categories, and invite collaborators. Your workspace is ready in minutes." },
-  { number: 3, icon: TrendingUp, title: "Track, Budget & Grow", description: "Log transactions daily, monitor budget utilization, and review analytics dashboards to make informed financial decisions." },
+  {
+    number: 1,
+    icon: UserPlus,
+    title: "Sign Up & Onboard",
+    description:
+      "Create your account in seconds using Google or GitHub. Complete a quick one-time profile setup and choose your first workspace template.",
+  },
+  {
+    number: 2,
+    icon: FolderOpen,
+    title: "Configure Your Workspace",
+    description:
+      "Add financial accounts (bank, cash, wallet), set up categories, and invite collaborators. Your workspace is ready in minutes.",
+  },
+  {
+    number: 3,
+    icon: TrendingUp,
+    title: "Track, Budget & Grow",
+    description:
+      "Log transactions daily, monitor budget utilization, and review analytics dashboards to make informed financial decisions.",
+  },
 ];
 
 interface Step {
@@ -26,19 +44,28 @@ interface Step {
  * Steps have gradient number badges (primary → emerald) and a
  * connecting gradient line between them.
  */
-export function HowItWorks({ id, className }: { id?: string; className?: string }) {
+export function HowItWorks({
+  id,
+  className,
+}: {
+  id?: string;
+  className?: string;
+}) {
   return (
     <section
       id={id}
       className={cn(
-        "relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-emerald-500/5 py-20 lg:py-28",
+        "relative overflow-hidden bg-linear-to-b from-primary/5 via-background to-emerald-500/5 py-20 lg:py-28",
         className,
       )}
     >
       {/* Decorative gradient */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute bottom-0 left-0 h-[300px] w-[500px] rounded-full bg-gradient-to-tr from-emerald-500/10 to-transparent blur-3xl" />
-        <div className="absolute right-0 top-0 h-[300px] w-[400px] rounded-full bg-gradient-to-bl from-primary/10 to-transparent blur-3xl" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
+        <div className="absolute bottom-0 left-0 h-[300px] w-[500px] rounded-full bg-linear-to-tr from-emerald-500/10 to-transparent blur-3xl" />
+        <div className="absolute right-0 top-0 h-[300px] w-[400px] rounded-full bg-linear-to-bl from-primary/10 to-transparent blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -49,7 +76,7 @@ export function HowItWorks({ id, className }: { id?: string; className?: string 
           </span>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Get Started in{" "}
-            <span className="bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
               Three Simple Steps
             </span>
           </h2>
@@ -64,7 +91,7 @@ export function HowItWorks({ id, className }: { id?: string; className?: string 
           {/* Connecting line (desktop) */}
           <div
             aria-hidden="true"
-            className="absolute left-0 right-0 top-12 mx-auto hidden h-1 max-w-5xl rounded-full bg-gradient-to-r from-primary/40 via-emerald-500/40 to-primary/40 md:block"
+            className="absolute left-0 right-0 top-12 mx-auto hidden h-1 max-w-5xl rounded-full bg-linear-to-r from-primary/40 via-emerald-500/40 to-primary/40 md:block"
           />
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
@@ -76,7 +103,7 @@ export function HowItWorks({ id, className }: { id?: string; className?: string 
                   className="relative flex flex-col items-center text-center"
                 >
                   {/* Number badge */}
-                  <div className="relative z-10 mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-500 text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25 ring-4 ring-background">
+                  <div className="relative z-10 mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-linear-to-br from-primary to-emerald-500 text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25 ring-4 ring-background">
                     {step.number}
                   </div>
                   {/* Icon */}

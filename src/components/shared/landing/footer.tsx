@@ -15,14 +15,14 @@ export function Footer({ className }: { className?: string }) {
   return (
     <footer
       className={cn(
-        "relative border-t border-primary/15 bg-gradient-to-b from-primary/5 to-muted/30",
+        "relative border-t border-primary/15 bg-linear-to-b from-primary/5 to-muted/30",
         className,
       )}
     >
       {/* Gradient top accent */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent"
+        className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-primary to-transparent"
       />
 
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
@@ -51,17 +51,26 @@ export function Footer({ className }: { className?: string }) {
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/#features" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  href="/#features"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="/#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  href="/#how-it-works"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
                   How It Works
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  href="/login"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
                   Sign In
                 </Link>
               </li>
@@ -75,12 +84,18 @@ export function Footer({ className }: { className?: string }) {
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/privacy-policy" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  href="/privacy-policy"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms-of-service" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  href="/terms-of-service"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
                   Terms of Service
                 </Link>
               </li>

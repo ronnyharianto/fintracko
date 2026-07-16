@@ -15,7 +15,7 @@ export function NavBar({ className }: { className?: string }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-primary/15 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 backdrop-blur-md supports-[backdrop-filter]bg-background/60",
+        "sticky top-0 z-50 w-full border-b border-primary/15 bg-linear-to-r from-primary/5 via-accent/5 to-primary/5 backdrop-blur-md supports-[backdrop-filter]bg-background/60",
         className,
       )}
     >
@@ -59,7 +59,7 @@ export function NavBar({ className }: { className?: string }) {
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-9 items-center justify-center rounded-md bg-gradient-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-linear-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Get Started
           </Link>

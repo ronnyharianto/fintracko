@@ -29,6 +29,6 @@ export default defineConfig({
   // Supabase CLI Docker instance; for staging/prod it points to Supabase
   // Cloud. Both are supplied via the same `DATABASE_URL` env var.
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env.DATABASE_URL,
   },
 });

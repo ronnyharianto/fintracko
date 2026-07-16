@@ -14,7 +14,7 @@ export function HeroSection({ className }: { className?: string }) {
   return (
     <section
       className={cn(
-        "relative overflow-hidden bg-gradient-to-b from-primary/10 via-accent/5 to-background py-24 sm:py-28 lg:py-36",
+        "relative overflow-hidden bg-linear-to-b from-primary/10 via-accent/5 to-background py-24 sm:py-28 lg:py-36",
         className,
       )}
     >
@@ -23,7 +23,7 @@ export function HeroSection({ className }: { className?: string }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
-        <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-br from-primary/30 via-accent/20 to-transparent blur-3xl" />
+        <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-linear-to-br from-primary/30 via-accent/20 to-transparent blur-3xl" />
         <div className="absolute -right-20 top-1/4 h-[350px] w-[350px] animate-pulse rounded-full bg-emerald-400/20 blur-3xl [animation-duration:4s]" />
         <div className="absolute -left-20 bottom-0 h-[400px] w-[400px] animate-pulse rounded-full bg-teal-500/15 blur-3xl [animation-duration:6s]" />
       </div>
@@ -41,7 +41,7 @@ export function HeroSection({ className }: { className?: string }) {
         {/* Headline */}
         <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Take Control of Your{" "}
-          <span className="bg-gradient-to-r from-primary via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-primary via-teal-500 to-emerald-500 bg-clip-text text-transparent">
             Financial Future
           </span>
         </h1>
@@ -57,7 +57,7 @@ export function HeroSection({ className }: { className?: string }) {
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             href="/login"
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-gradient-to-r from-primary to-accent px-8 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-px"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-linear-to-r from-primary to-accent px-8 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-px"
           >
             Get Started Free
           </Link>

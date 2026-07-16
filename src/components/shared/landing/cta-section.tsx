@@ -11,12 +11,18 @@ import { cn } from "@/lib/utils";
 export function CtaSection({ className }: { className?: string }) {
   return (
     <section
-      className={cn("relative overflow-hidden bg-background py-20 lg:py-28", className)}
+      className={cn(
+        "relative overflow-hidden bg-background py-20 lg:py-28",
+        className,
+      )}
     >
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-emerald-500 to-accent px-6 py-16 text-center shadow-2xl shadow-primary/25 sm:px-12 lg:py-20">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary via-emerald-500 to-accent px-6 py-16 text-center shadow-2xl shadow-primary/25 sm:px-12 lg:py-20">
           {/* Floating shapes */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+          >
             <div className="absolute -left-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -bottom-10 -right-10 h-56 w-56 rounded-full bg-white/15 blur-2xl" />
             <div className="absolute right-1/4 top-1/4 h-24 w-24 animate-pulse rounded-full bg-white/10 blur-xl [animation-duration:5s]" />
@@ -27,8 +33,8 @@ export function CtaSection({ className }: { className?: string }) {
               Ready to Simplify Your Finances?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/85">
-              Join thousands of users who trust Fintracko to keep their
-              personal and business finances organized — completely free.
+              Join thousands of users who trust Fintracko to keep their personal
+              and business finances organized — completely free.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link

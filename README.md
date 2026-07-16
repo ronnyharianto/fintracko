@@ -9,11 +9,11 @@
 
 ### Prerequisites
 
-| Tool | Min Version | Purpose |
-|------|-------------|---------|
-| [Node.js](https://nodejs.org/) | 20 LTS | Runtime |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | 24+ | Local Supabase (Postgres) |
-| [Git](https://git-scm.com/) | 2.40+ | Version control |
+| Tool                                                              | Min Version | Purpose                   |
+| ----------------------------------------------------------------- | ----------- | ------------------------- |
+| [Node.js](https://nodejs.org/)                                    | 20 LTS      | Runtime                   |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | 24+         | Local Supabase (Postgres) |
+| [Git](https://git-scm.com/)                                       | 2.40+       | Version control           |
 
 ### 1. Clone & Install
 
@@ -78,39 +78,39 @@ Open [http://localhost:3000](http://localhost:3000) — the app is live.
 
 ### Development
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Next.js dev server (Turbopack) |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
+| Command         | Description                           |
+| --------------- | ------------------------------------- |
+| `npm run dev`   | Start Next.js dev server (`next dev`) |
+| `npm run build` | Production build                      |
+| `npm run start` | Start production server               |
+| `npm run lint`  | Run ESLint                            |
 
 ### Testing
 
-| Command | Description |
-|---------|-------------|
-| `npm run test` | Run Vitest in watch mode |
+| Command            | Description               |
+| ------------------ | ------------------------- |
+| `npm run test`     | Run Vitest in watch mode  |
 | `npm run test:run` | Run Vitest once (CI mode) |
-| `npm run test:ui` | Open Vitest UI dashboard |
+| `npm run test:ui`  | Open Vitest UI dashboard  |
 
 ### Database (Prisma)
 
-| Command | Description |
-|---------|-------------|
-| `npm run prisma:generate` | Generate Prisma Client from schema |
-| `npm run prisma:migrate` | Create & apply a new migration |
-| `npm run prisma:migrate:deploy` | Apply pending migrations (CI/prod) |
-| `npm run prisma:studio` | Open Prisma Studio (DB browser) |
-| `npm run db:push` | Push schema directly (no migration file) |
-| `npm run db:reset` | Reset DB and re-run all migrations |
+| Command                         | Description                              |
+| ------------------------------- | ---------------------------------------- |
+| `npm run prisma:generate`       | Generate Prisma Client from schema       |
+| `npm run prisma:migrate`        | Create & apply a new migration           |
+| `npm run prisma:migrate:deploy` | Apply pending migrations (CI/prod)       |
+| `npm run prisma:studio`         | Open Prisma Studio (DB browser)          |
+| `npm run db:push`               | Push schema directly (no migration file) |
+| `npm run db:reset`              | Reset DB and re-run all migrations       |
 
 ### Database (Supabase CLI)
 
-| Command | Description |
-|---------|-------------|
-| `npm run supabase:start` | Start local Supabase Docker stack |
-| `npm run supabase:stop` | Stop local Supabase services |
-| `npm run supabase:status` | Show running services & URLs |
+| Command                   | Description                       |
+| ------------------------- | --------------------------------- |
+| `npm run supabase:start`  | Start local Supabase Docker stack |
+| `npm run supabase:stop`   | Stop local Supabase services      |
+| `npm run supabase:status` | Show running services & URLs      |
 
 ---
 
@@ -223,21 +223,23 @@ This project uses **Prisma 7**, which introduced breaking changes:
 
 The local Supabase stack runs via **Docker** (managed by the Supabase CLI). The database is provisioned at `127.0.0.1:54322` with credentials `postgres:postgres`. We've disabled non-MVP services to reduce resource usage:
 
-| Service | Status | Reason |
-|---------|--------|--------|
-| PostgreSQL (db) | ✅ On | Required — the database |
-| Studio | ✅ On | Useful — DB admin UI at :54323 |
-| API Gateway | ✅ On | Required — future Auth/REST calls |
-| Auth (GoTrue) | ❌ Off | Not used — Better Auth handles OAuth (Task 2.2) |
-| Realtime | ❌ Off | WebSockets not in MVP |
-| Edge Functions | ❌ Off | Deno runtime not in MVP |
-| Storage / S3 | ❌ Off | File upload not in MVP |
-| Analytics | ❌ Off | Log analysis not needed yet |
-| Connection Pooler | ❌ Off | PrismaPg handles connections |
+| Service           | Status | Reason                                                     |
+| ----------------- | ------ | ---------------------------------------------------------- |
+| PostgreSQL (db)   | ✅ On  | Required — the database                                    |
+| Studio            | ✅ On  | Useful — DB admin UI at :54323                             |
+| API Gateway       | ✅ On  | Required — future Auth/REST calls                          |
+| Auth (GoTrue)     | ❌ Off | Not used — Better Auth handles OAuth (Task 2.2)            |
+| Realtime          | ❌ Off | WebSockets not in MVP                                      |
+| Edge Functions    | ❌ Off | Deno runtime not in MVP                                    |
+| Storage / S3      | ❌ Off | File upload not in MVP                                     |
+| Analytics         | ❌ Off | Log analysis not needed yet                                |
+| Connection Pooler | ❌ Off | PrismaPg handles connections                               |
+| Local SMTP        | ✅ On  | Inbucket email testing server (mail capture for local dev) |
 
 ### Unit Testing Rules
 
 Per [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md), all tests must be:
+
 - **Co-located** next to their target files (e.g., `src/lib/db.ts` → `src/lib/db.test.ts`)
 - **Explicitly named** `*.test.ts` or `*.test.tsx`
 - Run with `npm run test:run` before any task is marked complete
@@ -246,7 +248,7 @@ Per [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md), all tests must be:
 
 ## 🔐 Authentication
 
-Better Auth powers OAuth-only sign-in (no email/password). Task 2.2 is complete — 7 source files + 5 co-located test files (45 tests) ship with the integration.
+Better Auth powers OAuth-only sign-in (no email/password). Task 2.2 is complete — 7 source files + 5 co-located test files (44 tests) ship with the integration.
 
 ### Server instance — [`src/lib/auth.ts`](src/lib/auth.ts:1)
 
@@ -263,16 +265,26 @@ export const auth = betterAuth({
   emailAndPassword: { enabled: false },
   // Map Better Auth internal models → Prisma models explicitly
   // (user→User, account→AuthAccount, session→Session, verification→Verification)
-  user: { modelName: "user" },
-  account: { modelName: "account", accountLinking: { enabled: false } },
+  user: { modelName: "User" },
+  account: { modelName: "AuthAccount", accountLinking: { enabled: false } },
   session: { modelName: "session" },
   verification: { modelName: "verification" },
   socialProviders: {
-    google: { clientId: process.env.AUTH_GOOGLE_ID, clientSecret: process.env.AUTH_GOOGLE_SECRET },
-    github: { clientId: process.env.AUTH_GITHUB_ID, clientSecret: process.env.AUTH_GITHUB_SECRET },
+    google: {
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    },
+    github: {
+      clientId: process.env.AUTH_GITHUB_ID,
+      clientSecret: process.env.AUTH_GITHUB_SECRET,
+    },
   },
   callbacks: {
-    signIn: async ({ user }: { user: { emailVerified: boolean | null | undefined } }) => {
+    signIn: async ({
+      user,
+    }: {
+      user: { emailVerified: boolean | null | undefined };
+    }) => {
       // In production, reject only when the OAuth provider reports emailVerified === false.
       if (user.emailVerified === false) {
         throw new Error("Email is not verified by the OAuth provider.");
@@ -323,18 +335,18 @@ A `"use client"` component rendering Google + GitHub buttons. Accepts optional `
 
 ### Auth route group — `src/app/(auth)/`
 
-- **[`layout.tsx`](src/app/(auth)/layout.tsx:1)** — `AuthLayout` renders only a `FintrackoLogo` brand link to `/` (aria-label "Fintracko home") inside a `max-w-sm` centered container. **No NavBar / Footer.** Exports `metadata.robots = { index: false, follow: false }` so auth routes are noindex/nofollow.
-- **[`login/page.tsx`](src/app/(auth)/login/page.tsx:1)** — Card with `CardTitle` + `<h1>` "Welcome back", a `CardDescription`, the `<OAuthButtons />` client component, and a footer link "Create one" → `/register`.
-- **[`register/page.tsx`](src/app/(auth)/register/page.tsx:1)** — Card with "Create your account", `CardDescription`, `<OAuthButtons />`, and a footer link "Sign in" → `/login`.
+- **[`layout.tsx`](<src/app/(auth)/layout.tsx:1>)** — `AuthLayout` renders only a `FintrackoLogo` brand link to `/` (aria-label "Fintracko home") inside a `max-w-sm` centered container. **No NavBar / Footer.** Exports `metadata.robots = { index: false, follow: false }` so auth routes are noindex/nofollow.
+- **[`login/page.tsx`](<src/app/(auth)/login/page.tsx:1>)** — Card with `CardTitle` + `<h1>` "Welcome back", a `CardDescription`, the `<OAuthButtons />` client component, and a footer link "Create one" → `/register`.
+- **[`register/page.tsx`](<src/app/(auth)/register/page.tsx:1>)** — Card with "Create your account", `CardDescription`, `<OAuthButtons />`, and a footer link "Sign in" → `/login`.
 
 ### Required environment variables
 
-| Variable | Purpose |
-|----------|---------|
-| `BETTER_AUTH_SECRET` | Session signing secret (generate with `openssl rand -base64 32`) |
-| `BETTER_AUTH_URL` | App base URL used to build OAuth callback URLs (`http://localhost:3000` locally) |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client credentials |
-| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | GitHub OAuth client credentials |
+| Variable                                | Purpose                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                    | Session signing secret (generate with `openssl rand -base64 32`)                 |
+| `BETTER_AUTH_URL`                       | App base URL used to build OAuth callback URLs (`http://localhost:3000` locally) |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client credentials                                                  |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | GitHub OAuth client credentials                                                  |
 
 > OAuth redirect URLs must be set to `{BETTER_AUTH_URL}/api/v1/auth/callback/google` and `{BETTER_AUTH_URL}/api/v1/auth/callback/github` in the Google / GitHub developer consoles.
 
@@ -350,15 +362,15 @@ const { data: session, error } = await authClient.getSession();
 
 > The browser client uses `authClient.getSession()` — there is no `authClient.session()` method.
 
-### Test coverage (45 tests across 5 files)
+### Test coverage (44 tests across 5 files)
 
-| Test file | Tests | Covers |
-|-----------|-------|--------|
-| [`src/lib/auth.test.ts`](src/lib/auth.test.ts:1) | 17 | Auth instance structure, socialProviders env wiring, email verification `signIn` callback (`false` rejected, `null` rejected in helper, `true`/`undefined` allowed), GET/POST route handler exports, account-linking disabled, postgresql provider, `AuthClient` type export |
-| [`src/components/shared/auth/oauth-buttons.test.tsx`](src/components/shared/auth/oauth-buttons.test.tsx:1) | 11 | Both buttons rendered, default labels, `title` prop shown/omitted, `signIn.social` called with `google`/`github`, `pendingProvider` disables both buttons + shows "Redirecting…", re-enable on resolve, reset on reject |
-| [`src/app/(auth)/layout.test.tsx`](src/app/(auth)/layout.test.tsx:1) | 5 | Renders without throwing, renders Fintracko brand + home link, renders children, no NavBar/Footer, `robots.index === false` |
-| [`src/app/(auth)/login/page.test.tsx`](src/app/(auth)/login/page.test.tsx:1) | 6 | "Welcome back" heading, OAuthButtons rendered, register link → `/register`, indexing disabled + correct title/description metadata |
-| [`src/app/(auth)/register/page.test.tsx`](src/app/(auth)/register/page.test.tsx:1) | 6 | "Create your account" heading, OAuthButtons rendered, sign-in link → `/login`, indexing disabled + correct title/description metadata |
+| Test file                                                                                                  | Tests | Covers                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`src/lib/auth.test.ts`](src/lib/auth.test.ts:1)                                                           | 17    | Auth instance structure, socialProviders env wiring, email verification `signIn` callback (`false` rejected, `null` rejected in helper, `true`/`undefined` allowed), GET/POST route handler exports, account-linking disabled, postgresql provider, `AuthClient` type export |
+| [`src/components/shared/auth/oauth-buttons.test.tsx`](src/components/shared/auth/oauth-buttons.test.tsx:1) | 10    | Both buttons rendered, default labels, `title` prop shown/omitted, `signIn.social` called with `google`/`github`, `pendingProvider` disables both buttons + shows "Redirecting…", re-enable on resolve, reset on reject                                                      |
+| [`src/app/(auth)/layout.test.tsx`](<src/app/(auth)/layout.test.tsx:1>)                                     | 5     | Renders without throwing, renders Fintracko brand + home link, renders children, no NavBar/Footer, `robots.index === false`                                                                                                                                                  |
+| [`src/app/(auth)/login/page.test.tsx`](<src/app/(auth)/login/page.test.tsx:1>)                             | 6     | "Welcome back" heading, OAuthButtons rendered, register link → `/register`, indexing disabled + correct title/description metadata                                                                                                                                           |
+| [`src/app/(auth)/register/page.test.tsx`](<src/app/(auth)/register/page.test.tsx:1>)                       | 6     | "Create your account" heading, OAuthButtons rendered, sign-in link → `/login`, indexing disabled + correct title/description metadata                                                                                                                                        |
 
 Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md:1) (§ Better Auth + Verification table) and [`docs/product/TASK_ROADMAP.md`](docs/product/TASK_ROADMAP.md:1) (Task 2.2 resolution) — Better Auth integration reference. Status: **✅ Complete**.
 
@@ -366,15 +378,15 @@ Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARC
 
 ## 📚 Documentation
 
-| Document | Purpose |
-|----------|---------|
-| [`docs/product/PRD_MVP1.md`](docs/product/PRD_MVP1.md) | Product requirements & data models |
-| [`docs/product/TASK_ROADMAP.md`](docs/product/TASK_ROADMAP.md) | Implementation task checklist |
-| [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) | System architecture & design |
-| [`docs/architecture/API_SPECS.md`](docs/architecture/API_SPECS.md) | REST API contract specifications |
-| [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md) | AI agent development rules |
-| [`docs/core/DESIGN_SYSTEM.md`](docs/core/DESIGN_SYSTEM.md) | Design tokens & visual guidelines |
-| [`docs/core/PROJECT_STRUCTURE.md`](docs/core/PROJECT_STRUCTURE.md) | Directory structure & module layout |
+| Document                                                                 | Purpose                             |
+| ------------------------------------------------------------------------ | ----------------------------------- |
+| [`docs/product/PRD_MVP1.md`](docs/product/PRD_MVP1.md)                   | Product requirements & data models  |
+| [`docs/product/TASK_ROADMAP.md`](docs/product/TASK_ROADMAP.md)           | Implementation task checklist       |
+| [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) | System architecture & design        |
+| [`docs/architecture/API_SPECS.md`](docs/architecture/API_SPECS.md)       | REST API contract specifications    |
+| [`docs/core/AGENT_RULES.md`](docs/core/AGENT_RULES.md)                   | AI agent development rules          |
+| [`docs/core/DESIGN_SYSTEM.md`](docs/core/DESIGN_SYSTEM.md)               | Design tokens & visual guidelines   |
+| [`docs/core/PROJECT_STRUCTURE.md`](docs/core/PROJECT_STRUCTURE.md)       | Directory structure & module layout |
 
 ---
 
@@ -384,4 +396,4 @@ Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARC
 
 ---
 
-*Last updated: Phase 2 (Auth & Onboarding) — Task 2.2 complete — Better Auth integration (OAuth Google + GitHub, `basePath: /api/v1/auth`, explicit Prisma `modelMapping` incl. `Verification` table, account linking disabled, email verification callback, 45 passing tests). Follow-up migration `20260715141409_add_better_auth_verification_model` bumped the schema to 12 models.*
+_Last updated: Phase 2 (Auth & Onboarding) — Task 2.2 complete — Better Auth integration (OAuth Google + GitHub, `basePath: /api/v1/auth`, explicit Prisma `modelMapping` incl. `Verification` table, account linking disabled, email verification callback, 45 passing tests). Follow-up migration `20260715141409_add_better_auth_verification_model` bumped the schema to 12 models._

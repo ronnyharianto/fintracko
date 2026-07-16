@@ -98,12 +98,12 @@ enum Gender {
 
 model User {
   id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
   name          String
+  email         String    @unique
   // Presence of a non-null value indicates the OAuth provider confirmed the
   // email. The Task 2.2 OAuth rejection guard refuses payloads whose
   // `email_verified` claim is false, and in that case this column stays null.
-  emailVerified DateTime?
+  emailVerified Boolean
   image         String?
   createdAt     DateTime  @default(now())
   // Required by Better Auth for session refresh / touch-on-login behavior.
@@ -134,17 +134,17 @@ model User {
 
 model AuthAccount {
   id                     String    @id @default(uuid()) @db.Uuid
-  userId                 String    @db.Uuid
-  // OAuth provider identifier, e.g. "google" | "github".
-  providerId             String
   // OAuth provider's internal user id.
   accountId              String
+  // OAuth provider identifier, e.g. "google" | "github".
+  providerId             String
+  userId                 String    @db.Uuid
   accessToken            String?
   refreshToken           String?
-  accessTokenExpiresAt   DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                  String?
   idToken                String?
+  accessTokenExpiresAt   DateTime?
+  refreshTokenExpiresAt  DateTime?
+  scope                  String?
   // Always null for Fintracko — passwords are explicitly disabled per the
   // OAuth-only login policy in PRD_MVP1.md §3.1. The column is retained to
   // satisfy the Better Auth adapter's compiled schema contract.
@@ -164,13 +164,13 @@ model AuthAccount {
 
 model Session {
   id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  token     String   @unique
   expiresAt DateTime
-  ipAddress String?
-  userAgent String?
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt @default(now())
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -192,10 +192,10 @@ model Session {
 
 model Verification {
   id         String   @id @default(uuid()) @db.Uuid
-  value      String
   // A stable identifier Better Auth uses to look up a pending verification,
   // typically `<provider>:<userId>` or an email hash.
   identifier String
+  value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt @default(now())
