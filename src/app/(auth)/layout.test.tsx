@@ -8,7 +8,7 @@
  * - Children are wrapped inside the centered container.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import AuthLayout, { metadata } from "./layout";
 
@@ -32,10 +32,9 @@ describe("AuthLayout — render", () => {
       </AuthLayout>,
     );
     expect(screen.getByText(/Fintracko/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /fintracko home/i })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    expect(
+      screen.getByRole("link", { name: /fintracko home/i }),
+    ).toHaveAttribute("href", "/");
   });
 
   it("renders children content inside the centered container", () => {
