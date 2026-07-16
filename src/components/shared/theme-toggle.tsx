@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,9 +23,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   const [mounted, setMounted] = useState(false);
 
   // Sync local state with whatever the pre-hydration script established.
-  useEffect(() => {
-    const current =
-      document.documentElement.classList.contains("dark") ? "dark" : "light";
+  useLayoutEffect(() => {
+    const current = document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(current as "light" | "dark");
     setMounted(true);
   }, []);

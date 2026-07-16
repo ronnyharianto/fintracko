@@ -37,7 +37,6 @@ import { PrismaClient } from "../../generated/prisma/client";
 // Declared here (and not in a separate `*.d.ts`) to keep the singleton logic
 // and its type contract co-located.
 declare global {
-  // eslint-disable-next-line no-var
   var __prismaClient: PrismaClient | undefined;
 }
 

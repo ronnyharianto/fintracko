@@ -13,7 +13,6 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import type { NextRequest } from "next/server";
 
 // Mock environment variables before importing auth module
 const mockEnv = {
@@ -93,7 +92,7 @@ describe("Better Auth Configuration", () => {
       };
 
       await expect(
-        emailVerificationCallback.signIn(unverifiedUser)
+        emailVerificationCallback.signIn(unverifiedUser),
       ).rejects.toThrow("Email is not verified by the OAuth provider.");
     });
 
@@ -119,7 +118,7 @@ describe("Better Auth Configuration", () => {
 
       // null should also be rejected
       await expect(
-        emailVerificationCallback.signIn(nullVerifiedUser)
+        emailVerificationCallback.signIn(nullVerifiedUser),
       ).rejects.toThrow("Email is not verified by the OAuth provider.");
     });
 
@@ -132,7 +131,9 @@ describe("Better Auth Configuration", () => {
       };
 
       // undefined is not === false or === null, so it should pass
-      const result = await emailVerificationCallback.signIn(undefinedVerifiedUser);
+      const result = await emailVerificationCallback.signIn(
+        undefinedVerifiedUser,
+      );
       expect(result.user.emailVerified).toBeUndefined();
     });
   });
@@ -141,7 +142,8 @@ describe("Better Auth Configuration", () => {
 describe("OAuth Route Handler", () => {
   it("should export GET and POST handlers", async () => {
     // Import route module to verify exports
-    const routeModule = await import("@/app/api/v1/auth/[...better-auth]/route");
+    const routeModule =
+      await import("@/app/api/v1/auth/[...better-auth]/route");
 
     expect(routeModule.GET).toBeDefined();
     expect(typeof routeModule.GET).toBe("function");
@@ -152,15 +154,9 @@ describe("OAuth Route Handler", () => {
   it("GET handler should be a function", async () => {
     const { GET } = await import("@/app/api/v1/auth/[...better-auth]/route");
 
-    // Create a mock NextRequest
-    const mockRequest = {
-      method: "GET",
-      url: "http://localhost:3000/api/v1/auth/session",
-      headers: new Headers(),
-    } as unknown as NextRequest;
-
-    // The handler will call auth.handler which needs a proper request
-    // For unit testing, we verify the handler is a function
+    // For unit testing, we verify the handler is a function. (A full
+    // request/response round-trip against auth.handler is covered by the
+    // the integration suite rather than this isolated module check.)
     expect(typeof GET).toBe("function");
   });
 
@@ -227,7 +223,7 @@ describe("Callback edge cases", () => {
     await expect(
       emailVerificationCallback.signIn({
         user: { emailVerified: false },
-      })
+      }),
     ).rejects.toThrow();
   });
 
@@ -238,7 +234,9 @@ describe("Callback edge cases", () => {
     };
 
     // Should not throw since undefined !== false && undefined !== null
-    const result = await emailVerificationCallback.signIn(userWithoutEmailVerified);
+    const result = await emailVerificationCallback.signIn(
+      userWithoutEmailVerified,
+    );
     expect(result.user.emailVerified).toBeUndefined();
   });
 
@@ -246,7 +244,7 @@ describe("Callback edge cases", () => {
     await expect(
       emailVerificationCallback.signIn({
         user: { emailVerified: null },
-      })
+      }),
     ).rejects.toThrow("Email is not verified by the OAuth provider.");
   });
 });
