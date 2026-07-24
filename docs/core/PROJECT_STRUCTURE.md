@@ -3,6 +3,7 @@
 To maintain clean modularity, strict multi-tenancy isolation, database integrity, and robust automated test coverage, the application must strictly adhere to the following directory layout. Arbitrary top-level structures are prohibited.
 
 ## Root Directory Layout
+
 ```text
 fintracko/
 ├── .env.example           # Environment variable template (committed)
@@ -26,8 +27,8 @@ fintracko/
 │   ├── components/        # Reusable UI components
 │   │   ├── shared/        # Shared composed components used across routes (logo, theme toggle, auth, landing)
 │   │   └── ui/            # shadcn/ui atomic components (button, card, dialog, input, form, label, table, toast)
-│   ├── features/          # Domain-driven core business logic (future phases)
-│   ├── lib/               # Shared utilities, clients, and configurations
+│   ├── features/          # Domain-driven core business logic (`onboarding/` live; workspaces/accounts/transactions/budgets/analytics planned)
+│   ├── lib/               # Shared utilities, clients, and configurations (incl. `lib/api/` pipeline)
 │   ├── test/              # Test infrastructure (Vitest setup: jest-dom matchers)
 │   └── types/             # Global TypeScript type definitions (future)
 ├── generated/             # Generated Prisma Client output (`./generated/prisma`, git-ignored)
@@ -43,25 +44,26 @@ fintracko/
 
 This layer manages HTTP request endpoints and page structural renders. All security pipeline logic executes here before business mutations are called.
 
-* src/app/layout.tsx - Root layout injecting a pre-hydration inline script that reads the persisted light/dark theme from `localStorage` and sets the `.dark` class on `<html>` before paint (prevents flash of unstyled content / FOUC, default dark). Also mounts the `sonner` `<Toaster>` notification provider (`richColors`, `closeButton`, `position="top-right"`) and exports Fintracko branding metadata. Will additionally initialize Better Auth session providers in later phases.
-* src/app/page.tsx - Public marketing landing page optimized for search engine optimization (SEO). Composed of modular Server Component sections under `src/components/shared/landing/`.
-* src/app/(auth)/ - Auth route group (no NavBar/Footer; `robots: { index: false, follow: false }` — noindex/nofollow). `layout.tsx` renders a `max-w-sm` centered container with the `FintrackoLogo` brand link to `/`. Concrete pages: `login/page.tsx` ("Welcome back" card + `OAuthButtons` + register link) and `register/page.tsx` ("Create your account" card + `OAuthButtons` + sign-in link). Co-located render + metadata tests ship for both pages and the layout.
-* src/app/(marketing)/ - Static layout paths enforcing legal accessibility compliance: `/privacy-policy` and `/terms-of-service`. The shared `layout.tsx` provides the NavBar + Footer wrappers. Each page exposes SEO metadata (title, description, openGraph, robots).
-* src/app/(onboarding)/ - Step-by-step wizard route group (/onboarding) to create the initial user profile record and the first active workspace. (Planned for Phase 3 — not yet present in the codebase.)
-* src/app/(dashboard)/ - Private core application layout bound strictly to the OnboardingGuardWrapper component. (Planned for Phase 3+ — not yet present in the codebase.)
-  * src/app/(dashboard)/workspaces/ - Workspace orchestration switcher and management page. (Planned)
-  * src/app/(dashboard)/dashboard/ - Main analytical dashboard. (Planned)
-  * src/app/(dashboard)/transactions/ - Ledger management. (Planned)
-  * src/app/(dashboard)/budgets/ - Interface dedicated to assigning spending threshold limits. (Planned)
-* src/app/api/v1/ - Hardened REST API Route Handlers providing unified success/failure envelopes. (Only the auth handler is live; the business endpoints below are planned for Phases 3–7.)
-  * src/app/api/v1/auth/[...better-auth]/route.ts - Native handler managing identity states for Better Auth. ✅ Live — explicit `async` `GET`/`POST` named exports delegating to `auth.handler`.
-  * src/app/api/v1/workspaces/route.ts - Creates workspaces and seeds default categories. (Planned)
-  * src/app/api/v1/workspaces/[workspaceId]/route.ts - Retrieves or updates a specific workspace. (Planned)
-  * src/app/api/v1/workspaces/[workspaceId]/invite/route.ts - Generates workspace member invitations. (Planned)
-  * src/app/api/v1/accounts/route.ts - Instantiates specific financial asset nodes. (Planned)
-  * src/app/api/v1/transactions/route.ts - Processes ledger changes inside isolated transactions. (Planned)
-  * src/app/api/v1/budgets/route.ts - Modifies category threshold spending rules. (Planned)
-  * src/app/api/v1/analytics/dashboard/route.ts - Compiles mathematical reporting matrices. (Planned)
+- src/app/layout.tsx - Root layout injecting a pre-hydration inline script that reads the persisted light/dark theme from `localStorage` and sets the `.dark` class on `<html>` before paint (prevents flash of unstyled content / FOUC, default dark). Also mounts the `sonner` `<Toaster>` notification provider (`richColors`, `closeButton`, `position="top-right"`) and exports Fintracko branding metadata. Will additionally initialize Better Auth session providers in later phases.
+- src/app/page.tsx - Public marketing landing page optimized for search engine optimization (SEO). Composed of modular Server Component sections under `src/components/shared/landing/`.
+- src/app/(auth)/ - Auth route group (no NavBar/Footer; `robots: { index: false, follow: false }` — noindex/nofollow). `layout.tsx` renders a `max-w-sm` centered container with the `FintrackoLogo` brand link to `/`. Concrete pages: `login/page.tsx` ("Welcome back" card + `OAuthButtons` + register link) and `register/page.tsx` ("Create your account" card + `OAuthButtons` + sign-in link). Co-located render + metadata tests ship for both pages and the layout.
+- src/app/(marketing)/ - Static layout paths enforcing legal accessibility compliance: `/privacy-policy` and `/terms-of-service`. The shared `layout.tsx` provides the NavBar + Footer wrappers. Each page exposes SEO metadata (title, description, openGraph, robots).
+- src/app/(onboarding)/ - ✅ Live (Task 3.1 / 3.2). Step-by-step wizard route group (`/onboarding`) to create the initial `Profile` record and the first active `Workspace`. `layout.tsx` renders a distraction-free centered shell (Fintracko brand link, no NavBar/Footer, `robots: { index: false, follow: false }`) and wraps children in [`OnboardingGuardWrapper`](src/components/guards/onboarding-guard-wrapper.tsx) (so already-onboarded users bounce away). `onboarding/page.tsx` mounts the [`OnboardingForm`](src/components/shared/onboarding/onboarding-form.tsx). Co-located `layout.test.tsx` and `onboarding/page.test.tsx` ship.
+- src/app/(dashboard)/ - ✅ Live (Task 3.1 — layout). Private core application layout bound strictly to the `OnboardingGuardWrapper` component via `src/app/(dashboard)/layout.tsx`. (Inner business pages remain planned — see below.)
+  - src/app/(dashboard)/workspaces/ - Workspace orchestration switcher and management page. (Planned)
+  - src/app/(dashboard)/dashboard/ - Main analytical dashboard. ✅ Live — placeholder page renders a "Dashboard" heading while downstream business UIs are built in Phases 4–7.
+  - src/app/(dashboard)/transactions/ - Ledger management. (Planned)
+  - src/app/(dashboard)/budgets/ - Interface dedicated to assigning spending threshold limits. (Planned)
+- src/app/api/v1/ - Hardened REST API Route Handlers providing unified success/failure envelopes. (The auth + onboarding handlers are live; the business endpoints below are planned for Phases 3.3–7.)
+  - src/app/api/v1/auth/[...better-auth]/route.ts - Native handler managing identity states for Better Auth. ✅ Live — explicit `async` `GET`/`POST` named exports delegating to `auth.handler`.
+  - src/app/api/v1/onboarding/complete/route.ts - ✅ Live (Task 3.2). `POST` endpoint running the shared Task 2.3 pipeline (`withSession` → `validateBody` → `sanitizeObject`) over [`CompleteOnboardingSchema`](src/features/onboarding/schemas.ts), then atomically creating `Profile` + `Workspace` + `WorkspaceMember` (OWNER) in one Prisma `$transaction`. See API_SPECS.md §3.0. Co-located `route.test.ts` present.
+  - src/app/api/v1/workspaces/route.ts - Creates workspaces and seeds default categories. (Planned)
+  - src/app/api/v1/workspaces/[workspaceId]/route.ts - Retrieves or updates a specific workspace. (Planned)
+  - src/app/api/v1/workspaces/[workspaceId]/invite/route.ts - Generates workspace member invitations. (Planned)
+  - src/app/api/v1/accounts/route.ts - Instantiates specific financial asset nodes. (Planned)
+  - src/app/api/v1/transactions/route.ts - Processes ledger changes inside isolated transactions. (Planned)
+  - src/app/api/v1/budgets/route.ts - Modifies category threshold spending rules. (Planned)
+  - src/app/api/v1/analytics/dashboard/route.ts - Compiles mathematical reporting matrices. (Planned)
 
 ### 2.2 src/features/ (Domain Logic & Processing Layer)
 
@@ -69,49 +71,65 @@ To prevent fragmented code distribution, all validations, database updates, and 
 
 ```text
 src/features/
-├── workspaces/
+├── onboarding/          # ✅ Live (Task 3.2). First vertical slice shipped.
+│   ├── schemas.ts       # Zod 4 enums (Gender/Currency/Language) + CompleteOnboardingSchema
+│   ├── services.ts      # completeOnboarding() — atomic Prisma $transaction (Profile + Workspace + Owner member)
+│   ├── schemas.test.ts
+│   └── services.test.ts
+├── workspaces/          # (Planned — Phase 3.3)
 │   ├── handlers/        # HTTP request handler logic invoked by REST API Route Handlers (e.g., createWorkspace, inviteMember)
 │   ├── components/      # Reusable UI components for this module
 │   ├── schemas/         # Zod schemas for input validation
 │   └── services/        # Direct Prisma DB query abstractions
-├── accounts/
-├── transactions/
-├── budgets/
-└── analytics/
+├── accounts/            # (Planned — Phase 4)
+├── transactions/        # (Planned — Phase 5)
+├── budgets/             # (Planned — Phase 6)
+└── analytics/           # (Planned — Phase 7)
 ```
 
-* src/features/workspaces/ - Templates for setup constants, compound ownership filters, and schema fields.
-* src/features/accounts/ - Calculators for net asset totals based on initialBalance and netTransactionSum.
-* src/features/transactions/ - Atomic ledger rules enforcing strict math rules inside database procedures.
-* src/features/budgets/ - Systems to compute remaining allocations for Level 2 sub-categories.
-* src/features/analytics/ - Multi-month aggregations using precise database formatting tools.
+- src/features/onboarding/ - ✅ Live. Zod 4 schema for the onboarding payload (`GenderEnum`, `CurrencyEnum`, `LanguageEnum`, `CompleteOnboardingSchema`) and the atomic `completeOnboarding()` service that creates the `Profile`, the first `Workspace`, and the owner `WorkspaceMember` row inside a single Prisma `$transaction`.
+- src/features/workspaces/ - (Planned) Templates for setup constants, compound ownership filters, and schema fields.
+- src/features/accounts/ - (Planned) Calculators for net asset totals based on initialBalance and netTransactionSum.
+- src/features/transactions/ - (Planned) Atomic ledger rules enforcing strict math rules inside database procedures.
+- src/features/budgets/ - (Planned) Systems to compute remaining allocations for Level 2 sub-categories.
+- src/features/analytics/ - (Planned) Multi-month aggregations using precise database formatting tools.
 
 ### 2.3 src/components/ (Presentation & Interface Layer)
 
 UI components are clearly divided by responsibility to isolate logic from generic markup designs.
 
-* src/components/ui/ - Atomic visual design components built via shadcn/ui (new-york variant) such as button.tsx, card.tsx, dialog.tsx, input.tsx, form.tsx, label.tsx, table.tsx, and toast.tsx. All components carry `data-slot` attributes for deterministic DOM querying. Code injection here remains generic; business states must never be parsed inside these files. A co-located smoke test (`ui-components.test.tsx`) asserts every installed component renders without throwing.
-* src/components/shared/ - Reusable composed components shared across multiple routes (private screens + marketing pages). Currently houses `fintracko-logo.tsx` (SVG wallet + chart-bars logo with light/dark variants) and `theme-toggle.tsx` (accessible client-side `ThemeToggle` using `role="switch"` + `localStorage` persistence, with a co-located `theme-toggle.test.tsx`). Future private-screen widgets (sidebar.tsx, navbar.tsx, workspace-picker.tsx) will also live here.
-* src/components/shared/auth/ - Auth UI components: `oauth-buttons.tsx` — a `"use client"` component rendering Google + GitHub sign-in buttons (optional `title` + `className` props, per-provider pending state with "Redirecting…" UX, `callbackURL = {origin}/onboarding`), plus a co-located `oauth-buttons.test.tsx`.
-* src/components/shared/landing/ - Landing page section Server Components rendered by `src/app/page.tsx`: nav-bar.tsx, hero-section.tsx, feature-grid.tsx, how-it-works.tsx, cta-section.tsx, footer.tsx. Each is independently testable and follows the Fintracko teal design system (see DESIGN_SYSTEM.md).
-* src/components/guards/ - Pure server wrapper blocks like OnboardingGuardWrapper.tsx that implicitly check profile database records before displaying child views. (Planned for Task 3.1 — not yet present in the codebase.)
+- src/components/ui/ - Atomic visual design components built via shadcn/ui (new-york variant) such as button.tsx, card.tsx, dialog.tsx, input.tsx, form.tsx, label.tsx, table.tsx, and toast.tsx. All components carry `data-slot` attributes for deterministic DOM querying. Code injection here remains generic; business states must never be parsed inside these files. A co-located smoke test (`ui-components.test.tsx`) asserts every installed component renders without throwing.
+- src/components/shared/ - Reusable composed components shared across multiple routes (private screens + marketing pages). Currently houses `fintracko-logo.tsx` (SVG wallet + chart-bars logo with light/dark variants) and `theme-toggle.tsx` (accessible client-side `ThemeToggle` using `role="switch"` + `localStorage` persistence, with a co-located `theme-toggle.test.tsx`). Future private-screen widgets (sidebar.tsx, navbar.tsx, workspace-picker.tsx) will also live here.
+- src/components/shared/auth/ - Auth UI components: `oauth-buttons.tsx` — a `"use client"` component rendering Google + GitHub sign-in buttons (optional `title` + `className` props, per-provider pending state with "Redirecting…" UX, `callbackURL = {origin}/onboarding`), plus a co-located `oauth-buttons.test.tsx`.
+- src/components/shared/landing/ - Landing page section Server Components rendered by `src/app/page.tsx`: nav-bar.tsx, hero-section.tsx, feature-grid.tsx, how-it-works.tsx, cta-section.tsx, footer.tsx. Each is independently testable and follows the Fintracko teal design system (see DESIGN_SYSTEM.md).
+- src/components/shared/onboarding/ - ✅ Live (Task 3.2). Onboarding UI components: `onboarding-form.tsx` — a `"use client"` card-driven wizard (`Card` + `Input` + `Select` + `Checkbox`) collecting bio/dateOfBirth/gender/currencyPreference/languagePreference plus gated-read legal checkboxes (disabled until the relevant `/terms-of-service` / `/privacy-policy` link is clicked), then `POST`-ing to [`/api/v1/onboarding/complete`](src/app/api/v1/onboarding/complete/route.ts) and hard-redirecting to `/dashboard` on success. Co-located `onboarding-form.test.tsx`.
+- src/components/shared/status-screen.tsx - Shared status-screen surface for success/error/empty UI states.
+- src/components/guards/ - ✅ Live (Task 3.1). Pure server wrapper blocks that implicitly check profile database records before displaying child views. Currently houses `onboarding-guard-wrapper.tsx` — a React Server Component (no `'use client'`) that resolves the Better Auth session + the Prisma singleton lazily, `redirect('/login')` on missing session, `redirect('/onboarding')` on missing `Profile`, otherwise renders `children`. Mounted by both `(dashboard)/layout.tsx` and `(onboarding)/layout.tsx`. Co-located `onboarding-guard-wrapper.test.tsx` (6 tests).
 
 ### 2.4 src/lib/ (Infrastructure & Constants)
 
-* src/lib/db.ts - Singleton script managing connection instances for the Prisma database client. The singleton pattern (cached on `globalThis`) prevents Next.js dev hot-reload from spawning multiple Prisma clients and exhausting the Supabase connection pool. Uses the `@prisma/adapter-pg` driver adapter (`PrismaPg`) and imports the generated client from `../../generated/prisma`.
-* src/lib/auth.ts - Better Auth server instance. Configures the Prisma adapter (`postgresql` provider), `emailAndPassword.enabled: false`, Google + GitHub social providers from env vars, `account.accountLinking.enabled: false` (linking disabled), explicit Better Auth `modelMapping` (`user`→`User`, `account`→`AuthAccount`, `session`→`Session`, `verification`→`Verification`), `basePath: "/api/v1/auth"`, and a `signIn` callback rejecting any payload where `emailVerified === false`. Exports `AuthClient = typeof auth`.
-* src/lib/auth-client.ts - Better Auth browser client. Ships a parameterless `createAuthClient()` (no `baseURL` — resolves to `window.location.origin`) and the `OAuthProvider` (`"google" | "github"`) type union for client components.
-* src/lib/utils.ts - General utilities (Tailwind class-merge helper `cn`, etc.).
-* Co-located tests: `db.test.ts`, `auth.test.ts`, `utils.test.ts`.
+- src/lib/db.ts - Singleton script managing connection instances for the Prisma database client. The singleton pattern (cached on `globalThis`) prevents Next.js dev hot-reload from spawning multiple Prisma clients and exhausting the Supabase connection pool. Uses the `@prisma/adapter-pg` driver adapter (`PrismaPg`) and imports the generated client from `../../generated/prisma`.
+- src/lib/auth.ts - Better Auth server instance. Configures the Prisma adapter (`postgresql` provider), `emailAndPassword.enabled: false`, Google + GitHub social providers from env vars, `account.accountLinking.enabled: false` (linking disabled), explicit Better Auth `modelMapping` (`user`→`User`, `account`→`AuthAccount`, `session`→`Session`, `verification`→`Verification`), `basePath: "/api/v1/auth"`, and a `signIn` callback rejecting any payload where `emailVerified === false`. Exports `AuthClient = typeof auth`.
+- src/lib/auth-client.ts - Better Auth browser client. Ships a parameterless `createAuthClient()` (no `baseURL` — resolves to `window.location.origin`) and the `OAuthProvider` (`"google" | "github"`) type union for client components.
+- src/lib/api/ - ✅ Live (Task 2.3). Shared REST API infrastructure consumed by the onboarding endpoint (and all future Phase 3.3+ business endpoints):
+  - `envelope.ts` - success/failure JSON envelope builders (`success`, `successWithStatus`, `failure`, `failureWithStatus`, `validationFailure`) plus the frozen `HTTP_STATUS_BY_CODE` map and the UTC ISO-8601 `timestamp` helper.
+  - `session.ts` - `resolveSession()` (Better Auth `auth.api.getSession` → `AuthContext` or `UNAUTHORIZED 401` envelope) and `withSession()` wrapper; the auth singleton is resolved lazily via dynamic `import("../auth")` to keep the test graph Prisma-free.
+  - `validate.ts` - `readJsonBody()` + `validateBody()` wrapping Zod 4; non-JSON → `BAD_REQUEST 400`, schema failure → `VALIDATION_ERROR 422` with per-field details, a throwing `.parse` degrades to 400 (no 500 leak).
+  - `sanitize.ts` - `sanitizeString` / `sanitizeStringArray` / `sanitizeObject` running `isomorphic-dompurify` on every string leaf, with array walking, circular-reference refusal, and Date/RegExp/Map/Set instance immunity.
+  - `pipeline.ts` - `runPipeline()` / `withPipeline()` orchestrating the three stages (session → validate → sanitize) into a discriminated `PipelineResult` so consumer Route Handlers cannot reach business logic until every stage attests success.
+  - Co-located tests: `envelope.test.ts`, `session.test.ts`, `validate.test.ts`, `sanitize.test.ts`, `pipeline.test.ts`.
+- src/lib/utils.ts - General utilities (Tailwind class-merge helper `cn`, etc.).
+- Co-located tests: `db.test.ts`, `auth.test.ts`, `utils.test.ts`.
 
 ---
 
 ## 3. Co-located Automated Unit Testing
 
-All quality control scripts written for Vitest must reside directly next to their target implementation using the explicit naming pattern *.test.ts or *.test.tsx.
+All quality control scripts written for Vitest must reside directly next to their target implementation using the explicit naming pattern _.test.ts or _.test.tsx.
 
 Example Path Map:
-* src/features/transactions/create-transaction.ts
-* src/features/transactions/create-transaction.test.ts
+
+- src/features/transactions/create-transaction.ts
+- src/features/transactions/create-transaction.test.ts
 
 This ensures high coverage tracking, immediate isolation of unexpected breaks, and maintains clean modular exports across the application codebase.

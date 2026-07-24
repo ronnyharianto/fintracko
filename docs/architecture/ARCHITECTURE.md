@@ -188,13 +188,15 @@ Core ledger for financial mutations.
 
 ## 3. Core Architectural Safeguards & Guards
 
-- **Onboarding & Auth Guard (Server Component Layout Wrapper):**
-  - Instead of using global Next.js Middleware which runs on the Edge runtime (limiting database connection direct querying), authentication and onboarding status checks are implemented via a React Server Component layout wrapper wrapping the children of all non-public pages (e.g., `(dashboard)/layout.tsx`).
+- **Onboarding & Auth Guard (Server Component Layout Wrapper):** ✅ Live (Task 3.1)
+  - Instead of using global Next.js Middleware which runs on the Edge runtime (limiting direct database connections), authentication and onboarding status checks are implemented via a React Server Component layout wrapper ([`src/components/guards/onboarding-guard-wrapper.tsx`](src/components/guards/onboarding-guard-wrapper.tsx)) wrapping the children of all non-public pages. It is mounted by both [`src/app/(dashboard)/layout.tsx`](<src/app/(dashboard)/layout.tsx>) (every private dashboard route) and [`src/app/(onboarding)/layout.tsx`](<src/app/(onboarding)/layout.tsx>) (so already-onboarded users hitting `/onboarding` are bounced back to the dashboard).
   - **Guard Logic Flow:**
-    1. Retrieve the current active session via Better Auth server session helper. If no session exists, instantly perform a server-side redirect (`redirect('/login')`).
-    2. Query the database to check for the existence of a `Profile` record linked to the authenticated `userId`.
-    3. If the `Profile` record **does not exist**, the user is classified as "Not Onboarded" and is immediately server-side redirected to `/onboarding`.
-    4. If the `Profile` record exists, the component renders the layout `children` normally.
+    1. Read request headers via `next/headers`, then lazily resolve the Better Auth singleton ([`src/lib/auth.ts`](src/lib/auth.ts)) and the Prisma singleton ([`src/lib/db.ts`](src/lib/db.ts)) via dynamic `import()` — this keeps the module-load graph small and lets co-located unit tests run Prisma-free.
+    2. Call `auth.api.getSession({ headers })`. If no session resolves, or the session lacks `user.id`, instantly perform a server-side `redirect('/login')` from `next/navigation`.
+    3. `db.profile.findUnique({ where: { userId } })` checks for a `Profile` record linked to the authenticated `userId`.
+    4. If the `Profile` record **does not exist**, the user is classified as "Not Onboarded" and is immediately server-side `redirect('/onboarding')`.
+    5. If the `Profile` record exists, the component renders the layout `children` normally via a `<>{children}</>` fragment.
+  - **Note:** This guard governs **page-route** access (Server Component redirects). The API-specific `403 ONBOARDING_REQUIRED` fallthrough in API_SPECS.md §2 governs **REST endpoint** access for the workspace-tenant-guarded routes coming in Phase 3.3+. The live Task 3.2 endpoint (`POST /api/v1/onboarding/complete`, API_SPECS.md §3.0) instead short-circuits on an _already-existing_ `Profile` via its transaction failure path rather than via a pre-check guard.
 - **API-First Architecture (RESTful Route Handlers):**
   - All data mutations and retrievals MUST utilize standard REST APIs via Next.js Route Handlers (`app/api/...`) instead of Server Actions to ensure modular decoupling and effortless extensibility for future platforms (e.g., MVP 2 Mobile App).
   - **API Security Protocol:** All endpoints require strict Session validation (Better Auth tokens), rate limiting implementation, request payload validation using Zod schemas, and strict CORS configuration restricting external domain access.

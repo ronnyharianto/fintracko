@@ -149,9 +149,22 @@ fintracko/
 │   │   │   └── register/
 │   │   │       ├── page.tsx       # Register page (Card + "Create your account" + OAuthButtons + sign-in link)
 │   │   │       └── page.test.tsx # Register page render & metadata tests (6 tests)
-│   │   └── api/v1/auth/
-│   │       └── [...better-auth]/
-│   │           └── route.ts       # Better Auth route handler (explicit async GET/POST → auth.handler)
+│   │   ├── (onboarding)/         # ✅ Onboarding route group (Task 3.1/3.2) — noindex/nofollow
+│   │   │   ├── layout.tsx         # Centered shell + FintrackoLogo, wrapped in OnboardingGuardWrapper
+│   │   │   ├── layout.test.tsx   # Onboarding layout render & metadata tests (5 tests)
+│   │   │   └── onboarding/
+│   │   │       ├── page.tsx       # Mounts <OnboardingForm />
+│   │   │       └── page.test.tsx # Onboarding page render test (1 test)
+│   │   ├── (dashboard)/          # ✅ Private dashboard route group (Task 3.1 — guard wired)
+│   │   │   ├── layout.tsx         # Wraps children in OnboardingGuardWrapper (session + Profile check)
+│   │   │   └── dashboard/
+│   │   │       └── page.tsx       # Placeholder dashboard page (business UIs planned Phases 4–7)
+│   │   └── api/v1/
+│   │       ├── auth/[...better-auth]/
+│   │       │   └── route.ts       # Better Auth route handler (explicit async GET/POST → auth.handler)
+│   │       └── onboarding/complete/
+│   │           ├── route.ts       # ✅ POST onboarding completion (Task 2.3 pipeline → atomic transaction)
+│   │           └── route.test.ts  # Onboarding endpoint tests (3 tests)
 │   ├── components/
 │   │   ├── shared/            # Shared, composed UI used across routes
 │   │   │   ├── fintracko-logo.tsx     # SVG wallet + chart-bars logo (light/dark variants)
@@ -160,19 +173,43 @@ fintracko/
 │   │   │   ├── auth/                  # Auth UI components
 │   │   │   │   ├── oauth-buttons.tsx       # Client component — Google + GitHub sign-in buttons (title? + className? props)
 │   │   │   │   └── oauth-buttons.test.tsx # OAuthButtons render, click behaviour & pending state tests (11 tests)
-│   │   │   └── landing/              # Landing page section components
-│   │   │       ├── nav-bar.tsx         # Glassmorphism NavBar + ThemeToggle
-│   │   │       ├── hero-section.tsx   # Hero headline, CTAs, animated blur blobs
-│   │   │       ├── feature-grid.tsx   # 6-card feature bento grid
-│   │   │       ├── how-it-works.tsx   # 3-step timeline with gradient connecting line
-│   │   │       ├── cta-section.tsx    # Bottom call-to-action band
-│   │   │       └── footer.tsx         # Teal-tinted footer with aligned contact info
+│   │   │   ├── onboarding/                # ✅ Onboarding UI components (Task 3.2)
+│   │   │   │   ├── onboarding-form.tsx       # "use client" wizard (bio/DoB/gender/currency/language + gated legal checkboxes)
+│   │   │   │   └── onboarding-form.test.tsx # Form render, checkbox enable & validation tests (3 tests)
+│   │   │   ├── landing/              # Landing page section components
+│   │   │   │   ├── nav-bar.tsx         # Glassmorphism NavBar + ThemeToggle
+│   │   │   │   ├── hero-section.tsx   # Hero headline, CTAs, animated blur blobs
+│   │   │   │   ├── feature-grid.tsx   # 6-card feature bento grid
+│   │   │   │   ├── how-it-works.tsx   # 3-step timeline with gradient connecting line
+│   │   │   │   ├── cta-section.tsx    # Bottom call-to-action band
+│   │   │   │   └── footer.tsx         # Teal-tinted footer with aligned contact info
+│   │   │   └── status-screen.tsx    # Shared success/error/empty status-screen surface
+│   │   ├── guards/                  # ✅ Server-component route guards (Task 3.1)
+│   │   │   ├── onboarding-guard-wrapper.tsx       # Session + Profile existence → redirect or render children
+│   │   │   └── onboarding-guard-wrapper.test.tsx # Guard redirect & render tests (6 tests)
 │   │   └── ui/                # shadcn/ui atomic components (button, card, dialog, input, form, label, table, toast)
 │   │       └── ui-components.test.tsx  # Component smoke tests
+│   ├── features/                  # ✅ Domain logic (Task 3.2 first slice)
+│   │   └── onboarding/
+│   │       ├── schemas.ts          # GenderEnum/CurrencyEnum/LanguageEnum + CompleteOnboardingSchema (Zod 4)
+│   │       ├── schemas.test.ts    # Schema validation tests (15 tests)
+│   │       ├── services.ts         # completeOnboarding() — atomic Prisma $transaction (Profile+Workspace+Member)
+│   │       └── services.test.ts   # Service transaction tests (5 tests)
 │   ├── lib/                   # Shared utilities & singletons
 │   │   ├── auth.ts            # Better Auth server instance (prismaAdapter, socialProviders, account linking disabled)
 │   │   ├── auth-client.ts     # Better Auth browser client (createAuthClient(), OAuthProvider type)
 │   │   ├── auth.test.ts       # Auth config, callbacks, route handler & exports tests (17 tests)
+│   │   ├── api/               # ✅ Shared REST API pipeline (Task 2.3)
+│   │   │   ├── envelope.ts       # success/failure JSON envelopes + HTTP_STATUS_BY_CODE + timestamp
+│   │   │   ├── envelope.test.ts
+│   │   │   ├── session.ts        # resolveSession/withSession → AuthContext or UNAUTHORIZED 401
+│   │   │   ├── session.test.ts
+│   │   │   ├── validate.ts       # readJsonBody/validateBody (Zod) → BAD_REQUEST 400 / VALIDATION_ERROR 422
+│   │   │   ├── validate.test.ts
+│   │   │   ├── sanitize.ts       # sanitizeString/Array/Object (isomorphic-dompurify, XSS-neutralizing)
+│   │   │   ├── sanitize.test.ts
+│   │   │   ├── pipeline.ts       # runPipeline/withPipeline orchestrating session → validate → sanitize
+│   │   │   └── pipeline.test.ts
 │   │   ├── db.ts              # Prisma client singleton
 │   │   ├── db.test.ts         # DB contract unit test
 │   │   ├── utils.ts           # General utilities (cn, etc.)
@@ -376,6 +413,40 @@ Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARC
 
 ---
 
+---
+
+## 🧭 Onboarding & Dashboard (Phase 3)
+
+Phase 3 ships the implicit-onboarding guard and the first-time wizard flow. **Status: Tasks 3.1 & 3.2 complete.**
+
+### Onboarding guard — [`src/components/guards/onboarding-guard-wrapper.tsx`](src/components/guards/onboarding-guard-wrapper.tsx:1)
+
+A React Server Component (no `'use client'`) wired into both [`src/app/(dashboard)/layout.tsx`](<src/app/(dashboard)/layout.tsx:1>) and [`src/app/(onboarding)/layout.tsx`](<src/app/(onboarding)/layout.tsx:1>). It reads request headers, then **lazily** resolves the Better Auth singleton and the Prisma singleton via dynamic `import()` (small module graph, Prisma-free tests). The guard flow:
+
+1. `auth.api.getSession({ headers })` — no session (or no `user.id`) → `redirect("/login")`.
+2. `db.profile.findUnique({ where: { userId } })` — no `Profile` → `redirect("/onboarding")`.
+3. `Profile` exists → renders `children` via a `<>{children}</>` fragment.
+
+### Onboarding wizard — [`src/components/shared/onboarding/onboarding-form.tsx`](src/components/shared/onboarding/onboarding-form.tsx:1)
+
+A `"use client"` card-driven wizard collecting `bio` (optional), `dateOfBirth`, `gender`, `currencyPreference`, `languagePreference`, plus two legal checkboxes that stay **disabled** until the user clicks the `/terms-of-service` / `/privacy-policy` links (gated-read UX). On submit it converts the date to ISO, `POST`s to `/api/v1/onboarding/complete`, surfaces `sonner` toasts, and hard-redirects to `/dashboard` on success.
+
+### Onboarding endpoint — [`src/app/api/v1/onboarding/complete/route.ts`](src/app/api/v1/onboarding/complete/route.ts:1)
+
+`POST /api/v1/onboarding/complete` reuses the Task 2.3 pipeline (`withSession` → `validateBody` → `sanitizeObject`) over [`CompleteOnboardingSchema`](src/features/onboarding/schemas.ts:1), then calls [`completeOnboarding()`](src/features/onboarding/services.ts:1) — a single Prisma `$transaction` that atomically creates the `Profile`, the first `Workspace` ("My Workspace", `ownerId = userId`), and a `WorkspaceMember` row with `role: "OWNER"`.
+
+- Request payload: `{ bio?, dateOfBirth(ISO), gender, currencyPreference, languagePreference }`.
+- Response envelope (`200`): `{ profile: { id, bio, currencyPreference, languagePreference }, workspace: { id, name } }`.
+- A second completion attempt for the same user throws inside the transaction (the `Profile.userId` `@unique` constraint); the handler collapses this into `failure("INTERNAL_SERVER_ERROR", …)`.
+
+Full contract: [`docs/architecture/API_SPECS.md`](docs/architecture/API_SPECS.md:1) §3.0. Resolution notes: [`docs/product/IMPLEMENTATION_LOG.md`](docs/product/IMPLEMENTATION_LOG.md:1) → Tasks 3.1 & 3.2.
+
+### Dashboard — [`src/app/(dashboard)/dashboard/page.tsx`](<src/app/(dashboard)/dashboard/page.tsx:1>)
+
+A placeholder page rendering a "Dashboard" heading, gated by the `OnboardingGuardWrapper` mounted in [`src/app/(dashboard)/layout.tsx`](<src/app/(dashboard)/layout.tsx:1>). Business dashboard UIs (workspaces, transactions, budgets, analytics) are planned for Phases 4–7.
+
+---
+
 ## 📚 Documentation
 
 | Document                                                                 | Purpose                             |
@@ -396,4 +467,4 @@ Deeper design notes: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARC
 
 ---
 
-_Last updated: Phase 2 (Auth & Onboarding) — Task 2.2 complete — Better Auth integration (OAuth Google + GitHub, `basePath: /api/v1/auth`, explicit Prisma `modelMapping` incl. `Verification` table, account linking disabled, email verification callback, 45 passing tests). Follow-up migration `20260715141409_add_better_auth_verification_model` bumped the schema to 12 models._
+_Last updated: Phase 3 (Implicit Onboarding & Multi-Tenancy Framework) — Tasks 3.1 & 3.2 complete. Phase 1–2 recap: project initialization, design system, Better Auth integration (OAuth Google + GitHub, `basePath: /api/v1/auth`, explicit Prisma `modelMapping` incl. `Verification` table, account linking disabled, email verification callback), and the Task 2.3 REST envelope + security pipeline (`src/lib/api/`). Phase 3 adds the `OnboardingGuardWrapper` Server Component, the `(onboarding)/(dashboard)` route groups, the `/api/v1/onboarding/complete` endpoint, and the first `src/features/onboarding/` slice (Zod schemas + atomic `completeOnboarding()` service). The initial migration is `20260716222200_init` (12 models). Total suite now 234 tests across 23 files. Remaining for this phase: Task 3.3 (workspace templates) & 3.4 (collaborator invites); Phases 4–7 (accounts, transactions, budgets, analytics) are planned._

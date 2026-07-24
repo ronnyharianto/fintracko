@@ -39,6 +39,54 @@ Every API Route Handler endpoint must process incoming payloads through a harden
 
 ## 3. Core Feature Contracts (API Route Handlers)
 
+### 3.0 Onboarding Module ✅ Live (Task 3.2)
+
+#### `POST /api/v1/onboarding/complete`
+
+- **Description:** Completes the first-time onboarding flow by atomically creating the authenticated user's `Profile` record and their first baseline `Workspace` (plus the owner `WorkspaceMember` row). This endpoint is reached from [`src/components/shared/onboarding/onboarding-form.tsx`](src/components/shared/onboarding/onboarding-form.tsx) after the user fills the wizard and accepts the legal checkboxes.
+- **Pipeline:** Shares the global Task 2.3 pipeline — `withSession` → `validateBody` → `sanitizeObject` — before business logic executes.
+- **Zod Payload Schema** ([`src/features/onboarding/schemas.ts`](src/features/onboarding/schemas.ts)):
+
+  ```typescript
+  const GenderEnum = z.enum(["MALE", "FEMALE", "OTHER"]);
+  const CurrencyEnum = z.enum(["USD", "IDR", "EUR", "GBP", "JPY", "SGD"]);
+  const LanguageEnum = z.enum(["en", "id", "es"]);
+
+  const CompleteOnboardingSchema = z.object({
+    bio: z.string().max(500).nullable().optional(),
+    dateOfBirth: z.string().datetime(), // ISO-8601 (client converts YYYY-MM-DD → ISO)
+    gender: GenderEnum,
+    currencyPreference: CurrencyEnum,
+    languagePreference: LanguageEnum,
+  });
+  ```
+
+- **Database Operation & Invariant Execution Lifecycle:** Must run inside a single Prisma `$transaction` block ([`src/features/onboarding/services.ts`](src/features/onboarding/services.ts) `completeOnboarding`):
+  1. `tx.profile.create({ data: { userId, bio, dateOfBirth, gender, currencyPreference, languagePreference } })`.
+  2. `tx.workspace.create({ data: { name: "My Workspace", ownerId: userId } })`.
+  3. `tx.workspaceMember.create({ data: { workspaceId, userId, role: "OWNER" } })`.
+- **Duplicate / idempotency behavior:** `Profile.userId` is `@unique`, so a second completion attempt for the same user causes the `profile.create` to throw inside the transaction; the handler collapses this into a `failure("INTERNAL_SERVER_ERROR", "Failed to complete onboarding. Please try again.")` envelope. There is deliberate no `409` differentiation in MVP1.
+- **Success Response Envelope** (`200`):
+  ```json
+  {
+    "success": true,
+    "data": {
+      "profile": {
+        "id": "<profile-uuid>",
+        "bio": "string | null",
+        "currencyPreference": "USD",
+        "languagePreference": "en"
+      },
+      "workspace": {
+        "id": "<workspace-uuid>",
+        "name": "My Workspace"
+      }
+    },
+    "timestamp": "2026-07-24T17:00:00Z"
+  }
+  ```
+- **Path note:** Unlike the workspace-tenant endpoints in §3.1+ that key off a `[workspaceId]` path segment + `WorkspaceMember` Anti-IDOR check, this endpoint is scoped solely to the authenticated `userId` (no workspace exists yet — it is _created_ by this call).
+
 ### 3.1 Workspace Module
 
 #### `POST /api/v1/workspaces`
@@ -79,11 +127,9 @@ Every API Route Handler endpoint must process incoming payloads through a harden
   const CreateAccountSchema = zod.object({
     workspaceId: zod.string().uuid(),
     name: zod.string().min(1).max(50),
-    initialBalance: zod
-      .string()
-      .refine((val) => !isNaN(Number(val)), {
-        message: "Must be a valid numeric decimal string",
-      }),
+    initialBalance: zod.string().refine((val) => !isNaN(Number(val)), {
+      message: "Must be a valid numeric decimal string",
+    }),
   });
   ```
 - **Behavior:** Inserts a `FinancialAccount` record. Sets the `initialBalance` field exactly to the requested payload value while ensuring the `netTransactionSum` field defaults to `0.0000` (meaning current calculated balance is perfectly equivalent to `initialBalance + netTransactionSum`).
@@ -100,11 +146,9 @@ Every API Route Handler endpoint must process incoming payloads through a harden
   const CreateTransactionSchema = zod.object({
     workspaceId: zod.string().uuid(),
     type: zod.enum(["INCOME", "EXPENSE", "TRANSFER"]),
-    amount: zod
-      .string()
-      .refine((val) => Number(val) > 0, {
-        message: "Amount must be a strictly positive decimal value",
-      }),
+    amount: zod.string().refine((val) => Number(val) > 0, {
+      message: "Amount must be a strictly positive decimal value",
+    }),
     subCategoryId: zod.string().uuid(),
     date: zod.string().datetime(),
     sourceAccountId: zod.string().uuid().optional(),
