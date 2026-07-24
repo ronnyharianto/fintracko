@@ -30,7 +30,7 @@ export default function OnboardingLayout({
           Fintracko
         </span>
       </Link>
-      <div className="w-full max-w-md">{children}</div>
+      <div className="w-full max-w-lg md:max-w-xl lg:max-w-2xl">{children}</div>
     </div>
   );
 }

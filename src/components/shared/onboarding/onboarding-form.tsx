@@ -51,8 +51,14 @@ export function OnboardingForm() {
     acceptPrivacy: false,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+
+    if (!formData.acceptTerms || !formData.acceptPrivacy) {
+      toast.error("You must accept the Terms of Service and Privacy Policy.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -92,30 +98,38 @@ export function OnboardingForm() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Complete your profile</CardTitle>
+    <Card className="w-full shadow-lg">
+      <CardHeader className="text-center md:text-left">
+        <CardTitle className="text-xl md:text-2xl">
+          Complete your profile
+        </CardTitle>
         <CardDescription>
           Please provide some information to set up your account
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
+        >
           {/* Bio (optional) */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="bio">Bio (optional)</Label>
-            <Input
+            <textarea
               id="bio"
-              placeholder="Tell us a bit about yourself"
+              placeholder="Tell us a bit about yourself (max 500 characters)"
+              rows={3}
+              maxLength={500}
               value={formData.bio || ""}
               onChange={(e) =>
                 setFormData({ ...formData, bio: e.target.value })
               }
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
             />
           </div>
 
           {/* Date of Birth (required) */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="dateOfBirth">Date of Birth *</Label>
             <Input
               id="dateOfBirth"
@@ -129,7 +143,7 @@ export function OnboardingForm() {
           </div>
 
           {/* Gender (required) */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="gender">Gender *</Label>
             <select
               id="gender"
@@ -150,7 +164,7 @@ export function OnboardingForm() {
           </div>
 
           {/* Currency Preference (required) */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="currencyPreference">Currency Preference *</Label>
             <select
               id="currencyPreference"
@@ -171,7 +185,7 @@ export function OnboardingForm() {
           </div>
 
           {/* Language Preference (required) */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="languagePreference">Language Preference *</Label>
             <select
               id="languagePreference"
@@ -189,7 +203,7 @@ export function OnboardingForm() {
           </div>
 
           {/* Legal Compliance Checkboxes */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-2 md:col-span-2">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="acceptTerms"
@@ -236,9 +250,11 @@ export function OnboardingForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Completing..." : "Complete Setup"}
-          </Button>
+          <div className="md:col-span-2 pt-2">
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Completing..." : "Complete Setup"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
