@@ -42,6 +42,8 @@ interface OnboardingFormData {
 
 export function OnboardingForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
   const [formData, setFormData] = useState<OnboardingFormData>({
     dateOfBirth: "",
     gender: "OTHER",
@@ -203,32 +205,47 @@ export function OnboardingForm() {
           </div>
 
           {/* Legal Compliance Checkboxes */}
-          <div className="space-y-3 pt-2 md:col-span-2">
-            <div className="flex items-center space-x-2">
+          <div className="space-y-4 pt-2 md:col-span-2">
+            <div className="flex items-start space-x-3">
               <Checkbox
                 id="acceptTerms"
                 required
+                disabled={!hasReadTerms}
                 checked={formData.acceptTerms}
                 onCheckedChange={(checked: boolean) =>
                   setFormData({ ...formData, acceptTerms: checked })
                 }
+                className="mt-1 shrink-0"
               />
-              <Label htmlFor="acceptTerms" className="text-sm">
-                I accept the{" "}
-                <a
-                  href="/terms-of-service"
-                  className="text-primary underline"
-                  target="_blank"
+              <div className="space-y-1">
+                <label
+                  htmlFor="acceptTerms"
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? "text-muted-foreground" : ""}`}
                 >
-                  Terms of Service
-                </a>
-              </Label>
+                  I already read, acknowledge and accept the{" "}
+                  <a
+                    href="/terms-of-service"
+                    className="text-primary underline font-medium hover:text-primary/80"
+                    target="_blank"
+                    onClick={() => setHasReadTerms(true)}
+                  >
+                    Terms of Service
+                  </a>
+                </label>
+                {!hasReadTerms && (
+                  <span className="block text-xs text-amber-600 dark:text-amber-400">
+                    (Please click and read the Terms of Service above to enable
+                    the checkbox)
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-3">
               <Checkbox
                 id="acceptPrivacy"
                 required
+                disabled={!hasReadPrivacy}
                 checked={formData.acceptPrivacy}
                 onCheckedChange={(checked: boolean) =>
                   setFormData({
@@ -236,17 +253,30 @@ export function OnboardingForm() {
                     acceptPrivacy: checked,
                   })
                 }
+                className="mt-1 shrink-0"
               />
-              <Label htmlFor="acceptPrivacy" className="text-sm">
-                I accept the{" "}
-                <a
-                  href="/privacy-policy"
-                  className="text-primary underline"
-                  target="_blank"
+              <div className="space-y-1">
+                <label
+                  htmlFor="acceptPrivacy"
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? "text-muted-foreground" : ""}`}
                 >
-                  Privacy Policy
-                </a>
-              </Label>
+                  I already read, acknowledge and accept the{" "}
+                  <a
+                    href="/privacy-policy"
+                    className="text-primary underline font-medium hover:text-primary/80"
+                    target="_blank"
+                    onClick={() => setHasReadPrivacy(true)}
+                  >
+                    Privacy Policy
+                  </a>
+                </label>
+                {!hasReadPrivacy && (
+                  <span className="block text-xs text-amber-600 dark:text-amber-400">
+                    (Please click and read the Privacy Policy above to enable
+                    the checkbox)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
