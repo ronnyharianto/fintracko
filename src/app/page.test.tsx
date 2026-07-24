@@ -7,9 +7,21 @@
  * Per AGENT_RULES §4, co-located beside the page component.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import LandingPage, { metadata } from "./page";
+
+vi.mock("@/lib/auth", () => ({
+  auth: {
+    api: {
+      getSession: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn().mockResolvedValue(new Headers()),
+}));
 
 // ---------------------------------------------------------------------------
 // Render smoke test
@@ -21,10 +33,12 @@ describe("LandingPage — render", () => {
 
   it("renders the navigation bar with 'Get Started' CTA pointing to /login", () => {
     render(<LandingPage />);
-    const getStartedLinks = screen.getAllByRole("link", { name: /get started/i });
+    const getStartedLinks = screen.getAllByRole("link", {
+      name: /get started/i,
+    });
     expect(getStartedLinks.length).toBeGreaterThanOrEqual(1);
-    const allGoToLogin = getStartedLinks.every((el) =>
-      el.getAttribute("href") === "/login",
+    const allGoToLogin = getStartedLinks.every(
+      (el) => el.getAttribute("href") === "/login",
     );
     expect(allGoToLogin).toBe(true);
   });
