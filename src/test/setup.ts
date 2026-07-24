@@ -10,3 +10,12 @@
  * With Vitest globals enabled in vitest.config.ts, `expect` is available here.
  */
 import "@testing-library/jest-dom/vitest";
+
+class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.ResizeObserver = ResizeObserver;
+global.ResizeObserver = ResizeObserver;
