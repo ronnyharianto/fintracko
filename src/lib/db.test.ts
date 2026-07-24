@@ -4,7 +4,7 @@
  * Per docs/core/AGENT_RULES.md §4 (Mandatory Unit Testing) and
  * docs/core/PROJECT_STRUCTURE.md §3 (Co-located Automated Unit Testing),
  * this test sits directly next to its target `db.ts`. It verifies the public
- * contract of the generated Prisma Client (all 11 model delegates, all 5
+ * contract of the generated Prisma Client (all 12 model delegates, all 5
  * enums, and the singleton property) WITHOUT issuing any database queries —
  * the assertions operate purely on the client object surface so the test runs
  * offline and never exhausts the Supabase connection pool.
@@ -27,7 +27,15 @@ import {
 } from "../../generated/prisma/enums";
 
 /**
- * Canonical list of all 11 models defined in `prisma/schema.prisma`.
+ * Canonical list of all 12 models defined in `prisma/schema.prisma`.
+ *
+ * Naming note (Task 1.3 schema reconciliation): the financial ledger node
+ * is `FinancialAccount` (Prisma camel-cases the delegate to
+ * `financialAccount`) and the core ledger entry is `FinancialTransaction`
+ * (delegate `financialTransaction`). These supersede the legacy `account`
+ * / `transaction` names — the schema comment in ARCHITECTURE.md §2 calls
+ * them out explicitly as "Formerly Account" and "Formerly Transaction".
+ *
  * If the schema grows or shrinks, update `EXPECTED_MODELS` and this test
  * fails fast — surfacing the contract change at the import boundary.
  */
@@ -39,11 +47,11 @@ const EXPECTED_MODELS = [
   "profile",
   "workspace",
   "workspaceMember",
-  "account",
+  "financialAccount",
   "category",
   "subCategory",
   "budget",
-  "transaction",
+  "financialTransaction",
 ] as const;
 
 describe("Prisma Client singleton (db)", () => {
@@ -54,7 +62,13 @@ describe("Prisma Client singleton (db)", () => {
       // shapes to ensure the client was generated correctly.
       const delegate = (db as unknown as Record<string, unknown>)[modelName];
       expect(delegate, `expected db.${modelName} to exist`).toBeDefined();
-      for (const method of ["findMany", "findUnique", "create", "update", "delete"]) {
+      for (const method of [
+        "findMany",
+        "findUnique",
+        "create",
+        "update",
+        "delete",
+      ]) {
         expect(
           (delegate as Record<string, unknown>)[method],
           `expected db.${modelName}.${method} to exist`,
@@ -71,7 +85,8 @@ describe("Prisma Client singleton (db)", () => {
       (key) =>
         !key.startsWith("$") &&
         typeof (db as unknown as Record<string, unknown>)[key] === "object" &&
-        typeof ((db as unknown as Record<string, Record<string, unknown>>)[key]?.findMany) === "function",
+        typeof (db as unknown as Record<string, Record<string, unknown>>)[key]
+          ?.findMany === "function",
     );
     expect(actualModels.sort()).toEqual([...EXPECTED_MODELS].sort());
   });
@@ -81,14 +96,21 @@ describe("Prisma schema enums", () => {
   it("WorkspaceRole contains OWNER and COLLABORATOR", () => {
     expect(WorkspaceRole.OWNER).toBe("OWNER");
     expect(WorkspaceRole.COLLABORATOR).toBe("COLLABORATOR");
-    expect(Object.keys(WorkspaceRole).sort()).toEqual(["COLLABORATOR", "OWNER"]);
+    expect(Object.keys(WorkspaceRole).sort()).toEqual([
+      "COLLABORATOR",
+      "OWNER",
+    ]);
   });
 
   it("CategoryType contains INCOME, EXPENSE, TRANSFER", () => {
     expect(CategoryType.INCOME).toBe("INCOME");
     expect(CategoryType.EXPENSE).toBe("EXPENSE");
     expect(CategoryType.TRANSFER).toBe("TRANSFER");
-    expect(Object.keys(CategoryType).sort()).toEqual(["EXPENSE", "INCOME", "TRANSFER"]);
+    expect(Object.keys(CategoryType).sort()).toEqual([
+      "EXPENSE",
+      "INCOME",
+      "TRANSFER",
+    ]);
   });
 
   it("TransactionType mirrors CategoryType (intentional duplicated enum)", () => {
@@ -98,7 +120,11 @@ describe("Prisma schema enums", () => {
     expect(TransactionType.INCOME).toBe("INCOME");
     expect(TransactionType.EXPENSE).toBe("EXPENSE");
     expect(TransactionType.TRANSFER).toBe("TRANSFER");
-    expect(Object.keys(TransactionType).sort()).toEqual(["EXPENSE", "INCOME", "TRANSFER"]);
+    expect(Object.keys(TransactionType).sort()).toEqual([
+      "EXPENSE",
+      "INCOME",
+      "TRANSFER",
+    ]);
   });
 
   it("BudgetInterval contains MONTHLY and YEARLY", () => {
