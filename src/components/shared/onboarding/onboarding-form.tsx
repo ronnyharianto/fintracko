@@ -29,6 +29,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface OnboardingFormData {
   bio?: string;
@@ -147,61 +154,67 @@ export function OnboardingForm() {
           {/* Gender (required) */}
           <div className="space-y-2 md:col-span-1">
             <Label htmlFor="gender">Gender *</Label>
-            <select
-              id="gender"
-              required
+            <Select
               value={formData.gender}
-              onChange={(e) =>
+              onValueChange={(value: "MALE" | "FEMALE" | "OTHER") =>
                 setFormData({
                   ...formData,
-                  gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
+                  gender: value,
                 })
               }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-            </select>
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MALE">Male</SelectItem>
+                <SelectItem value="FEMALE">Female</SelectItem>
+                <SelectItem value="OTHER">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Currency Preference (required) */}
           <div className="space-y-2 md:col-span-1">
             <Label htmlFor="currencyPreference">Currency Preference *</Label>
-            <select
-              id="currencyPreference"
-              required
+            <Select
               value={formData.currencyPreference}
-              onChange={(e) =>
-                setFormData({ ...formData, currencyPreference: e.target.value })
+              onValueChange={(value) =>
+                setFormData({ ...formData, currencyPreference: value })
               }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="USD">USD - US Dollar</option>
-              <option value="IDR">IDR - Indonesian Rupiah</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="GBP">GBP - British Pound</option>
-              <option value="JPY">JPY - Japanese Yen</option>
-              <option value="SGD">SGD - Singapore Dollar</option>
-            </select>
+              <SelectTrigger id="currencyPreference">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD - US Dollar</SelectItem>
+                <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
+                <SelectItem value="EUR">EUR - Euro</SelectItem>
+                <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Language Preference (required) */}
           <div className="space-y-2 md:col-span-1">
             <Label htmlFor="languagePreference">Language Preference *</Label>
-            <select
-              id="languagePreference"
-              required
+            <Select
               value={formData.languagePreference}
-              onChange={(e) =>
-                setFormData({ ...formData, languagePreference: e.target.value })
+              onValueChange={(value) =>
+                setFormData({ ...formData, languagePreference: value })
               }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="en">English</option>
-              <option value="id">Bahasa Indonesia</option>
-              <option value="es">Español</option>
-            </select>
+              <SelectTrigger id="languagePreference">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                <SelectItem value="es">Español</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Legal Compliance Checkboxes */}
