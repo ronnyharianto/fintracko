@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FintrackoLogo } from "@/components/shared/fintracko-logo";
+import OnboardingGuardWrapper from "@/components/guards/onboarding-guard-wrapper";
 
 /**
  * Onboarding route group layout.
@@ -19,19 +20,23 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12">
-      <Link
-        href="/"
-        className="mb-8 inline-flex items-center gap-2"
-        aria-label="Fintracko home"
-      >
-        <FintrackoLogo className="h-8 w-8" />
-        <span className="text-xl font-semibold tracking-tight text-foreground">
-          Fintracko
-        </span>
-      </Link>
-      <div className="w-full max-w-lg md:max-w-xl lg:max-w-2xl">{children}</div>
-    </div>
+    <OnboardingGuardWrapper>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12">
+        <Link
+          href="/"
+          className="mb-8 inline-flex items-center gap-2"
+          aria-label="Fintracko home"
+        >
+          <FintrackoLogo className="h-8 w-8" />
+          <span className="text-xl font-semibold tracking-tight text-foreground">
+            Fintracko
+          </span>
+        </Link>
+        <div className="w-full max-w-lg md:max-w-xl lg:max-w-2xl">
+          {children}
+        </div>
+      </div>
+    </OnboardingGuardWrapper>
   );
 }
 

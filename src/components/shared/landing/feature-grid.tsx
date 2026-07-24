@@ -83,7 +83,7 @@ export function FeatureGrid({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
-        <div className="absolute left-1/2 top-0 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-linear-to-b from-primary/10 to-transparent blur-3xl" />
+        <div className="absolute left-1/2 top-0 h-100 w-150 -translate-x-1/2 rounded-full bg-linear-to-b from-primary/10 to-transparent blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

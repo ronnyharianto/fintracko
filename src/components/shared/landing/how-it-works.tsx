@@ -64,8 +64,8 @@ export function HowItWorks({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
-        <div className="absolute bottom-0 left-0 h-[300px] w-[500px] rounded-full bg-linear-to-tr from-emerald-500/10 to-transparent blur-3xl" />
-        <div className="absolute right-0 top-0 h-[300px] w-[400px] rounded-full bg-linear-to-bl from-primary/10 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-75 w-125 rounded-full bg-linear-to-tr from-emerald-500/10 to-transparent blur-3xl" />
+        <div className="absolute right-0 top-0 h-75 w-100 rounded-full bg-linear-to-bl from-primary/10 to-transparent blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
