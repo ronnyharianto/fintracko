@@ -16,16 +16,12 @@
  */
 
 import type { ReactNode } from "react";
-import OnboardingGuardWrapper from "@/components/guards/OnboardingGuardWrapper";
+import OnboardingGuardWrapper from "@/components/guards/onboarding-guard-wrapper";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return (
-    <OnboardingGuardWrapper>
-      {children}
-    </OnboardingGuardWrapper>
-  );
+  return <OnboardingGuardWrapper>{children}</OnboardingGuardWrapper>;
 }

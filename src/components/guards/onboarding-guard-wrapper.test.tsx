@@ -63,7 +63,7 @@ describe("OnboardingGuardWrapper", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
     // Import and render the component
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     // Should throw a redirect error with /login URL
@@ -80,7 +80,7 @@ describe("OnboardingGuardWrapper", () => {
       user: {},
     } as never);
 
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     // Should throw a redirect error with /login URL
@@ -101,7 +101,7 @@ describe("OnboardingGuardWrapper", () => {
     // Mock findUnique to return null (no profile)
     vi.mocked(db.profile.findUnique).mockResolvedValue(null);
 
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     // Should throw a redirect error with /onboarding URL
@@ -124,7 +124,7 @@ describe("OnboardingGuardWrapper", () => {
       id: "test-profile-id",
     } as never);
 
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     const result = await OnboardingGuardWrapper({
@@ -151,7 +151,7 @@ describe("OnboardingGuardWrapper", () => {
       id: "test-profile-id",
     } as never);
 
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     await OnboardingGuardWrapper({ children: <div>Test Content</div> });
@@ -176,7 +176,7 @@ describe("OnboardingGuardWrapper", () => {
       new Error("Database error"),
     );
 
-    const OnboardingGuardWrapper = (await import("./OnboardingGuardWrapper"))
+    const OnboardingGuardWrapper = (await import("./onboarding-guard-wrapper"))
       .default;
 
     // Should propagate the database error
