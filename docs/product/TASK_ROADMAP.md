@@ -47,10 +47,10 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
 
 ## Phase 3: Implicit Onboarding & Multi-Tenancy Framework
 
-- [ ] **Task 3.1: Profile Implicit Onboarding Guard**
+- [x] **Task 3.1: Profile Implicit Onboarding Guard**
   - Create the `OnboardingGuardWrapper.tsx` Server Component at the layout level enclosing all private dashboard pages (`src/app/(dashboard)/`).
   - Perform direct Prisma database verification to check for the existence of a `Profile` record linked to the `userId`. If no profile exists, gracefully intercept and render the onboarding wizard interface without global edge middleware block constraints.
-- [ ] **Task 3.2: Onboarding Wizard Flow**
+- [x] **Task 3.2: Onboarding Wizard Flow**
   - Implement the onboarding route wizard (`src/app/(onboarding)/onboarding`) to collect mandatory user settings (`bio`, `dateOfBirth`, `gender`, `currencyPreference`, `languagePreference`) and force explicit checkboxes confirming legal compliance.
   - Persist the new `Profile` entry and automatically establish the user's first baseline workspace in a single atomic database operation.
 - [ ] **Task 3.3: Dynamic Workspace Templates Creation**
