@@ -115,4 +115,19 @@ Co-located tests: [`schemas.test.ts`](src/features/onboarding/schemas.test.ts) (
 
 > **Source-of-truth alignment:** The onboarding endpoint contract is canonically documented in [`docs/architecture/API_SPECS.md`](../architecture/API_SPECS.md) §3.0 (Onboarding Module), and the wizard flow aligns with [`docs/product/PRD_MVP1.md`](PRD_MVP1.md) §3.1 (Mandatory Onboarding).
 
-> ⚠️ **Known test-only inconsistency (out of docs scope):** [`src/app/(onboarding)/layout.test.tsx`](<src/app/(onboarding)/layout.test.tsx>) references a mock module path `@/components/guards/onboarding-access-guard-wrapper`, but the actual layout imports `@/components/guards/onboarding-guard-wrapper` (no `-access-`). This does not affect documentation; surfaced here for a separate code fix.
+---
+
+## Task 3.3 — Dynamic Workspace Templates Creation
+
+### Resolution ✅ Complete
+
+5 files created/updated. Implements the dynamic workspace templates creation vertical slice:
+
+- **Constants** — [`src/features/workspaces/constants/workspace-templates.ts`](../../src/features/workspaces/constants/workspace-templates.ts) defines static configuration templates for `PERSONAL`, `FAMILY`, and `SMALL_BUSINESS`, mapping template names to default Level 1 Categories (`INCOME`, `EXPENSE`, `TRANSFER`) and Level 2 SubCategories.
+- **Schemas** — [`src/features/workspaces/schemas.ts`](../../src/features/workspaces/schemas.ts) exports `WorkspaceTemplateEnum` and `CreateWorkspaceSchema` (validating `name` length 1-100 and `templateName`), with co-located unit tests in [`schemas.test.ts`](../../src/features/workspaces/schemas.test.ts).
+- **Service** — [`src/features/workspaces/services.ts`](../../src/features/workspaces/services.ts) `createWorkspace(userId, data)` runs an atomic Prisma `$transaction` that creates the `Workspace`, inserts an owner `WorkspaceMember` (`role: "OWNER"`), and bulk-inserts Category and SubCategory rows derived from the selected template. Co-located unit tests in [`services.test.ts`](../../src/features/workspaces/services.test.ts).
+- **Endpoint** — [`src/app/api/v1/workspaces/route.ts`](../../src/app/api/v1/workspaces/route.ts) implements `POST /api/v1/workspaces`. Enforces session extraction, the Onboarding Verification guard (`db.profile.findUnique` → `403 ONBOARDING_REQUIRED` if missing), Zod validation, XSS sanitization, and service execution, returning `successWithStatus(workspace, 201)`. Co-located unit tests in [`route.test.ts`](../../src/app/api/v1/workspaces/route.test.ts).
+
+Total test suite now stands at 259 passing tests across 29 test files. Build and lint are completely clean.
+
+> **Source-of-truth alignment:** The workspace creation contract and template seeding logic are canonically documented in [`docs/architecture/API_SPECS.md`](../architecture/API_SPECS.md) §3.1 (Workspace Module) and [`docs/architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) §4 (Workspace Templates Storage).

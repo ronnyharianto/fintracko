@@ -60,9 +60,10 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Implement the onboarding route wizard (`src/app/(onboarding)/onboarding`) to collect mandatory user settings (`bio`, `dateOfBirth`, `gender`, `currencyPreference`, `languagePreference`) and force explicit checkboxes confirming legal compliance.
   - Persist the new `Profile` entry and automatically establish the user's first baseline workspace in a single atomic database operation.
   - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 3.2 for the resolution — `POST /api/v1/onboarding/complete` runs the shared Task 2.3 pipeline (session → validate → sanitize) over `CompleteOnboardingSchema`, then atomically creates `Profile` + `Workspace` + `WorkspaceMember` (OWNER) inside a Prisma `$transaction`.
-- [ ] **Task 3.3: Dynamic Workspace Templates Creation**
+- [x] **Task 3.3: Dynamic Workspace Templates Creation**
   - Implement `POST /api/v1/workspaces` following the explicit Prisma `$transaction` workflow.
   - Read static workspace configuration templates from codebase constants (`PERSONAL`, `FAMILY`, `SMALL_BUSINESS`) to populate multi-level Category (Level 1) and SubCategory (Level 2) rows bound to the new workspace.
+  - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 3.3 for the resolution — `POST /api/v1/workspaces` enforces session validation, the Onboarding Verification guard (`403 ONBOARDING_REQUIRED`), Zod validation (`CreateWorkspaceSchema`), sanitization, and an atomic Prisma `$transaction` creating the `Workspace`, owner `WorkspaceMember`, and bulk-seeding Level 1 Categories and Level 2 SubCategories from `WORKSPACE_TEMPLATES`.
 - [ ] **Task 3.4: Workspace Collaborator Orchestration**
   - Implement `POST /api/v1/workspaces/invite` to safely attach a new row to `WorkspaceMember` with a default role of `COLLABORATOR`, checking recipient existence via indexed lookups.
   - Implement secure multi-tenancy Anti-IDOR validation across all workspace endpoints by performing compound query verification inside `WorkspaceMember` matching both `workspaceId` and `userId`.

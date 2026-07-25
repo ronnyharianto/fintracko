@@ -99,7 +99,7 @@ export function OnboardingForm() {
 
       // Redirect to dashboard after successful onboarding
       window.location.href = '/dashboard';
-    } catch (error) {
+    } catch {
       toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

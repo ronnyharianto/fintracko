@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
           name: result.workspace.name,
         },
       });
-    } catch (error) {
+    } catch {
       // Handle potential errors (e.g., Profile already exists)
       return failure(
         'INTERNAL_SERVER_ERROR',
