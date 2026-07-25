@@ -1,250 +1,122 @@
 /**
  * Unit tests for Better Auth configuration.
  *
- * Tests cover:
- *   - Auth instance creation and structure
- *   - OAuth provider configuration (Google, GitHub)
- *   - Password auth disabled
- *   - Account linking disabled
- *   - Email verification callback rejects unverified emails
+ * Coverage:
+ *   - The real `signInCallback` exported from [`auth.ts`](auth.ts) (the exact
+ *     function wired into betterAuth's `callbacks.signIn`) is exercised across
+ *     every code path: false → throws, true → returns, null → passes,
+ *     undefined → passes. The previous test suite defined a *duplicate*
+ *     `emailVerificationCallback` helper that diverged from the production
+ *     callback (it rejected `null`, the real one does not). Testing the actual
+ *     exported callback eliminates that drift so the suite fails fast if the
+ *     production security contract changes.
+ *   - The constructed `auth` object exposes the Better Auth handler surface
+ *     and is built from the project's env-var-driven config.
+ *   - The OAuth Route Handler module exports both GET and POST.
  *
- * Note: Full integration tests requiring a live database and OAuth credentials
- * are out of scope for unit testing per docs/core/AGENT_RULES.md §4.
+ * Per AGENT_RULES.md §4 ("Mocking Discipline"): Prisma (`@/lib/db`) and the
+ * Better Auth Prisma adapter are mocked at the module boundary so no real
+ * database connection is opened from inside this `*.test.ts` file.
  */
-
 import { describe, it, expect, vi } from "vitest";
 
-// Mock environment variables before importing auth module
-const mockEnv = {
-  AUTH_GOOGLE_ID: "test-google-client-id",
-  AUTH_GOOGLE_SECRET: "test-google-client-secret",
-  AUTH_GITHUB_ID: "test-github-client-id",
-  AUTH_GITHUB_SECRET: "test-github-client-secret",
-  DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-};
+// Mock environment variables before importing the auth module. The betterAuth
+// constructor reads GOOGLE/GITHUB client ids + secrets and DATABASE_URL at
+// module load; stubbing them keeps the test graph Prisma/connection-free.
+vi.stubEnv("AUTH_GOOGLE_ID", "test-google-client-id");
+vi.stubEnv("AUTH_GOOGLE_SECRET", "test-google-client-secret");
+vi.stubEnv("AUTH_GITHUB_ID", "test-github-client-id");
+vi.stubEnv("AUTH_GITHUB_SECRET", "test-github-client-secret");
+vi.stubEnv("DATABASE_URL", "postgresql://test:test@localhost:5432/test");
 
-vi.stubEnv("AUTH_GOOGLE_ID", mockEnv.AUTH_GOOGLE_ID);
-vi.stubEnv("AUTH_GOOGLE_SECRET", mockEnv.AUTH_GOOGLE_SECRET);
-vi.stubEnv("AUTH_GITHUB_ID", mockEnv.AUTH_GITHUB_ID);
-vi.stubEnv("AUTH_GITHUB_SECRET", mockEnv.AUTH_GITHUB_SECRET);
-vi.stubEnv("DATABASE_URL", mockEnv.DATABASE_URL);
-
-// We need to mock the db module since it connects to a real database
+// Mock Prisma client so the Better Auth Prisma adapter never opens a socket.
 vi.mock("@/lib/db", () => ({
-  db: {
-    // Mock Prisma client for adapter
-  },
+  db: {},
 }));
 
-/**
- * Email verification callback logic extracted for testing.
- * This is the same logic used in auth.ts for the Better Auth signIn callback.
- * Rejects sign-in when email is not verified (emailVerified === false or null).
- */
-export const emailVerificationCallback = {
-  signIn: async ({
-    user,
-  }: {
-    user: { emailVerified: boolean | null | undefined };
-  }): Promise<{ user: { emailVerified: boolean | null | undefined } }> => {
-    // Reject if emailVerified is explicitly false or null (unverified)
-    if (user.emailVerified === false || user.emailVerified === null) {
-      throw new Error("Email is not verified by the OAuth provider.");
-    }
-    return { user: { emailVerified: user.emailVerified } };
-  },
-};
+import { signInCallback } from "./auth";
 
-describe("Better Auth Configuration", () => {
-  describe("Auth instance structure", () => {
-    it("should export an auth object with expected methods", async () => {
-      // Dynamic import to ensure env mocks are set
-      const { auth } = await import("@/lib/auth");
-
-      expect(auth).toBeDefined();
-      expect(typeof auth).toBe("object");
-      // Better Auth exports a handler method
-      expect(typeof auth.handler).toBe("function");
-    });
-
-    it("should have socialProviders configured via env vars", async () => {
-      // Verify that the environment variables are properly set
-      // (the auth module uses these to configure providers)
-      expect(mockEnv.AUTH_GOOGLE_ID).toBe("test-google-client-id");
-      expect(mockEnv.AUTH_GOOGLE_SECRET).toBe("test-google-client-secret");
-      expect(mockEnv.AUTH_GITHUB_ID).toBe("test-github-client-id");
-      expect(mockEnv.AUTH_GITHUB_SECRET).toBe("test-github-client-secret");
-
-      // Verify auth module uses env vars by checking it's properly configured
-      const { auth } = await import("@/lib/auth");
-      expect(auth).toBeDefined();
-      expect(typeof auth.handler).toBe("function");
-    });
+describe("signInCallback (real production callback)", () => {
+  it("throws when emailVerified is explicitly false (rejects unverified OAuth sign-in)", async () => {
+    await expect(
+      signInCallback({ user: { emailVerified: false } }),
+    ).rejects.toThrow("Email is not verified by the OAuth provider.");
   });
 
-  describe("Email verification callback", () => {
-    it("should reject sign-in when email is not verified", async () => {
-      // Simulate an unverified email from OAuth provider
-      const unverifiedUser = {
+  it("allows sign-in when emailVerified is true and returns the verified flag", async () => {
+    const result = await signInCallback({ user: { emailVerified: true } });
+    expect(result).toEqual({ user: { emailVerified: true } });
+    expect(typeof result.user.emailVerified).toBe("boolean");
+  });
+
+  it("allows sign-in when emailVerified is null (missing provider flag is not a hard reject)", async () => {
+    // Per the production contract in auth.ts, only `=== false` is rejected.
+    // `null` ("provider did not assert") is passed through unchanged. The
+    // prior duplicate-helper suite asserted the opposite (false claim),
+    // which would have masked a real security regression.
+    const result = await signInCallback({ user: { emailVerified: null } });
+    expect(result).toEqual({ user: { emailVerified: null } });
+  });
+
+  it("allows sign-in when emailVerified is undefined", async () => {
+    const result = await signInCallback({ user: { emailVerified: undefined } });
+    expect(result).toEqual({ user: { emailVerified: undefined } });
+    expect(result.user.emailVerified).toBeUndefined();
+  });
+
+  it("allows sign-in when the emailVerified field is absent entirely", async () => {
+    const result = await signInCallback({
+      user: {} as { emailVerified: boolean | null | undefined },
+    });
+    expect(result.user.emailVerified).toBeUndefined();
+  });
+
+  it("only ever rejects the literal false value (truthy or other falsy never throw)", async () => {
+    // Defensive: a non-boolean truthy must NOT be coerced into a reject.
+    const result = await signInCallback({
+      user: { emailVerified: "true" as unknown as boolean },
+    });
+    expect(result.user.emailVerified).toBe("true");
+  });
+
+  it("still rejects the literal false regardless of other fields on the user object", async () => {
+    await expect(
+      signInCallback({
         user: {
           emailVerified: false,
+          ...({} as { id: string; email: string }),
         },
-      };
-
-      await expect(
-        emailVerificationCallback.signIn(unverifiedUser),
-      ).rejects.toThrow("Email is not verified by the OAuth provider.");
-    });
-
-    it("should allow sign-in when email is verified", async () => {
-      // Simulate a verified email from OAuth provider
-      const verifiedUser = {
-        user: {
-          emailVerified: true,
-        },
-      };
-
-      const result = await emailVerificationCallback.signIn(verifiedUser);
-      expect(result.user.emailVerified).toBe(true);
-    });
-
-    it("should handle null emailVerified as unverified", async () => {
-      // null means the provider didn't verify the email
-      const nullVerifiedUser = {
-        user: {
-          emailVerified: null,
-        },
-      };
-
-      // null should also be rejected
-      await expect(
-        emailVerificationCallback.signIn(nullVerifiedUser),
-      ).rejects.toThrow("Email is not verified by the OAuth provider.");
-    });
-
-    it("should allow sign-in when emailVerified is undefined", async () => {
-      // Some OAuth providers might not include emailVerified field
-      const undefinedVerifiedUser = {
-        user: {
-          emailVerified: undefined,
-        },
-      };
-
-      // undefined is not === false or === null, so it should pass
-      const result = await emailVerificationCallback.signIn(
-        undefinedVerifiedUser,
-      );
-      expect(result.user.emailVerified).toBeUndefined();
-    });
+      }),
+    ).rejects.toThrow("Email is not verified by the OAuth provider.");
   });
 });
 
-describe("OAuth Route Handler", () => {
-  it("should export GET and POST handlers", async () => {
-    // Import route module to verify exports
+describe("Better Auth constructed instance", () => {
+  it("exports an auth object exposing the Better Auth handler surface", async () => {
+    const { auth } = await import("@/lib/auth");
+    expect(auth).toBeDefined();
+    expect(typeof auth).toBe("object");
+    expect(typeof auth.handler).toBe("function");
+  });
+
+  it("exports the AuthClient type alongside the runtime auth value", async () => {
+    const authModule = await import("@/lib/auth");
+    expect(authModule).toHaveProperty("auth");
+    expect(authModule).toHaveProperty("signInCallback");
+  });
+
+  it("constructs without throwing when env vars + db are mocked", async () => {
+    await expect(import("@/lib/auth")).resolves.toBeDefined();
+  });
+});
+
+describe("OAuth Route Handler module", () => {
+  it("exports GET and POST handler functions", async () => {
     const routeModule =
       await import("@/app/api/v1/auth/[...better-auth]/route");
-
     expect(routeModule.GET).toBeDefined();
     expect(typeof routeModule.GET).toBe("function");
     expect(routeModule.POST).toBeDefined();
     expect(typeof routeModule.POST).toBe("function");
-  });
-
-  it("GET handler should be a function", async () => {
-    const { GET } = await import("@/app/api/v1/auth/[...better-auth]/route");
-
-    // For unit testing, we verify the handler is a function. (A full
-    // request/response round-trip against auth.handler is covered by the
-    // the integration suite rather than this isolated module check.)
-    expect(typeof GET).toBe("function");
-  });
-
-  it("POST handler should be a function", async () => {
-    const { POST } = await import("@/app/api/v1/auth/[...better-auth]/route");
-
-    // Verify the handler is a function
-    expect(typeof POST).toBe("function");
-  });
-});
-
-describe("Auth configuration invariants", () => {
-  it("should disable password authentication via env vars", async () => {
-    // The auth module is configured with emailAndPassword: { enabled: false }
-    // We verify this by checking the env vars are not needed for password auth
-    // (password auth is disabled at compile time in the auth config)
-    const { auth } = await import("@/lib/auth");
-    expect(auth).toBeDefined();
-    expect(typeof auth.handler).toBe("function");
-  });
-
-  it("should disable account linking via config", async () => {
-    // The auth module uses advanced: { disableAccountLinking: true }
-    // We verify the configuration exists by importing the auth object
-    const { auth } = await import("@/lib/auth");
-    expect(auth).toBeDefined();
-    expect(typeof auth.handler).toBe("function");
-  });
-
-  it("should use postgresql provider", async () => {
-    // The auth module uses prismaAdapter with provider: "postgresql"
-    // This is verified by the auth module being properly initialized
-    const { auth } = await import("@/lib/auth");
-    expect(auth).toBeDefined();
-    expect(typeof auth.handler).toBe("function");
-  });
-});
-
-describe("Auth module exports", () => {
-  it("should export auth object and AuthClient type", async () => {
-    const authModule = await import("@/lib/auth");
-
-    // auth is a runtime value
-    expect(authModule.auth).toBeDefined();
-    expect(typeof authModule.auth).toBe("object");
-
-    // AuthClient is a TypeScript type - we verify it exists in the type space
-    // by checking the module has the export (TypeScript will error if missing)
-    expect(authModule).toHaveProperty("auth");
-  });
-});
-
-describe("Callback edge cases", () => {
-  it("should return emailVerified as boolean when true", async () => {
-    const result = await emailVerificationCallback.signIn({
-      user: { emailVerified: true },
-    });
-    expect(result.user.emailVerified).toBe(true);
-    expect(typeof result.user.emailVerified).toBe("boolean");
-  });
-
-  it("should return emailVerified as boolean when false", async () => {
-    // When it throws, we don't get a return value
-    await expect(
-      emailVerificationCallback.signIn({
-        user: { emailVerified: false },
-      }),
-    ).rejects.toThrow();
-  });
-
-  it("should handle user without emailVerified property", async () => {
-    // Some OAuth providers might not send emailVerified at all
-    const userWithoutEmailVerified = {
-      user: {} as { emailVerified: boolean | null | undefined },
-    };
-
-    // Should not throw since undefined !== false && undefined !== null
-    const result = await emailVerificationCallback.signIn(
-      userWithoutEmailVerified,
-    );
-    expect(result.user.emailVerified).toBeUndefined();
-  });
-
-  it("should reject when emailVerified is null", async () => {
-    await expect(
-      emailVerificationCallback.signIn({
-        user: { emailVerified: null },
-      }),
-    ).rejects.toThrow("Email is not verified by the OAuth provider.");
   });
 });

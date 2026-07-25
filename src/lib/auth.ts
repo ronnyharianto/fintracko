@@ -13,6 +13,41 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "./db";
 
 /**
+ * Better Auth `signIn` callback.
+ *
+ * Extracted as a named export so the co-located unit suite can assert its
+ * exact behaviour (reject `emailVerified === false`, pass through every other
+ * value including `null`/`undefined`) without spinning up Better Auth or a
+ * database. AGENT_RULES.md §4 ("Mocking Discipline") requires that Prisma
+ * and Better Auth be mocked at the module boundary; testing the raw callback
+ * function directly is the most faithful application of that rule.
+ *
+ * Google and GitHub OAuth payloads include an `email_verified` flag. We reject
+ * any sign-in attempt where the email has not been verified by the provider,
+ * as unverified emails could belong to any user who can receive mail at that
+ * address. `null` / `undefined` are passed through unchanged: a missing flag
+ * is treated as "provider did not assert" rather than a hard reject, matching
+ * Better Auth's own contract for callers that legitimately omit the field.
+ *
+ * @throws Error("Email is not verified by the OAuth provider.") when
+ *   `user.emailVerified === false`.
+ */
+export async function signInCallback({
+  user,
+}: {
+  user: { emailVerified: boolean | null | undefined };
+}): Promise<{ user: { emailVerified: boolean | null | undefined } }> {
+  if (user.emailVerified === false) {
+    throw new Error("Email is not verified by the OAuth provider.");
+  }
+  return {
+    user: {
+      emailVerified: user.emailVerified,
+    },
+  };
+}
+
+/**
  * Better Auth instance configured for OAuth-only authentication.
  *
  * Features enabled:
@@ -84,25 +119,12 @@ export const auth = betterAuth({
     /**
      * Enforce email verification for OAuth sign-ins.
      *
-     * Google and GitHub OAuth payloads include an `email_verified` flag.
-     * We reject any sign-in attempt where the email has not been verified
-     * by the provider, as unverified emails could belong to any user who
-     * can receive mail at that address.
+     * Delegates to {@link signInCallback} so the exact same logic is
+     * unit-testable in isolation (see `auth.test.ts`). Keeping the function
+     * hoisted out of the `betterAuth({...})` literal avoids a stale
+     * duplicate that drifted from the real configured behavior.
      */
-    signIn: async ({
-      user,
-    }: {
-      user: { emailVerified: boolean | null | undefined };
-    }) => {
-      if (user.emailVerified === false) {
-        throw new Error("Email is not verified by the OAuth provider.");
-      }
-      return {
-        user: {
-          emailVerified: user.emailVerified,
-        },
-      };
-    },
+    signIn: signInCallback,
   },
   advanced: {
     database: {

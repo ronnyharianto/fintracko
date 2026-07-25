@@ -144,7 +144,7 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
     return node;
   }
 
-  // Refuse to mutate Date / RegExp / class instances — sanitizing their
+  // Refuse to mutate Date / RegExp / Map / Set instances — sanitizing their
   // internal slots would silently corrupt their semantics.
   if (
     node instanceof Date ||
@@ -155,16 +155,39 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
     return node;
   }
 
+  // Arrays are plain-data containers — recurse into each element regardless
+  // of the prototype check below (Array.prototype !== Object.prototype).
+  // Detect cycles BEFORE mapping so a self-referential array throws cleanly.
+  if (Array.isArray(node)) {
+    if (visited.has(node as unknown as object)) {
+      throw new Error(
+        "Sanitization aborted: circular reference detected in payload.",
+      );
+    }
+    visited.add(node as unknown as object);
+    return node.map((child) => walkAndSanitize(child, visited)) as unknown as T;
+  }
+
+  // Refuse to descend into ANY non-plain object (i.e. a class instance whose
+  // prototype is not `Object.prototype`). The documented contract
+  // (see header comment "Refuses to descend into ... class instances") is
+  // that walkAndSanitize only traverses "plain data" objects; cloning a class
+  // instance via Object.entries would silently strip its prototype (breaking
+  // instanceof and any methods/slots), and recursing into user-supplied
+  // class instances is also a place attacker-controlled `toJSON`/getter logic
+  // could run. We pass the live reference through untouched. `Object.create(null)`
+  // (proto === null) is treated as a plain object and is traversed.
+  const proto = Object.getPrototypeOf(node as unknown as object);
+  if (proto !== Object.prototype && proto !== null) {
+    return node;
+  }
+
   if (visited.has(node as unknown as object)) {
     throw new Error(
       "Sanitization aborted: circular reference detected in payload.",
     );
   }
   visited.add(node as unknown as object);
-
-  if (Array.isArray(node)) {
-    return node.map((child) => walkAndSanitize(child, visited)) as unknown as T;
-  }
 
   const clone: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(node as Record<string, unknown>)) {

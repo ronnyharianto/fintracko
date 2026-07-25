@@ -159,4 +159,71 @@ describe("sanitizeObject", () => {
     expect(result.items[0].label).toContain("kept");
     expect(result.items[1].note).toBe("plain text");
   });
+
+  it("handles nested arrays-of-arrays (string leaves at every depth)", () => {
+    const payload = {
+      matrix: [
+        ["<b>a</b>", "b"],
+        ["c", "<script>d</script>e"],
+      ],
+      scalar: "f",
+    };
+    const result = sanitizeObject(payload);
+    expect(result.matrix[0][0]).toBe("a");
+    expect(result.matrix[0][1]).toBe("b");
+    expect(result.matrix[1][0]).toBe("c");
+    expect(result.matrix[1][1]).toBe("e");
+    expect(result.scalar).toBe("f");
+  });
+
+  it("does not descend into a custom class instance (preserves reference + prototype)", () => {
+    class Money {
+      constructor(public cents: number) {}
+      formatted() {
+        return `$${(this.cents / 100).toFixed(2)}`;
+      }
+    }
+    const money = new Money(1099);
+    const payload = { amount: money };
+    const result = sanitizeObject(payload);
+    expect(result.amount).toBe(money); // identity preserved, not cloned
+    expect(result.amount).toBeInstanceOf(Money);
+    expect(result.amount.formatted()).toBe("$10.99");
+  });
+
+  it("sanitizes string leaves nested inside a Date-immune object", () => {
+    const when = new Date("2026-01-01T00:00:00Z");
+    const payload = {
+      when,
+      label: "<script>x</script>event",
+      nested: { dirty: "<img src=x onerror=alert(1)>y" },
+    };
+    const result = sanitizeObject(payload);
+    expect(result.when).toBe(when);
+    expect(result.label).toBe("event");
+    expect(result.nested.dirty).toBe("y");
+  });
+
+  it("treats boolean and number leaves as non-xss and passes them through unchanged", () => {
+    const payload = {
+      n: 42,
+      b: false,
+      deep: { count: 7, flag: true },
+    };
+    const result = sanitizeObject(payload);
+    expect(result.n).toBe(42);
+    expect(result.b).toBe(false);
+    expect(result.deep.count).toBe(7);
+    expect(result.deep.flag).toBe(true);
+  });
+
+  it("strips an event-handler attribute payload while keeping the visible label (mixed markup)", () => {
+    const payload =
+      '<a href="javascript:alert(1)" onclick="steal()">Click me</a>';
+    const result = sanitizeString(payload);
+    expect(result).toContain("Click me");
+    expect((result ?? "").toLowerCase()).not.toContain("javascript:");
+    expect((result ?? "").toLowerCase()).not.toContain("onclick");
+    expect((result ?? "").toLowerCase()).not.toContain("steal");
+  });
 });

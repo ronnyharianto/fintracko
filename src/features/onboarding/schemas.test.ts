@@ -178,5 +178,91 @@ describe("Onboarding Schemas", () => {
       const result = CompleteOnboardingSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
     });
+
+    it("should REJECT a non-UTC datetime that carries a timezone offset (zod .datetime() requires trailing Z)", () => {
+      const invalidData = {
+        dateOfBirth: "2000-01-01T00:00:00+07:00",
+        gender: "MALE" as const,
+        currencyPreference: "USD" as const,
+        languagePreference: "en" as const,
+      };
+      expect(CompleteOnboardingSchema.safeParse(invalidData).success).toBe(
+        false,
+      );
+    });
+
+    it("should ACCEPT a bio at exactly the 500-character boundary", () => {
+      const validData = {
+        bio: "a".repeat(500),
+        dateOfBirth: "2000-01-01T00:00:00Z",
+        gender: "MALE" as const,
+        currencyPreference: "USD" as const,
+        languagePreference: "en" as const,
+      };
+      expect(CompleteOnboardingSchema.safeParse(validData).success).toBe(true);
+    });
+
+    it("should ACCEPT an empty-string bio (optional+nullable; emptiness is not a rejection)", () => {
+      const validData = {
+        bio: "",
+        dateOfBirth: "2000-01-01T00:00:00Z",
+        gender: "FEMALE" as const,
+        currencyPreference: "IDR" as const,
+        languagePreference: "id" as const,
+      };
+      expect(CompleteOnboardingSchema.safeParse(validData).success).toBe(true);
+    });
+
+    it("should reject `null` at the top level (the whole payload must be an object)", () => {
+      expect(CompleteOnboardingSchema.safeParse(null).success).toBe(false);
+    });
+
+    it("should reject `undefined` at the top level", () => {
+      expect(CompleteOnboardingSchema.safeParse(undefined).success).toBe(false);
+    });
+
+    it("should reject an array payload (object schema, not array)", () => {
+      expect(CompleteOnboardingSchema.safeParse(["MALE", "USD"]).success).toBe(
+        false,
+      );
+    });
+
+    it("should reject unknown extra keys stripping OR depending on zod default — confirm required fields still validated", () => {
+      // Zod v4 object is non-strict by default (extra keys stripped), so a
+      // payload with extra keys that ALSO has all required valid fields should
+      // parse successfully. This pins that contract so a future `.strict()`
+      // flip surfaces here as a deliberate change.
+      const data = {
+        bio: null,
+        dateOfBirth: "2000-01-01T00:00:00Z",
+        gender: "OTHER" as const,
+        currencyPreference: "EUR" as const,
+        languagePreference: "es" as const,
+        surprise: "extra-field",
+      };
+      const result = CompleteOnboardingSchema.safeParse(data);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).not.toHaveProperty("surprise");
+      }
+    });
+  });
+
+  describe("Type inference sanity (CompleteOnboardingInput)", () => {
+    it("compile-time inferred shape matches the runtime schema output", () => {
+      // A static-type assertion: assigning a fully-valid object to the
+      // inferred type MUST typecheck. The runtime round-trip is the
+      // meaningful part — if the inferred type drifts from the schema this
+      // line errors at compile time.
+      const value: import("./schemas").CompleteOnboardingInput = {
+        bio: "ok",
+        dateOfBirth: "2000-01-01T00:00:00Z",
+        gender: "MALE",
+        currencyPreference: "USD",
+        languagePreference: "en",
+      };
+      const result = CompleteOnboardingSchema.safeParse(value);
+      expect(result.success).toBe(true);
+    });
   });
 });
