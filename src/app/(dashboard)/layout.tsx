@@ -15,13 +15,24 @@
  *     the OnboardingGuardWrapper component
  */
 
-import type { ReactNode } from "react";
-import OnboardingGuardWrapper from "@/components/guards/onboarding-guard-wrapper";
+import type { ReactNode } from 'react';
+import OnboardingGuardWrapper from '@/components/guards/onboarding-guard-wrapper';
+import Sidebar from '@/components/shared/sidebar';
+import { WorkspaceProvider } from '@/components/shared/workspace-context';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return <OnboardingGuardWrapper>{children}</OnboardingGuardWrapper>;
+  return (
+    <OnboardingGuardWrapper>
+      <WorkspaceProvider>
+        <div className="flex min-h-screen bg-background text-foreground">
+          <Sidebar />
+          <main className="flex-1 p-6">{children}</main>
+        </div>
+      </WorkspaceProvider>
+    </OnboardingGuardWrapper>
+  );
 }

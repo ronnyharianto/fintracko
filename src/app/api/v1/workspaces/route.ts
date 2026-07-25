@@ -14,8 +14,37 @@ import { validateBody } from '@/lib/api/validate';
 import { sanitizeObject } from '@/lib/api/sanitize';
 import { successWithStatus, failure } from '@/lib/api/envelope';
 import { CreateWorkspaceSchema } from '@/features/workspaces/schemas';
-import { createWorkspace } from '@/features/workspaces/services';
+import {
+  createWorkspace,
+  getUserWorkspaces,
+} from '@/features/workspaces/services';
 import { db } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  return withSession(request, async ({ userId }) => {
+    const profile = await db.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      return failure(
+        'ONBOARDING_REQUIRED',
+        'Profile not found. Please complete onboarding first.'
+      );
+    }
+
+    try {
+      const workspaces = await getUserWorkspaces(userId);
+      return successWithStatus({ workspaces }, 200);
+    } catch {
+      return failure(
+        'INTERNAL_SERVER_ERROR',
+        'Failed to retrieve workspaces. Please try again.'
+      );
+    }
+  });
+}
 
 export async function POST(request: NextRequest) {
   return withSession(request, async ({ userId }) => {

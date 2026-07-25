@@ -13,6 +13,30 @@ import {
 import type { CreateWorkspaceInput } from './schemas';
 
 /**
+ * Retrieves all workspaces where the user is a member.
+ */
+export async function getUserWorkspaces(userId: string) {
+  const memberships = await db.workspaceMember.findMany({
+    where: { userId },
+    include: {
+      workspace: {
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return memberships.map((m) => ({
+    ...m.workspace,
+    role: m.role,
+  }));
+}
+
+/**
  * Creates a new Workspace, assigns the creator as OWNER in WorkspaceMember,
  * and seeds default Level 1 Categories and Level 2 SubCategories from the
  * selected static workspace template.
