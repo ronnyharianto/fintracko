@@ -12,21 +12,21 @@
  * Per ARCHITECTURE.md §3: Uses atomic database transaction to create Profile + Workspace.
  */
 
-import { NextRequest } from "next/server";
-import { withSession } from "@/lib/api/session";
-import { validateBody } from "@/lib/api/validate";
-import { sanitizeObject } from "@/lib/api/sanitize";
-import { success } from "@/lib/api/envelope";
-import { CompleteOnboardingSchema } from "@/features/onboarding/schemas";
-import { completeOnboarding } from "@/features/onboarding/services";
-import { failure } from "@/lib/api/envelope";
+import { NextRequest } from 'next/server';
+import { withSession } from '@/lib/api/session';
+import { validateBody } from '@/lib/api/validate';
+import { sanitizeObject } from '@/lib/api/sanitize';
+import { success } from '@/lib/api/envelope';
+import { CompleteOnboardingSchema } from '@/features/onboarding/schemas';
+import { completeOnboarding } from '@/features/onboarding/services';
+import { failure } from '@/lib/api/envelope';
 
 export async function POST(request: NextRequest) {
   return withSession(request, async ({ userId }) => {
     // Validate request body
     const validationResult = await validateBody(
       request,
-      CompleteOnboardingSchema,
+      CompleteOnboardingSchema
     );
     if (!validationResult.success) {
       return validationResult.response;
@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Handle potential errors (e.g., Profile already exists)
       return failure(
-        "INTERNAL_SERVER_ERROR",
-        "Failed to complete onboarding. Please try again.",
+        'INTERNAL_SERVER_ERROR',
+        'Failed to complete onboarding. Please try again.'
       );
     }
   });

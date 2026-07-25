@@ -15,9 +15,9 @@
  * function names, and comments MUST be written in English.
  */
 
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import type { ReactNode } from "react";
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import type { ReactNode } from 'react';
 
 /**
  * Minimal shape of the Better Auth instance we depend on.
@@ -44,7 +44,9 @@ interface SessionLike {
  */
 interface DbLike {
   profile: {
-    findUnique: (args: { where: { userId: string } }) => Promise<{ id: string } | null>;
+    findUnique: (args: {
+      where: { userId: string };
+    }) => Promise<{ id: string } | null>;
   };
 }
 
@@ -59,7 +61,7 @@ interface OnboardingGuardWrapperProps {
  * circular import hazards with the Prisma adapter.
  */
 async function getProductionAuth(): Promise<AuthLike> {
-  const { auth } = await import("@/lib/auth");
+  const { auth } = await import('@/lib/auth');
   return auth as unknown as AuthLike;
 }
 
@@ -70,7 +72,7 @@ async function getProductionAuth(): Promise<AuthLike> {
  * forcing DATABASE_URL resolution at import time in tests.
  */
 async function getProductionDb(): Promise<DbLike> {
-  const { db } = await import("@/lib/db");
+  const { db } = await import('@/lib/db');
   return db as unknown as DbLike;
 }
 
@@ -96,7 +98,7 @@ export default async function OnboardingGuardWrapper({
 
   // If no session exists, redirect to login
   if (!session || !session.user?.id) {
-    redirect("/login");
+    redirect('/login');
   }
 
   // Query database for Profile record
@@ -107,7 +109,7 @@ export default async function OnboardingGuardWrapper({
 
   // If no Profile exists, user has not completed onboarding
   if (!profile) {
-    redirect("/onboarding");
+    redirect('/onboarding');
   }
 
   // Profile exists - render children normally

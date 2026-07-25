@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Onboarding Form Component.
@@ -16,31 +16,31 @@
  * implementing full i18n infrastructure.
  */
 
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface OnboardingFormData {
   bio?: string;
   dateOfBirth: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
   currencyPreference: string;
   languagePreference: string;
   acceptTerms: boolean;
@@ -52,10 +52,10 @@ export function OnboardingForm() {
   const [hasReadTerms, setHasReadTerms] = useState(false);
   const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
   const [formData, setFormData] = useState<OnboardingFormData>({
-    dateOfBirth: "",
-    gender: "OTHER",
-    currencyPreference: "USD",
-    languagePreference: "en",
+    dateOfBirth: '',
+    gender: 'OTHER',
+    currencyPreference: 'USD',
+    languagePreference: 'en',
     acceptTerms: false,
     acceptPrivacy: false,
   });
@@ -64,7 +64,7 @@ export function OnboardingForm() {
     e.preventDefault();
 
     if (!formData.acceptTerms || !formData.acceptPrivacy) {
-      toast.error("You must accept the Terms of Service and Privacy Policy.");
+      toast.error('You must accept the Terms of Service and Privacy Policy.');
       return;
     }
 
@@ -74,10 +74,10 @@ export function OnboardingForm() {
       // Convert date from YYYY-MM-DD to ISO datetime format
       const isoDate = new Date(formData.dateOfBirth).toISOString();
 
-      const response = await fetch("/api/v1/onboarding/complete", {
-        method: "POST",
+      const response = await fetch('/api/v1/onboarding/complete', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           bio: formData.bio || null,
@@ -91,16 +91,16 @@ export function OnboardingForm() {
       const result = await response.json();
 
       if (!result.success) {
-        toast.error(result.error?.message || "Failed to complete onboarding");
+        toast.error(result.error?.message || 'Failed to complete onboarding');
         return;
       }
 
-      toast.success("Profile created successfully!");
+      toast.success('Profile created successfully!');
 
       // Redirect to dashboard after successful onboarding
-      window.location.href = "/dashboard";
+      window.location.href = '/dashboard';
     } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +129,7 @@ export function OnboardingForm() {
               placeholder="Tell us a bit about yourself (max 500 characters)"
               rows={3}
               maxLength={500}
-              value={formData.bio || ""}
+              value={formData.bio || ''}
               onChange={(e) =>
                 setFormData({ ...formData, bio: e.target.value })
               }
@@ -156,7 +156,7 @@ export function OnboardingForm() {
             <Label htmlFor="gender">Gender *</Label>
             <Select
               value={formData.gender}
-              onValueChange={(value: "MALE" | "FEMALE" | "OTHER") =>
+              onValueChange={(value: 'MALE' | 'FEMALE' | 'OTHER') =>
                 setFormData({
                   ...formData,
                   gender: value,
@@ -233,9 +233,9 @@ export function OnboardingForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="acceptTerms"
-                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? "text-muted-foreground" : ""}`}
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? 'text-muted-foreground' : ''}`}
                 >
-                  I already read, acknowledge and accept the{" "}
+                  I already read, acknowledge and accept the{' '}
                   <a
                     href="/terms-of-service"
                     className="text-primary underline font-medium hover:text-primary/80"
@@ -271,9 +271,9 @@ export function OnboardingForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="acceptPrivacy"
-                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? "text-muted-foreground" : ""}`}
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? 'text-muted-foreground' : ''}`}
                 >
-                  I already read, acknowledge and accept the{" "}
+                  I already read, acknowledge and accept the{' '}
                   <a
                     href="/privacy-policy"
                     className="text-primary underline font-medium hover:text-primary/80"
@@ -295,7 +295,7 @@ export function OnboardingForm() {
 
           <div className="md:col-span-2 pt-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Completing..." : "Complete Setup"}
+              {isLoading ? 'Completing...' : 'Complete Setup'}
             </Button>
           </div>
         </form>
