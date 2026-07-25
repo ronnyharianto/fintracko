@@ -11,9 +11,11 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
 - [x] **Task 1.1: Next.js Foundation Setup**
   - Initialize the Next.js application with TypeScript, Tailwind CSS, and the structured `src/` directory layout.
   - Set up `tsconfig.json` and verify absolute path mapping (`@/*`).
+  - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 1.1 for the resolution — Next.js 16 + React 19 bootstrap with TypeScript strict mode, a `src/` App Router layout, `tsconfig.json` `@/* → ./src/*` path aliasing (`bundler` module resolution, ES2017 target, Next plugin), and Tailwind CSS 4 wired through `postcss.config.mjs`.
 - [x] **Task 1.2: Testing Environment Config**
   - Configure `vitest.config.ts` and set up the sample environment sanity tests.
   - Enforce the rule: All unit tests must be co-located directly next to their target files using the explicit `*.test.ts` or `*.test.tsx` naming pattern.
+  - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 1.2 for the resolution — `vitest.config.mts` sets a jsdom environment with globals, an `@/*` alias mirroring `tsconfig.json`, `src/test/setup.ts` jest-dom matchers, and an `include` glob of `src/**/*.test.{ts,tsx}` that enforces the co-located test rule; the `cn()` utility sanity test fences the runner.
 - [x] **Task 1.3: Prisma Database Schema Definition**
   - Initialize Prisma ORM. Implement the full multi-tenant schema matching `ARCHITECTURE.md` §2. Models (12 total): `User`, `Profile`, `Workspace`, `WorkspaceMember`, `FinancialAccount` (financial ledger node), `Category`, `SubCategory`, `Budget`, `FinancialTransaction` (core ledger entry), plus the Better Auth–aligned `AuthAccount`, `Session`, and `Verification` tables reconciled into the schema here to guarantee migration continuity. (`User.email` is uniquely indexed by Prisma via `@unique`.)
   - Use PostgreSQL `UUID` primary keys, `Decimal(18,4)` for all financial fields, `String[]` for `FinancialTransaction.tags`, and Prisma enums for `WorkspaceRole`, `CategoryType`, `BudgetInterval`, `Gender`, and `TransactionType`.
@@ -24,12 +26,14 @@ This roadmap lists chronological technical checkpoints to build Fintracko safely
   - Verify primary keys, compound unique indexes, and cascade delete logic on local/Supabase development instances.
   - Add npm scripts: `prisma:generate`, `prisma:migrate`, `prisma:studio`, `db:push`, `db:reset`, `supabase:start`, `supabase:stop`.
   - Add a co-located `src/lib/db.test.ts` unit test asserting the generated Prisma Client exposes all 12 model delegates and the expected enum values. (Vitest's `include` is restricted to `src/**`, so the test sits beside the singleton `db.ts` — the import target — rather than under `prisma/`.)
+  - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 1.3 for the resolution — the 12-model schema ships as migration `20260716222200_init`, the `globalThis`-cached Prisma Client singleton lives at `src/lib/db.ts`, and the `db.test.ts` suite (9 tests) asserts every model delegate, the five enum contracts, and the singleton identity (the `Verification` cross-reference note and post-Task-2.2 count bump are recorded in the log).
 - [x] **Task 1.4: Design System Ingestion**
   - Initialize `shadcn/ui` atomic visual components within `src/components/ui/` (button, card, dialog, input, form, label, table, toast). All components carry `data-slot` attributes for deterministic DOM querying and are styled via the new-york variant.
   - Replace shadcn's default slate CSS variables in `src/app/globals.css` with Fintracko's teal design tokens per `docs/core/DESIGN_SYSTEM.md` §Color Palette. Light mode uses `#0f766e` (primary: `175 77% 26%`), dark mode uses `#14b8a6` (primary: `173 80% 40%`).
   - Integrate `sonner` toast notification provider into root layout (`src/app/layout.tsx`) with `richColors`, `closeButton`, and `position="top-right"`. Update metadata to Fintracko branding ("Fintracko — Smart Financial Tracker").
   - Add a co-located smoke test at `src/components/ui/ui-components.test.tsx` asserting every installed component renders without throwing and exposes the expected `data-slot` attribute.
   - Enforce component isolation: code injection in `src/components/ui/` must remain completely generic; no business-state parsing occurs inside these files.
+  - **Status:** ✅ Complete. See [`IMPLEMENTATION_LOG.md`](IMPLEMENTATION_LOG.md) → Task 1.4 for the resolution — the new-york `shadcn/ui` atoms land in `src/components/ui/` with `data-slot` hooks, the teal design tokens replace slate defaults in `globals.css`, `sonner` is wired into the root layout alongside the Fintracko metadata, and `ui-components.test.tsx` (12 tests) fences render + `data-slot` for every component.
 
 ## Phase 2: Core Authentication & Security Gateway Pipeline
 

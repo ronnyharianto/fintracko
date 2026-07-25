@@ -6,7 +6,31 @@ This document records **how** completed roadmap tasks were implemented — file-
 
 ---
 
+## Task 1.1 — Next.js Foundation Setup
+
+### Resolution ✅ Complete
+
+Next.js 16.2.10 bootstrapped with React 19.2.4 in TypeScript strict mode, using the App Router under a structured `src/` directory. [`tsconfig.json`](../../tsconfig.json) locks the language contract: `strict: true`, `target: ES2017`, `moduleResolution: "bundler"`, `isolatedModules`, the `next` plugin, and a `paths` alias of `@/* → ./src/*` enabling absolute imports across the codebase. Tailwind CSS 4 is wired through [`postcss.config.mjs`](../../postcss.config.mjs) and surfaced via [`src/app/globals.css`](../../src/app/globals.css); [`next.config.ts`](../../next.config.ts) carries the project-level Next configuration, and [`eslint.config.mjs`](../../eslint.config.mjs) extends `eslint-config-next` for the lint contract. The App Router skeleton carries root [`layout.tsx`](../../src/app/layout.tsx), [`page.tsx`](../../src/app/page.tsx), plus co-located [`error.tsx`](../../src/app/error.tsx), [`loading.tsx`](../../src/app/loading.tsx), and [`not-found.tsx`](../../src/app/not-found.tsx) error boundaries. Foundation verified: the dev server boots on `http://localhost:3000` and `next build` compiles the static marketing routes cleanly.
+
+> **Source-of-truth alignment:** The foundation layout and path aliasing are canonically documented in [`docs/core/PROJECT_STRUCTURE.md`](../core/PROJECT_STRUCTURE.md) §2 (Directory Layout) and the technology stack in [`docs/architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) §1 (Technology Stack).
+
+---
+
+## Task 1.2 — Testing Environment Config
+
+### Resolution ✅ Complete
+
+[`vitest.config.mts`](../../vitest.config.mts) defines the test contract: `environment: "jsdom"` (DOM APIs available for React Testing Library), globals enabled so `describe`/`it`/`expect` need no imports, a resolve `alias` of `@` → `./src` mirroring the [`tsconfig.json`](../../tsconfig.json) `paths` mapping, `setupFiles: ["./src/test/setup.ts"]` registering `@testing-library/jest-dom` matchers, and an `include: ["src/**/*.test.ts", "src/**/*.test.tsx"]` glob that hard-enforces the co-located test rule (tests sit directly next to their target files, `*.test.ts`/`*.test.tsx` naming — AGENT_RULES.md §4 + PROJECT_STRUCTURE.md §3). `node_modules`, `.next`, `build`, and `out` are excluded so generated/dependency code never runs. Vitest is resolved from `vitest@^4.1.10` with `@vitejs/plugin-react` and `vite-tsconfig-paths`. The sanity test at [`src/lib/utils.test.ts`](../../src/lib/utils.test.ts) fences the runner against the `cn()` `clsx` + `tailwind-merge` utility (5 tests: plain merge, Tailwind conflict resolution, falsy/conditional skipping, array/object joining, empty-input passthrough).
+
+> **Source-of-truth alignment:** The co-located testing rule and runner config are canonically documented in [`docs/core/AGENT_RULES.md`](../core/AGENT_RULES.md) §4 (Mandatory Unit Testing) and [`docs/core/PROJECT_STRUCTURE.md`](../core/PROJECT_STRUCTURE.md) §3 (Co-located Automated Unit Testing).
+
+---
+
 ## Task 1.3 — Prisma Database Schema Definition
+
+### Resolution ✅ Complete
+
+The full multi-tenant schema matching `ARCHITECTURE.md` §2 ships at [`prisma/schema.prisma`](../../prisma/schema.prisma) as migration `20260716222200_init` (under [`prisma/migrations/`](../../prisma/migrations/)). Twelve models — `User`, `Profile`, `Workspace`, `WorkspaceMember`, `FinancialAccount`, `Category`, `SubCategory`, `Budget`, `FinancialTransaction`, plus the Better Auth–aligned `AuthAccount`, `Session`, and `Verification` — use PostgreSQL `UUID` primary keys, `Decimal(18,4)` for every financial field, `String[]` `FinancialTransaction.tags`, and Prisma enums (`WorkspaceRole`, `CategoryType`, `BudgetInterval`, `Gender`, `TransactionType`). Compound unique keys enforce `WorkspaceMember[workspaceId, userId]`, `FinancialAccount[workspaceId, name]`, `Budget[subCategoryId, interval]`, and `AuthAccount[providerId, accountId]`; `On Delete: Cascade` is applied per the architecture spec and performance indexes cover foreign keys plus `User.createdAt`, `FinancialTransaction.date`, `FinancialTransaction.payeePayer`, and `Category[workspaceId, type]`. The Prisma Client singleton at [`src/lib/db.ts`](../../src/lib/db.ts) caches the client instance on `globalThis` (avoiding connection-pool exhaustion across Next.js dev hot-reload). Local Postgres 17 is bootstrapped via the Supabase CLI Docker stack ([`supabase/config.toml`](../../supabase/config.toml)); npm scripts `prisma:generate`, `prisma:migrate`, `prisma:migrate:deploy`, `prisma:studio`, `db:push`, `db:reset`, `supabase:start`, `supabase:stop`, and `supabase:status` are wired in [`package.json`](../../package.json). The co-located [`src/lib/db.test.ts`](../../src/lib/db.test.ts) suite (9 tests) asserts every one of the 12 model delegates is exposed, the five enum contracts (`WorkspaceRole`, `CategoryType`, `TransactionType`, `BudgetInterval`, `Gender`) hold their literal members, and re-importing `db` returns the identical singleton instance.
 
 ### Cross-reference notes (relocated from roadmap bullets)
 
@@ -17,9 +41,15 @@ This document records **how** completed roadmap tasks were implemented — file-
 
 ## Task 1.4 — Design System Ingestion
 
+### Resolution ✅ Complete
+
+The new-york `shadcn/ui` atomic variant lands in [`src/components/ui/`](../../src/components/ui/) — `button`, `card`, `dialog`, `input`, `label`, `table` (plus `checkbox`, `select`, `form`, `toast`) — each carrying `data-slot` attributes for deterministic DOM querying and styled via the Tailwind 4 + Radix primitives stack. [`src/app/globals.css`](../../src/app/globals.css) replaces shadcn's default slate CSS variables with Fintracko's teal design tokens (DESIGN_SYSTEM.md §Color Palette): light-mode primary `#0f766e` (`175 77% 26%`), dark-mode primary `#14b8a6` (`173 80% 40%`), with `@custom-variant dark (&:is(.dark *))` added for explicit dark-mode toggling alongside `prefers-color-scheme`. The `sonner` toast provider is integrated into the root layout at [`src/app/layout.tsx`](../../src/app/layout.tsx) (`richColors`, `closeButton`, `position="top-right"`) and the root metadata is updated to Fintracko branding (`"Fintracko — Smart Financial Tracker"`). The co-located smoke test at [`src/components/ui/ui-components.test.tsx`](../../src/components/ui/ui-components.test.tsx) (12 tests — Button ×3, Card ×2, Dialog ×2, Input ×2, Label ×1, Table ×2) asserts every installed component renders without throwing and exposes the expected `data-slot` attribute. Component isolation is enforced: files under `src/components/ui/` stay completely generic, no business-state parsing leaks into the atoms.
+
 ### Implementation detail (relocated from roadmap bullet)
 
 - `@custom-variant dark (&:is(.dark *))` was added for explicit dark-mode toggling alongside `prefers-color-scheme`.
+
+> **Source-of-truth alignment:** The teal design tokens, the `data-slot` component contract, and the `sonner` integration are canonically documented in [`docs/core/DESIGN_SYSTEM.md`](../core/DESIGN_SYSTEM.md) §Color Palette and §Component Architecture, and the `src/components/ui/` atomic layout in [`docs/core/PROJECT_STRUCTURE.md`](../core/PROJECT_STRUCTURE.md) §2.2 (`src/components/ui/`).
 
 ---
 
