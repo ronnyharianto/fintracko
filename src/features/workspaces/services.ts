@@ -24,6 +24,7 @@ export async function getUserWorkspaces(userId: string) {
           id: true,
           name: true,
           createdAt: true,
+          ownerId: true,
         },
       },
     },
@@ -34,6 +35,155 @@ export async function getUserWorkspaces(userId: string) {
     ...m.workspace,
     role: m.role,
   }));
+}
+
+/**
+ * Retrieves all workspaces owned by the user, including members and counts.
+ */
+export async function getOwnedWorkspaces(userId: string) {
+  const workspaces = await db.workspace.findMany({
+    where: { ownerId: userId },
+    include: {
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          accounts: true,
+          transactions: true,
+          budgets: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return workspaces;
+}
+
+/**
+ * Invites a collaborator by email to an owned workspace.
+ */
+export async function inviteCollaborator(
+  userId: string,
+  workspaceId: string,
+  email: string
+) {
+  // 1. Verify user is owner of workspace
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { ownerId: true },
+  });
+  if (!workspace || workspace.ownerId !== userId) {
+    throw new Error('FORBIDDEN');
+  }
+
+  // 2. Find user by email
+  const targetUser = await db.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (!targetUser) {
+    throw new Error('USER_NOT_FOUND');
+  }
+
+  // 3. Create or check membership
+  const existingMember = await db.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: targetUser.id,
+      },
+    },
+  });
+
+  if (existingMember) {
+    throw new Error('ALREADY_MEMBER');
+  }
+
+  return await db.workspaceMember.create({
+    data: {
+      workspaceId,
+      userId: targetUser.id,
+      role: 'COLLABORATOR',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Removes a collaborator from an owned workspace.
+ */
+export async function removeCollaborator(
+  userId: string,
+  workspaceId: string,
+  memberId: string
+) {
+  // 1. Verify user is owner of workspace
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { ownerId: true },
+  });
+  if (!workspace || workspace.ownerId !== userId) {
+    throw new Error('FORBIDDEN');
+  }
+
+  // 2. Find member
+  const member = await db.workspaceMember.findUnique({
+    where: { id: memberId },
+  });
+  if (!member || member.workspaceId !== workspaceId) {
+    throw new Error('MEMBER_NOT_FOUND');
+  }
+
+  if (member.userId === userId) {
+    throw new Error('CANNOT_REMOVE_OWNER');
+  }
+
+  await db.workspaceMember.delete({
+    where: { id: memberId },
+  });
+
+  return { success: true };
+}
+
+/**
+ * Deletes an owned workspace.
+ */
+export async function deleteWorkspace(userId: string, workspaceId: string) {
+  // 1. Verify user is owner of workspace
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { ownerId: true },
+  });
+  if (!workspace || workspace.ownerId !== userId) {
+    throw new Error('FORBIDDEN');
+  }
+
+  // 2. Delete workspace (cascade handles accounts, categories, transactions, budgets, members)
+  await db.workspace.delete({
+    where: { id: workspaceId },
+  });
+
+  return { success: true };
 }
 
 /**

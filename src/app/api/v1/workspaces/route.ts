@@ -17,6 +17,7 @@ import { CreateWorkspaceSchema } from '@/features/workspaces/schemas';
 import {
   createWorkspace,
   getUserWorkspaces,
+  getOwnedWorkspaces,
 } from '@/features/workspaces/services';
 import { db } from '@/lib/db';
 
@@ -35,7 +36,10 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const workspaces = await getUserWorkspaces(userId);
+      const isOwned = request.nextUrl.searchParams.get('owned') === 'true';
+      const workspaces = isOwned
+        ? await getOwnedWorkspaces(userId)
+        : await getUserWorkspaces(userId);
       return successWithStatus({ workspaces }, 200);
     } catch {
       return failure(

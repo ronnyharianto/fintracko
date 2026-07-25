@@ -33,3 +33,12 @@ export const CreateWorkspaceSchema = z.object({
  * Type inference from the schema.
  */
 export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceSchema>;
+
+/**
+ * Invite collaborator request schema.
+ */
+export const InviteCollaboratorSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export type InviteCollaboratorInput = z.infer<typeof InviteCollaboratorSchema>;
