@@ -5,8 +5,8 @@
  * (no Profile record exists). It collects mandatory user settings and
  * creates the initial Profile and first Workspace.
  *
- * Per ARCHITECTURE.md §3: Users are redirected here by the OnboardingGuardWrapper
- * when they attempt to access dashboard pages without completing onboarding.
+ * Users are redirected here by the OnboardingGuardWrapper
+ * when they attempt to access workspace pages without completing onboarding.
  */
 
 import { OnboardingForm } from "@/components/shared/onboarding/onboarding-form";

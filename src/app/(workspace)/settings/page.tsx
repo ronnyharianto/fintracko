@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings, User, Briefcase, Shield, Bell } from 'lucide-react';
+import { User, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsTabs = [

@@ -10,10 +10,6 @@
  * - currencyPreference (required: USD, IDR, EUR, etc.)
  * - languagePreference (required: en, id, es, etc.)
  * - Legal compliance checkboxes (required: Terms of Service, Privacy Policy)
- *
- * Per AGENT_RULES.md §1: All user-facing strings should use i18n, but for
- * MVP1 we'll use hardcoded English strings as a temporary measure before
- * implementing full i18n infrastructure.
  */
 
 import { useState } from 'react';

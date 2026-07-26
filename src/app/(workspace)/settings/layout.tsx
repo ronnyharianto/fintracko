@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Settings, User, Briefcase } from 'lucide-react';
+import { User, Briefcase } from 'lucide-react';
 
 const settingsTabs = [
   { href: '/settings/workspace', label: 'Workspace', icon: Briefcase },

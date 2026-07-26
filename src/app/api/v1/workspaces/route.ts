@@ -4,7 +4,7 @@
  * Creates a new independent workspace, assigns the creator as owner,
  * and populates the default category and subcategory structure from a static template.
  *
- * Per API_SPECS.md §2: Follows the global security pipeline (Session extraction,
+ * Follows the global security pipeline (Session extraction,
  * Onboarding Verification Guard, Zod validation, XSS sanitization).
  */
 

@@ -2,16 +2,15 @@
  * Zod-based input validation pipeline handler.
  *
  * Implements the "Rate Limiting & Input Validation" step of the global
- * security pipeline declared in docs/architecture/API_SPECS.md §2:
+ * security pipeline.
  *
  *   "Every incoming request must be parsed and strictly validated at
  *    runtime against explicit Zod schemas."
  *
- * Per docs/core/AGENT_RULES.md §3 (Data Validation & Input Sanitization):
+ * (Data Validation & Input Sanitization):
  *   "Validate all incoming payloads (Server Actions, Route Handlers, or
  *    form submissions) using strict schema validation (e.g., Zod)."
  *
- * Task 2.3 scope:
  *   This module ONLY parses and schema-validates the raw request body
  *   (JSON), returning a typed, validated payload to the caller or a
  *   canonical `VALIDATION_ERROR` (HTTP 422) failure envelope. The
@@ -31,10 +30,10 @@
  *     and is handed to the schema — the schema is solely responsible for
  *     rejecting that case (e.g. via `.refine` or `.nonNull`).
  */
-import type { NextRequest } from "next/server";
-import type { NextResponse } from "next/server";
-import { ZodError, type ZodType } from "zod";
-import { failure, validationFailure, type FailureEnvelope } from "./envelope";
+import type { NextRequest } from 'next/server';
+import type { NextResponse } from 'next/server';
+import { ZodError, type ZodType } from 'zod';
+import { failure, validationFailure, type FailureEnvelope } from './envelope';
 
 /**
  * Result of {@link validateBody}. A discriminated union so callers MUST
@@ -56,13 +55,13 @@ export type ValidateBodyResult<T> =
  * failure split independently.
  */
 export async function readJsonBody(
-  request: NextRequest,
+  request: NextRequest
 ): Promise<{ ok: true; data: unknown } | { ok: false; reason: string }> {
   let rawText: string;
   try {
     rawText = await request.text();
   } catch {
-    return { ok: false, reason: "Request body could not be read." };
+    return { ok: false, reason: 'Request body could not be read.' };
   }
   if (rawText.length === 0) {
     return { ok: true, data: null };
@@ -70,7 +69,7 @@ export async function readJsonBody(
   try {
     return { ok: true, data: JSON.parse(rawText) };
   } catch {
-    return { ok: false, reason: "Request body is not valid JSON." };
+    return { ok: false, reason: 'Request body is not valid JSON.' };
   }
 }
 
@@ -90,13 +89,13 @@ export async function readJsonBody(
  */
 export async function validateBody<S extends ZodType>(
   request: NextRequest,
-  schema: S,
-): Promise<ValidateBodyResult<S["_output"]>> {
+  schema: S
+): Promise<ValidateBodyResult<S['_output']>> {
   const read = await readJsonBody(request);
   if (!read.ok) {
     return {
       success: false,
-      response: failure("BAD_REQUEST", read.reason),
+      response: failure('BAD_REQUEST', read.reason),
     };
   }
   try {
@@ -114,7 +113,7 @@ export async function validateBody<S extends ZodType>(
     // a generic 400 without echoing the error upstream.
     return {
       success: false,
-      response: failure("BAD_REQUEST", "Request payload is malformed."),
+      response: failure('BAD_REQUEST', 'Request payload is malformed.'),
     };
   }
 }

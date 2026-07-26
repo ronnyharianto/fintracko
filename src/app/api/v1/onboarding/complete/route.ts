@@ -3,13 +3,13 @@
  *
  * Completes the onboarding process by creating a Profile and the first Workspace.
  *
- * Per API_SPECS.md §2: This endpoint follows the global security pipeline:
+ * This endpoint follows the global security pipeline:
  * - Session & Identity Extraction
  * - Onboarding Verification Guard (ensures Profile doesn't already exist)
  * - Rate Limiting & Input Validation
  * - XSS Sanitization
  *
- * Per ARCHITECTURE.md §3: Uses atomic database transaction to create Profile + Workspace.
+ * Uses atomic database transaction to create Profile + Workspace.
  */
 
 import { NextRequest } from 'next/server';

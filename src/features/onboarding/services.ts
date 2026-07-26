@@ -5,13 +5,13 @@
  * transaction that creates both the Profile and the first Workspace.
  */
 
-import { db } from "@/lib/db";
-import type { CompleteOnboardingInput } from "./schemas";
+import { db } from '@/lib/db';
+import type { CompleteOnboardingInput } from './schemas';
 
 /**
  * Creates a Profile and the first Workspace in a single atomic transaction.
  *
- * Per ARCHITECTURE.md §3: All financial mutations and calculations MUST be
+ * All financial mutations and calculations MUST be
  * wrapped in a Prisma $transaction block to ensure atomicity and consistency.
  *
  * This function:
@@ -40,7 +40,7 @@ export async function completeOnboarding(
     // Create first Workspace with default name
     const workspace = await tx.workspace.create({
       data: {
-        name: "My Workspace",
+        name: 'My Workspace',
         ownerId: userId,
       },
     });
@@ -50,7 +50,7 @@ export async function completeOnboarding(
       data: {
         workspaceId: workspace.id,
         userId,
-        role: "OWNER",
+        role: 'OWNER',
       },
     });
 

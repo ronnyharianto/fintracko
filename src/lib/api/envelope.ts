@@ -1,10 +1,9 @@
 /**
  * Standardized REST API response envelopes.
  *
- * Per docs/architecture/API_SPECS.md §1 "Global Response Standards", every
- * Route Handler under `src/app/api/...` MUST return a unified JSON envelope so
- * consumer code (the Next.js client and the future MVP 2 mobile app) can rely
- * on a single de-serialization contract.
+ * "Global Response Standards", every Route Handler under `src/app/api/...`
+ * MUST return a unified JSON envelope so consumer code (the Next.js client
+ * and the future MVP 2 mobile app) can rely on a single de-serialization contract.
  *
  * Success envelope:
  *   {
@@ -25,14 +24,12 @@
  *   }
  *
  * All helpers here:
- *   - Emit a UTC ISO-8601 timestamp (trailing `Z`) so the contract is
- *     locale-independent per ARCHITECTURE.md §4 i18n (the client formats dates).
  *   - Return a `NextResponse` with the canonical `application/json` content
  *     type, never leaking unhandled exceptions to the client
- *     (AGENT_RULES.md §4 "Error Handling").
+ *     ("Error Handling").
  */
-import { NextResponse } from "next/server";
-import type { ZodIssue } from "zod";
+import { NextResponse } from 'next/server';
+import type { ZodIssue } from 'zod';
 
 /**
  * Canonical error codes used across the Fintracko REST API.
@@ -43,15 +40,15 @@ import type { ZodIssue } from "zod";
  * reorder existing entries to preserve consumer compatibility.
  */
 export type ApiErrorCode =
-  | "BAD_REQUEST"
-  | "VALIDATION_ERROR"
-  | "UNAUTHORIZED"
-  | "FORBIDDEN"
-  | "NOT_FOUND"
-  | "CONFLICT"
-  | "ONBOARDING_REQUIRED"
-  | "UNAUTHORIZED_WORKSPACE_ACCESS"
-  | "INTERNAL_SERVER_ERROR";
+  | 'BAD_REQUEST'
+  | 'VALIDATION_ERROR'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'ONBOARDING_REQUIRED'
+  | 'UNAUTHORIZED_WORKSPACE_ACCESS'
+  | 'INTERNAL_SERVER_ERROR';
 
 /** Shape of the `error` block inside a failure envelope. */
 export interface ApiErrorBody {
@@ -138,15 +135,15 @@ export function nowTimestamp(): string {
  * collapses to `"_"` to give the client a stable anchor key — Zod uses an
  * empty array for "issue applies to the whole value".
  */
-export function pathToString(path: ZodIssue["path"]): string {
+export function pathToString(path: ZodIssue['path']): string {
   if (path.length === 0) {
-    return "_";
+    return '_';
   }
   return path
     .map((segment) =>
-      typeof segment === "number" ? `[${segment}]` : String(segment),
+      typeof segment === 'number' ? `[${segment}]` : String(segment)
     )
-    .join(".");
+    .join('.');
 }
 
 /**
@@ -169,7 +166,7 @@ export function buildSuccessEnvelope<T>(data: T): SuccessEnvelope<T> {
 export function buildFailureEnvelope(
   code: ApiErrorCode,
   message: string,
-  validationErrors?: ReadonlyArray<FieldValidationError>,
+  validationErrors?: ReadonlyArray<FieldValidationError>
 ): FailureEnvelope {
   const error: ApiErrorBody = { code, message };
   if (validationErrors && validationErrors.length > 0) {
@@ -200,7 +197,7 @@ export function success<T>(data: T): NextResponse<SuccessEnvelope<T>> {
  */
 export function successWithStatus<T>(
   data: T,
-  status: number,
+  status: number
 ): NextResponse<SuccessEnvelope<T>> {
   return NextResponse.json(buildSuccessEnvelope(data), { status });
 }
@@ -212,12 +209,12 @@ export function successWithStatus<T>(
 export function failure(
   code: ApiErrorCode,
   message: string,
-  validationErrors?: ReadonlyArray<FieldValidationError>,
+  validationErrors?: ReadonlyArray<FieldValidationError>
 ): NextResponse<FailureEnvelope> {
   const status = HTTP_STATUS_BY_CODE[code];
   return NextResponse.json(
     buildFailureEnvelope(code, message, validationErrors),
-    { status },
+    { status }
   );
 }
 
@@ -231,11 +228,11 @@ export function failureWithStatus(
   code: ApiErrorCode,
   message: string,
   status: number,
-  validationErrors?: ReadonlyArray<FieldValidationError>,
+  validationErrors?: ReadonlyArray<FieldValidationError>
 ): NextResponse<FailureEnvelope> {
   return NextResponse.json(
     buildFailureEnvelope(code, message, validationErrors),
-    { status },
+    { status }
   );
 }
 
@@ -247,11 +244,11 @@ export function failureWithStatus(
  */
 export function validationFailure(
   issues: ReadonlyArray<ZodIssue>,
-  message = "One or more input fields are invalid.",
+  message = 'One or more input fields are invalid.'
 ): NextResponse<FailureEnvelope> {
   const validationErrors: FieldValidationError[] = issues.map((issue) => ({
     path: pathToString(issue.path),
     message: issue.message,
   }));
-  return failure("VALIDATION_ERROR", message, validationErrors);
+  return failure('VALIDATION_ERROR', message, validationErrors);
 }

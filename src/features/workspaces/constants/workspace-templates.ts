@@ -1,7 +1,6 @@
 /**
  * Static workspace configuration templates.
  *
- * Per ARCHITECTURE.md §4 ("Workspace Templates Storage"):
  * Workspace Templates are explicitly stored as static TypeScript constants
  * inside the application codebase instead of being stored in the database.
  * When a user initiates workspace creation, the backend reads this structural

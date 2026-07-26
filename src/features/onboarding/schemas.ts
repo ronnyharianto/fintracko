@@ -1,26 +1,26 @@
 /**
  * Zod schemas for onboarding form validation.
  *
- * Per AGENT_RULES.md §3: Validate all incoming payloads using strict
+ * Validate all incoming payloads using strict
  * schema validation (e.g., Zod).
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Gender enum matching the Prisma schema.
  */
-export const GenderEnum = z.enum(["MALE", "FEMALE", "OTHER"]);
+export const GenderEnum = z.enum(['MALE', 'FEMALE', 'OTHER']);
 
 /**
  * Supported currencies for the MVP.
  */
-export const CurrencyEnum = z.enum(["USD", "IDR", "EUR", "GBP", "JPY", "SGD"]);
+export const CurrencyEnum = z.enum(['USD', 'IDR', 'EUR', 'GBP', 'JPY', 'SGD']);
 
 /**
  * Supported languages for the MVP.
  */
-export const LanguageEnum = z.enum(["en", "id", "es"]);
+export const LanguageEnum = z.enum(['en', 'id', 'es']);
 
 /**
  * Onboarding completion request schema.

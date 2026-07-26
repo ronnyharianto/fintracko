@@ -1,7 +1,7 @@
 /**
  * Zod schemas for workspace creation validation.
  *
- * Per AGENT_RULES.md §3: Validate all incoming payloads using strict
+ * Validate all incoming payloads using strict
  * Zod schema validation.
  */
 

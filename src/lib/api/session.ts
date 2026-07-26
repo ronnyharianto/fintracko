@@ -2,12 +2,11 @@
  * Session & identity extraction pipeline handler.
  *
  * Implements the "Session & Identity Extraction" step of the global security
- * pipeline declared in docs/architecture/API_SPECS.md §2:
+ * pipeline.
  *
  *   "Validate the HTTP session cookie or `Bearer` authorization headers
  *    strictly using Better Auth. Retrieve the validated `userId`."
  *
- * Scope of Task 2.3:
  *   This module ONLY resolves the authenticated session and exposes the
  *   validated `userId`. Downstream Phase 3+ guards (Onboarding Verification
  *   and Workspace Multi-Tenancy / Anti-IDOR) intentionally live in later
@@ -17,16 +16,16 @@
  *
  * Error handling:
  *   - No session / invalid session / unexpected Better Auth failure all map
- *     to the `UNAUTHORIZED` (HTTP 401) failure envelope per AGENT_RULES.md
- *     §4 ("Use standard HTTP status codes; never let unhandled exceptions
+ *     to the `UNAUTHORIZED` (HTTP 401) failure envelope
+ *     ("Use standard HTTP status codes; never let unhandled exceptions
  *     leak to the client").
  *   - The raw error from Better Auth is NEVER serialized to the response
  *     body (sensitive details such as session-token fragments or internal
  *     stack frames must not leak) — a generic message is emitted instead.
  */
-import type { NextRequest } from "next/server";
-import type { NextResponse } from "next/server";
-import { failure, type FailureEnvelope } from "./envelope";
+import type { NextRequest } from 'next/server';
+import type { NextResponse } from 'next/server';
+import { failure, type FailureEnvelope } from './envelope';
 
 /**
  * The minimal shape of the Better Auth instance we depend on. Using a
@@ -90,7 +89,7 @@ export interface AuthContext {
  */
 export async function resolveSession(
   request: NextRequest,
-  authInstance: AuthLike,
+  authInstance: AuthLike
 ): Promise<GetSessionResult> {
   try {
     const session = await authInstance.api.getSession({
@@ -100,8 +99,8 @@ export async function resolveSession(
       return {
         success: false,
         response: failure(
-          "UNAUTHORIZED",
-          "Authentication required to access this resource.",
+          'UNAUTHORIZED',
+          'Authentication required to access this resource.'
         ),
       };
     }
@@ -113,8 +112,8 @@ export async function resolveSession(
     return {
       success: false,
       response: failure(
-        "UNAUTHORIZED",
-        "Authentication required to access this resource.",
+        'UNAUTHORIZED',
+        'Authentication required to access this resource.'
       ),
     };
   }
@@ -133,7 +132,7 @@ export async function resolveSession(
  *      that's brittle under Vitest module isolation.
  */
 export async function getProductionAuth(): Promise<AuthLike> {
-  const { auth } = await import("../auth");
+  const { auth } = await import('../auth');
   return auth as unknown as AuthLike;
 }
 
@@ -157,7 +156,7 @@ export async function getProductionAuth(): Promise<AuthLike> {
 export async function withSession(
   request: NextRequest,
   onSuccess: (ctx: AuthContext) => Promise<NextResponse>,
-  authInstance?: AuthLike,
+  authInstance?: AuthLike
 ): Promise<NextResponse> {
   const resolvedAuth = authInstance ?? (await getProductionAuth());
   const result = await resolveSession(request, resolvedAuth);

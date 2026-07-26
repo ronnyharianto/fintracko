@@ -1,8 +1,7 @@
 /**
  * XSS-neutralizing sanitization helpers for REST API input payloads.
  *
- * Per docs/architecture/API_SPECS.md §2 "Global Security & Gateway Pipeline"
- * and docs/core/AGENT_RULES.md §3 "Anti-XSS in Rendering":
+ * "Global Security & Gateway Pipeline" and "Anti-XSS in Rendering":
  *
  *   "Input fields susceptible to rich text or custom entries must be
  *    rigorously sanitized using trusted libraries (e.g. `isomorphic-dompurify`)
@@ -28,7 +27,7 @@
  *     `null`/`undefined` as a no-op passthrough so the Zod layer above
  *     remains the single source of "is this field required?" truth.
  */
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * DOMPurify config for plain text (no markup) sanitization.
@@ -51,8 +50,8 @@ const PLAIN_TEXT_CONFIG: {
   ALLOWED_TAGS: [],
   ALLOWED_ATTR: [],
   KEEP_CONTENT: true,
-  FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "link"],
-  FORBID_ATTR: ["style", "onerror", "onload", "onclick", "href"],
+  FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed', 'link'],
+  FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'href'],
 };
 
 /**
@@ -69,15 +68,15 @@ const PLAIN_TEXT_CONFIG: {
 export function sanitizeString(value: string): string;
 export function sanitizeString(value: null | undefined): null | undefined;
 export function sanitizeString(
-  value: string | null | undefined,
+  value: string | null | undefined
 ): string | null | undefined;
 export function sanitizeString(
-  value: string | null | undefined,
+  value: string | null | undefined
 ): string | null | undefined {
   if (value === null || value === undefined) {
     return value;
   }
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     // Defensive guard: never silently coerce non-strings. The Zod schema
     // upstream should already have rejected such a payload, but we refuse to
     // mutate the value into a string here — pass it through so the ORM /
@@ -94,7 +93,7 @@ export function sanitizeString(
  * are preserved as-is so the Zod-level optional handling remains canonical.
  */
 export function sanitizeStringArray(
-  value: ReadonlyArray<string | null | undefined> | null | undefined,
+  value: ReadonlyArray<string | null | undefined> | null | undefined
 ): Array<string | null | undefined> {
   if (!Array.isArray(value)) {
     return value as unknown as Array<string | null | undefined>;
@@ -136,10 +135,10 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
   }
   const type = typeof node;
 
-  if (type === "string") {
+  if (type === 'string') {
     return sanitizeString(node as unknown as string) as unknown as T;
   }
-  if (type !== "object") {
+  if (type !== 'object') {
     // Numbers, booleans, bigints, symbols, functions are not XSS vectors.
     return node;
   }
@@ -161,7 +160,7 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
   if (Array.isArray(node)) {
     if (visited.has(node as unknown as object)) {
       throw new Error(
-        "Sanitization aborted: circular reference detected in payload.",
+        'Sanitization aborted: circular reference detected in payload.'
       );
     }
     visited.add(node as unknown as object);
@@ -184,7 +183,7 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
 
   if (visited.has(node as unknown as object)) {
     throw new Error(
-      "Sanitization aborted: circular reference detected in payload.",
+      'Sanitization aborted: circular reference detected in payload.'
     );
   }
   visited.add(node as unknown as object);
@@ -192,7 +191,7 @@ function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
   const clone: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
     clone[key] =
-      typeof value === "object" && value !== null
+      typeof value === 'object' && value !== null
         ? walkAndSanitize(value, visited)
         : sanitizeString(value as unknown as string);
   }

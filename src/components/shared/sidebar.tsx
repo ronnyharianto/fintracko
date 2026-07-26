@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FintrackoLogo } from './fintracko-logo';
 import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3 } from 'lucide-react';
 
 const navItems = [

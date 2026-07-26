@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 /**
  * Reusable full-screen status screen used by the Next.js special-route files
@@ -51,9 +51,9 @@ export function StatusScreen({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
-        <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-linear-to-br from-primary/30 via-accent/20 to-transparent blur-3xl" />
-        <div className="absolute -right-20 top-1/4 h-[350px] w-[350px] animate-pulse rounded-full bg-emerald-400/20 blur-3xl [animation-duration:4s]" />
-        <div className="absolute -left-20 bottom-0 h-[400px] w-[400px] animate-pulse rounded-full bg-teal-500/15 blur-3xl [animation-duration:6s]" />
+        <div className="absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 rounded-full bg-linear-to-br from-primary/30 via-accent/20 to-transparent blur-3xl" />
+        <div className="absolute -right-20 top-1/4 h-87.5 w-87.5 animate-pulse rounded-full bg-emerald-400/20 blur-3xl [animation-duration:4s]" />
+        <div className="absolute -left-20 bottom-0 h-100 w-100 animate-pulse rounded-full bg-teal-500/15 blur-3xl [animation-duration:6s]" />
       </div>
 
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">

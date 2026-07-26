@@ -1,8 +1,8 @@
 /**
  * Prisma database client singleton.
  *
- * Per docs/core/PROJECT_STRUCTURE.md §2.4, this module hosts the singleton
- * script managing connection instances for the Prisma database client.
+ * This module hosts the singleton script managing connection instances for
+ * the Prisma database client.
  *
  * Prisma 7 contract note:
  *   In Prisma 7 the client is no longer auto-installed into
@@ -30,8 +30,8 @@
 // `generator.output` in `prisma/schema.prisma` (here: `./generated/prisma`).
 // We import the `PrismaClient` symbol from that location rather than from
 // the bare `@prisma/client` package, which no longer re-exports it directly.
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../../generated/prisma/client';
 
 // Augment the global namespace so TypeScript recognises our cached client.
 // Declared here (and not in a separate `*.d.ts`) to keep the singleton logic
@@ -60,12 +60,12 @@ const db: PrismaClient =
   new PrismaClient({
     adapter,
     log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
+      process.env.NODE_ENV === 'development'
+        ? ['query', 'error', 'warn']
+        : ['error'],
   });
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== 'production') {
   globalThis.__prismaClient = db;
 }
 

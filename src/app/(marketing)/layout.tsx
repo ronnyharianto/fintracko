@@ -10,8 +10,8 @@ import { Footer } from "@/components/shared/landing/footer";
  * NavBar + Footer shell. No authentication context is needed —
  * these pages are accessible to unauthenticated visitors.
  *
- * @remarks Per AGENT_RULES:11, this layout is a Server Component
- * by default. There is no client-side interactivity required.
+ * @remarks This layout is a Server Component by default.
+ * There is no client-side interactivity required.
  */
 export default function MarketingLayout({
   children,

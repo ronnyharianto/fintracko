@@ -5,13 +5,6 @@ import Link from 'next/link';
 import { useWorkspace } from '@/components/shared/workspace-context';
 import { ChevronDown, Plus, Briefcase, Building2 } from 'lucide-react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

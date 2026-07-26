@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
-import type { SVGProps } from "react";
+import { cn } from '@/lib/utils';
+import type { SVGProps } from 'react';
 
 /**
  * Fintracko brand logo — a wallet + growth chart hybrid.
@@ -21,7 +21,7 @@ export function FintrackoLogo({
     <svg
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("h-8 w-8", className)}
+      className={cn('h-8 w-8', className)}
       aria-hidden="true"
       {...props}
     >

@@ -16,7 +16,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Sign in — Fintracko",
   description:
-    "Sign in to Fintracko with Google or GitHub. Secure OAuth-only authentication — no passwords required.",
+    "Sign in to Fintracko with secure OAuth-only authentication — no passwords required.",
   robots: {
     index: false,
     follow: false,

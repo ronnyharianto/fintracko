@@ -16,7 +16,7 @@ import { OAuthButtons } from "@/components/shared/auth/oauth-buttons";
 export const metadata: Metadata = {
   title: "Create account — Fintracko",
   description:
-    "Create your Fintracko account with Google or GitHub. Secure OAuth-only sign-up — no passwords required.",
+    "Create your Fintracko account with secure OAuth-only sign-up — no passwords required.",
   robots: {
     index: false,
     follow: false,

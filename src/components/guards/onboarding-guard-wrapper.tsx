@@ -10,9 +10,6 @@
  *
  * This is a Server Component (no 'use client') that wraps all private
  * dashboard pages at the layout level (src/app/(dashboard)/layout.tsx).
- *
- * Per AGENT_RULES.md §1: All source code components including variable names,
- * function names, and comments MUST be written in English.
  */
 
 import { redirect } from 'next/navigation';
