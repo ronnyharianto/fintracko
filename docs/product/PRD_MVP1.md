@@ -4,7 +4,7 @@
 Fintracko is a collaborative personal and business financial tracking SaaS application. The goal of MVP 1 is to provide users with a robust platform to manage multiple financial workspaces, collaborate with other users, track income/expenses/transfers, enforce budget constraints, and visualize financial health through an intuitive dashboard.
 
 ## 2. Target Audience & Scope
-- **Target:** Individuals, freelancers, and small teams needing shared or separate financial tracking.
+- **Target:** Individuals, family members, and small business needing shared or separate financial tracking.
 - **Scope:** Web-based responsive application powered by Next.js App Router, secured via OAuth, and utilizing an ORM for data persistence.
 
 ## 3. Detailed Feature Requirements
@@ -15,6 +15,8 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 - **Authentication:** 
   - Strictly **OAuth only** (e.g., Google, GitHub). Traditional username and password registration/login MUST be disabled.
   - Secure session tracking via HttpOnly cookies.
+  - Email verification MUST be enforced for all OAuth providers.
+  - Account linking must be disabled for security reasons. 
 - **Mandatory Onboarding:**
   - Users accessing the app for the first time must be redirected to an onboarding flow.
   - **Requirements:** Collect profile setup data, force explicit acceptance of the Privacy Policy and Terms of Service, and prompt the creation of the first workspace.
@@ -24,12 +26,25 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 
 ### Phase 3.2: Multi-Tenancy & Collaboration (Workspaces)
 - **Workspace Management:** A user can create, update, and switch between multiple independent workspaces.
+  - **Workspace Creation:** When the workspace is created, it needs to state the workspace name and currency used (default currency selected based on currencyPreference at their's profile).
+  - **Currency Update:** User are not allowed to update the currency after workspace created.
 - **Access Control:** Data must be strictly isolated by `workspace_id`.
 - **Collaboration:** Users can invite other registered users via email to join a specific workspace. Invited users share real-time visibility and mutation capabilities within that workspace based on assignment.
 
 ### Phase 3.3: Accounts & Categories Configuration
-- **Accounts:** Each workspace can configure multiple financial accounts (e.g., Cash, Bank, Digital Wallet). Each account requires a unique name and tracks its own balance.
+- **Financial Accounts:** Each workspace can configure multiple financial accounts (e.g., Cash, Bank, Digital Wallet). Each account requires a unique name and tracks its own balance.
+  - **Initial Balance:** When creating an account, users can set an initial balance. And do not update this when Transaction created.
+  - **Net Transaction Sum:** This field is used to track the net transaction sum of the account. It is updated when transaction is created, updated, or deleted. Use atomic update to ensure data consistency. **BEWARE OF RACE CONDITION**.
+  - **Final Balance Calculation:** The final balance of an account is calculated as: `initialBalance + netTransactionSum`.
+  - **Edit Rules:** When user edits account, they can only update it's name and initial balance. Other fields are not allowed to edit.
+  - **Delete Rules:** User not allowed to delete account that already created, they can mark it as archived if it not used anymore.
+  - **Archive Rules:** For account not used anymore, they can mark it as archived data. The archived account will not be shown or include when summary all their accounts balance.
+  - **Unarchive Rules:** User can unarchiving for archived account
 - **Two-Level Categories:** Every transaction type must map to a sub-category system (e.g., Category: *Food* -> Sub-Category: *Restaurants*).
+  - **Edit Rules:** When user edits category or sub category, they can only update it's name
+  - **Delete Rules:** User not allowed to delete category or sub category that already created, they can mark it as archived if it not used anymore.
+  - **Archive Rules:** For category or sub category not used anymore, they can mark it as archived data. If category is archive, automically it will make all sub category inside unaccesable too.
+  - **Unarchive Rules:** User can unarchiving for archived category or sub category
 - **Workspace Templates:** Upon workspace creation, provide pre-configured category and sub-category templates (e.g., Personal Finance, Family Finance, Small Business) that users can choose to auto-populate their setup.
 
 ### Phase 3.4: Transaction Management
@@ -37,7 +52,9 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 - **Mandatory Fields:**
   - Transaction Date
   - Transaction Type
-  - Sub-category
+  - Category & Sub-category
+    - Must be selected from the available categories and sub-categories in the workspace
+    - Categories and Sub-category must be detach from it's master data, so when user delete or update a category or sub-category, the transactions that use it will not be affected
   - Account Association:
     - *Income:* Requires `Destination Account`.
     - *Expense:* Requires `Source Account`.
@@ -52,7 +69,10 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 ### Phase 3.5: Budgeting System
 - **Budget Scope:** Budgets are applied strictly to Level 2 (Sub-categories).
 - **Constraints:** Each sub-category can have exactly **one** active budget at a time.
-- **Intervals:** Budgets can be configured as either Monthly or Yearly.
+- **Intervals:** Budgets can be configured as either Monthly or Yearly. It must be defined when creating the budget and cannot be changed later.
+- **Budget Period:** Each budget has a start and end date, defining its active period. Must be stored without time component (date only).
+  - **Monthly:** Start date and end date must be the first day of the month.
+  - **Yearly:** Start date and end date must be the first day of the year.
 - **Monitoring:** Real-time tracking of budget utilization percentages against actual expenses in the corresponding category.
 
 ### Phase 3.6: Dashboard & Analytics

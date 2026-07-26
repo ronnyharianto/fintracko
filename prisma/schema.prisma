@@ -1,8 +1,7 @@
 // ============================================================================
 // Fintracko — Prisma Database Schema (Source of Truth)
 // ============================================================================
-// This schema implements the multi-tenant data contract defined in
-// docs/architecture/ARCHITECTURE.md §2 ("Database Schema Design").
+// This schema implements the multi-tenant data contract
 //
 // Models (12 total):
 //   1. User             — Authenticated user. (Schema: ft_auth)
@@ -25,29 +24,18 @@
 //     deleting a `User` or `Workspace` atomically removes all dependent rows.
 //   - Compound unique keys prevent duplicate membership, duplicate account
 //     names, duplicate budgets, and duplicate OAuth identity linkage.
-//   - Indexes are declared explicitly on every foreign key and on the
-//     hot query columns surfaced by ARCHITECTURE.md §4.
 //
 // IMPORTANT: This schema is `On Delete: Cascade` heavy by design. Workspace
-// deletion wipes all financial data — workspace-deletion endpoints (added in
-// a later task) MUST verify `WorkspaceMember.role === OWNER` before issuing
-// the deletion, per the Anti-IDOR guard in ARCHITECTURE.md §3.
+// deletion wipes all financial data, so it MUST verify `WorkspaceMember.role === OWNER` before issuing
+// the deletion.
 // ============================================================================
 
 generator client {
-  // Prisma 7 ships a new generator, `prisma-client` (replacing the legacy
-  // `prisma-client-js`), and requires an explicit output path. The client
-  // source is emitted to `./generated/prisma` (git-ignored) and re-imported
-  // by `src/lib/db.ts` via the relative alias below.
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
 datasource db {
-  // Prisma 7 removed support for `url` inside the schema file. The connection
-  // URL now lives in `prisma.config.ts` (project root), loaded from the
-  // `DATABASE_URL` environment variable via `dotenv/config`. See
-  // ARCHITECTURE.md §5 and §6 for the local Supabase dev workflow.
   provider = "postgresql"
   schemas  = ["ft_auth", "ft_core"]
 }
@@ -60,24 +48,16 @@ datasource db {
 enum WorkspaceRole {
   OWNER
   COLLABORATOR
+
   @@schema("ft_core")
 }
 
-/// Transaction or budget parent classification type.
-enum CategoryType {
-  INCOME
-  EXPENSE
-  TRANSFER
-  @@schema("ft_core")
-}
-
-/// Identical to `CategoryType`; declared separately for the `Transaction.type`
-/// column so that future divergence (e.g. a `DEPOSIT` type) does not force a
-/// breaking rename of the budget-oriented `CategoryType` enum.
+/// Transaction, budget, or category parent classification type.
 enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+
   @@schema("ft_core")
 }
 
@@ -85,6 +65,7 @@ enum TransactionType {
 enum BudgetInterval {
   MONTHLY
   YEARLY
+  
   @@schema("ft_core")
 }
 
@@ -93,6 +74,7 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+
   @@schema("ft_core")
 }
 
@@ -101,47 +83,33 @@ enum Gender {
 // ----------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  name          String
-  email         String    @unique
-  // Presence of a non-null value indicates the OAuth provider confirmed the
-  // email. The Task 2.2 OAuth rejection guard refuses payloads whose
-  // `email_verified` claim is false, and in that case this column stays null.
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime  @default(now())
-  // Required by Better Auth for session refresh / touch-on-login behavior.
-  updatedAt     DateTime  @updatedAt @default(now())
+  id              String            @id @default(uuid()) @db.Uuid
+  name            String
+  email           String            @unique
+  emailVerified   Boolean
+  image           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt @default(now())
 
-  // --- Relations ---
-  // One-to-one: a user has at most one profile. Deleting the user cascades.
-  profile      Profile?
-  // One-to-many: OAuth identity records owned by Better Auth.
-  authAccounts AuthAccount[]
-  // One-to-many: active session tokens owned by Better Auth.
-  sessions     Session[]
-  // Workspaces this user owns (via `Workspace.ownerId`).
-  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
-  // Workspaces this user is a member of.
-  memberships  WorkspaceMember[]
+  profile         Profile?
+  authAccounts    AuthAccount[]
+  sessions        Session[]
+  memberships     WorkspaceMember[]
 
-  @@index([createdAt]) // Chronological sorting of users
+  createdTransactions FinancialTransaction[] @relation("TransactionCreatedBy")
+  updatedTransactions FinancialTransaction[] @relation("TransactionUpdatedBy")
+
   @@schema("ft_auth")
 }
 
 // ----------------------------------------------------------------------------
 // 2. AuthAccount — OAuth identity linkage (Better Auth owned)
 // ----------------------------------------------------------------------------
-// Named `AuthAccount` (not `Account`) to avoid a collision with the financial
-// `Account` table. The mapping is wired via Better Auth's `modelMapping`
-// configuration in Task 2.2. Application code must never write to this table
-// directly — it is mutated exclusively by the Better Auth runtime.
+// The mapping is wired via Better Auth's `modelMapping` configuration.
 
 model AuthAccount {
   id                     String    @id @default(uuid()) @db.Uuid
-  // OAuth provider's internal user id.
   accountId              String
-  // OAuth provider identifier, e.g. "google" | "github".
   providerId             String
   userId                 String    @db.Uuid
   accessToken            String?
@@ -150,14 +118,11 @@ model AuthAccount {
   accessTokenExpiresAt   DateTime?
   refreshTokenExpiresAt  DateTime?
   scope                  String?
-  // Always null for Fintracko — passwords are explicitly disabled per the
-  // OAuth-only login policy in PRD_MVP1.md §3.1. The column is retained to
-  // satisfy the Better Auth adapter's compiled schema contract.
   password               String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
   @@index([userId])
@@ -178,7 +143,7 @@ model Session {
   userAgent String?
   userId    String   @db.Uuid
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@schema("ft_auth")
@@ -187,27 +152,15 @@ model Session {
 // ----------------------------------------------------------------------------
 // 4. Verification — OAuth/email verification tokens (Better Auth owned)
 // ----------------------------------------------------------------------------
-// Stores short-lived verification tokens used by Better Auth during OAuth
-// flows (e.g. OAuth state round-trip callbacks) and email-verification flows.
-// Field contract mirrors Better Auth's `verificationSchema` exactly:
-//   { id, value, identifier, expiresAt, createdAt, updatedAt }
-// Created by Task 2.2 fix: the Better Auth Prisma adapter previously failed
-// OAuth sign-in with "Model verification does not exist in the database"
-// because neither the model nor a backing table existed. Like `AuthAccount`
-// and `Session`, this table is *exclusively* mutated by the Better Auth
-// runtime; application code must never write to it directly.
 
 model Verification {
   id         String   @id @default(uuid()) @db.Uuid
-  // A stable identifier Better Auth uses to look up a pending verification,
-  // typically `<provider>:<userId>` or an email hash.
   identifier String
   value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt @default(now())
 
-  // Index for fast lookups by identifier during the OAuth callback path.
   @@index([identifier])
   @@schema("ft_auth")
 }
@@ -216,22 +169,22 @@ model Verification {
 // 5. Profile — Onboarding completion marker + user preferences
 // ----------------------------------------------------------------------------
 // The presence of a `Profile` row linked to a `User` is the implicit signal
-// that the user has completed onboarding (see OnboardingGuardWrapper, Task 3.1).
+// that the user has completed onboarding.
 
 model Profile {
-  id                  String   @id @default(uuid()) @db.Uuid
-  userId              String   @unique @db.Uuid
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @unique @db.Uuid
   phoneNumber         String?
   company             String?
   bio                 String?
-  dateOfBirth         DateTime?
+  dateOfBirth         DateTime? @db.Date
   gender              Gender?
-  currencyPreference  String   @default("USD")
-  languagePreference  String   @default("en")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt @default(now())
+  currencyPreference  String    @default("USD")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@schema("ft_core")
 }
 
@@ -242,11 +195,8 @@ model Profile {
 model Workspace {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
-  ownerId   String   @db.Uuid
+  currency  String   @default("USD")
   createdAt DateTime @default(now())
-
-  // The owning user (denormalized for fast ownership checks).
-  owner User @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   // Members with explicit roles for access control.
   members         WorkspaceMember[]
@@ -256,7 +206,6 @@ model Workspace {
   budgets         Budget[]
   transactions    FinancialTransaction[]
 
-  @@index([ownerId])
   @@schema("ft_core")
 }
 
@@ -271,12 +220,12 @@ model WorkspaceMember {
   role        WorkspaceRole @default(COLLABORATOR)
   createdAt   DateTime      @default(now())
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // A user can be a member of a given workspace exactly once.
   @@unique([workspaceId, userId])
-  @@index([workspaceId])
+  @@index([workspaceId, role])
   @@index([userId])
   @@schema("ft_core")
 }
@@ -284,28 +233,27 @@ model WorkspaceMember {
 // ----------------------------------------------------------------------------
 // 8. FinancialAccount — Financial ledger node (Bank, Cash, Digital Wallet, ...)
 // ----------------------------------------------------------------------------
-// Balance invariant (ARCHITECTURE.md §3 — Atomic Balance Updates):
-//   Final Balance = initialBalance + netTransactionSum
+// Balance invariant: Final Balance = initialBalance + netTransactionSum
 // Every `Transaction` mutation must adjust `netTransactionSum` on the
 // affected source/destination account inside a Prisma `$transaction` block.
 // `initialBalance` is only touched when the user edits account settings.
 
 model FinancialAccount {
-  id                 String   @id @default(uuid()) @db.Uuid
-  workspaceId        String   @db.Uuid
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @db.Uuid
   name               String
-  initialBalance     Decimal  @default(0) @db.Decimal(18, 4)
-  netTransactionSum  Decimal  @default(0) @db.Decimal(18, 4)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt @default(now())
+  initialBalance     Decimal   @default(0) @db.Decimal(18, 4)
+  netTransactionSum  Decimal   @default(0) @db.Decimal(18, 4)
+  isArchived         Boolean   @default(false)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt @default(now())
 
-  // Transactions where this account is the source (mandatory for
-  // EXPENSE / TRANSFER).
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Transactions where this account is the source (mandatory for EXPENSE / TRANSFER).
   outgoingTransactions FinancialTransaction[] @relation("TransactionSourceAccount")
-  // Transactions where this account is the destination (mandatory for
-  // INCOME / TRANSFER).
+  // Transactions where this account is the destination (mandatory for INCOME / TRANSFER).
   incomingTransactions FinancialTransaction[] @relation("TransactionDestinationAccount")
 
   // Prevents duplicate account names within the same workspace.
@@ -319,16 +267,18 @@ model FinancialAccount {
 // ----------------------------------------------------------------------------
 
 model Category {
-  id          String       @id @default(uuid()) @db.Uuid
-  workspaceId String       @db.Uuid
-  name        String
-  type        CategoryType
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt @default(now())
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @db.Uuid
+  name          String
+  type          TransactionType
+  isArchived    Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt @default(now())
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   subCategories SubCategory[]
 
+  @@unique([workspaceId, name, type])
   // Composite index for filtering categories by workspace AND type in a
   // single index range scan (e.g. dashboard "Expense Breakdown" query).
   @@index([workspaceId, type])
@@ -344,6 +294,7 @@ model SubCategory {
   workspaceId String   @db.Uuid
   categoryId  String   @db.Uuid
   name        String
+  isArchived  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt @default(now())
 
@@ -353,6 +304,7 @@ model SubCategory {
   budgets      Budget[]
   transactions FinancialTransaction[]
 
+  @@unique([workspaceId, name, categoryId])
   @@index([workspaceId])
   @@index([categoryId])
   @@schema("ft_core")
@@ -361,26 +313,27 @@ model SubCategory {
 // ----------------------------------------------------------------------------
 // 11. Budget — Spending limit on a SubCategory (Level 2) for an interval
 // ----------------------------------------------------------------------------
-// Per ARCHITECTURE.md / PRD_MVP1.md, budgets are scoped strictly to Level 2
-// SubCategories. The backend guard (Task 6.1) rejects budget creation if the
-// targeted `subCategoryId` resolves to a Level 1 parent node.
 
 model Budget {
-  id            String          @id @default(uuid()) @db.Uuid
-  workspaceId   String          @db.Uuid
-  subCategoryId String          @db.Uuid
-  amount        Decimal         @db.Decimal(18, 4)
+  id            String         @id @default(uuid()) @db.Uuid
+  workspaceId   String         @db.Uuid
+  subCategoryId String         @db.Uuid
+  amount        Decimal        @db.Decimal(18, 4)
   interval      BudgetInterval
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt @default(now())
 
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  subCategory SubCategory @relation(fields: [subCategoryId], references: [id], onDelete: Cascade)
+  /// Start date of the budget period (e.g., 2025-10-01).
+  startDate     DateTime       @db.Date
+  /// End date of the budget period (e.g., 2025-10-31 or 9999-12-31).
+  endDate       DateTime       @default("9999-12-31") @db.Date
 
-  // Enforces "exactly one active budget per interval per sub-category".
-  @@unique([subCategoryId, interval])
-  @@index([subCategoryId])
-  @@index([workspaceId])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt @default(now())
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subCategory   SubCategory    @relation(fields: [subCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, subCategoryId])
+  @@index([subCategoryId, startDate, endDate])
   @@schema("ft_core")
 }
 
@@ -389,36 +342,36 @@ model Budget {
 // ----------------------------------------------------------------------------
 // Account direction safeguards (enforced in the POST handler, Task 5.1):
 //   - INCOME    => destinationAccountId mandatory
-//   - EXPENSE   => sourceAccountId      mandatory
+//   - EXPENSE   => sourceAccountId mandatory
 //   - TRANSFER  => both source & destination mandatory
 
 model FinancialTransaction {
-  id                 String          @id @default(uuid()) @db.Uuid
-  workspaceId        String          @db.Uuid
-  type               TransactionType
-  amount             Decimal         @db.Decimal(18, 4)
-  subCategoryId      String          @db.Uuid
-  date               DateTime
-  sourceAccountId    String?         @db.Uuid
-  destinationAccountId String?       @db.Uuid
-  description        String?
-  payeePayer         String?
-  tags               String[]
-  attachmentUrl      String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt @default(now())
+  id                    String            @id @default(uuid()) @db.Uuid
+  workspaceId           String            @db.Uuid
+  type                  TransactionType
+  amount                Decimal           @db.Decimal(18, 4)
+  subCategoryId         String            @db.Uuid
+  date                  DateTime          @db.Date
+  sourceAccountId       String?           @db.Uuid
+  destinationAccountId  String?           @db.Uuid
+  description           String?
+  payeePayer            String?
+  tags                  String[]
+  attachmentUrl         String?
+  createdById           String?           @db.Uuid
+  createdAt             DateTime          @default(now())
+  updatedById           String?           @db.Uuid
+  updatedAt             DateTime          @updatedAt @default(now())
 
-  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  subCategory  SubCategory  @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
-  sourceAccount      FinancialAccount? @relation("TransactionSourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
-  destinationAccount FinancialAccount? @relation("TransactionDestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  workspace             Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceAccount         FinancialAccount? @relation("TransactionSourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  destinationAccount    FinancialAccount? @relation("TransactionDestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  subCategory           SubCategory       @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+  
+  createdBy            User?              @relation("TransactionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy            User?              @relation("TransactionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  // Index declarations for the hot query paths enumerated in
-  // ARCHITECTURE.md §3 / §4 (time-series aggregation, type filtering,
-  // autocomplete, workspace isolation, multi-tenancy Anti-IDOR lookups).
-  @@index([workspaceId, type])
-  @@index([workspaceId, date])
-  @@index([subCategoryId])
+  @@index([workspaceId, date, type])
   @@index([sourceAccountId])
   @@index([destinationAccountId])
   @@index([payeePayer])
