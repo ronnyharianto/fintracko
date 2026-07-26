@@ -187,6 +187,28 @@ export async function deleteWorkspace(userId: string, workspaceId: string) {
 }
 
 /**
+ * Updates an owned workspace name.
+ */
+export async function updateWorkspace(
+  userId: string,
+  workspaceId: string,
+  name: string
+) {
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { ownerId: true },
+  });
+  if (!workspace || workspace.ownerId !== userId) {
+    throw new Error('FORBIDDEN');
+  }
+
+  return await db.workspace.update({
+    where: { id: workspaceId },
+    data: { name },
+  });
+}
+
+/**
  * Creates a new Workspace, assigns the creator as OWNER in WorkspaceMember,
  * and seeds default Level 1 Categories and Level 2 SubCategories from the
  * selected static workspace template.
