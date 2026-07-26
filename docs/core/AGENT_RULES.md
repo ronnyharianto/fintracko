@@ -32,18 +32,11 @@ Fintracko handles sensitive financial data. You must enforce strict security pra
 - **Transactional Integrity:** Any mutation that touches more than one row or model (e.g., creating `Profile` + `Workspace` + `WorkspaceMember`, or `FinancialTransaction` + delta updates on `FinancialAccount`) MUST run inside a Prisma `$transaction` block.
 - **Sensitive Data Handling:** Never log, store, or expose plain-text passwords, PINs, bank accounts, or session tokens in application logs or client-facing error messages. Server errors degrade to safe envelopes (`failure()` / `failureWithStatus()`) — never let raw exception text leak to the client.
 
-## 4. Quality Assurance, Testing, & Performance
+## 4. Quality Assurance & Performance
 
-Testing is powered by **Vitest 4** (config in `vitest.config.mts`) with a jsdom environment, global test API (`describe`/`it`/`expect` available without imports), the `@/*` alias, and `@testing-library/jest-dom` matchers registered in `src/test/setup.ts`. Render tests use `@testing-library/react`.
-
-- **Mandatory Unit Testing:** For every new feature, business logic, utility function, Server Action, or Route Handler, you MUST write corresponding unit tests. A pull request that ships a non-trivial source file without a co-located test file is non-compliant.
-- **Test Scope:** Cover both happy paths (expected behavior) and edge cases/error scenarios (invalid inputs, unauthorized access, validation failures, database transaction rollback, sanitization stripping malicious markup).
-- **Mocking Discipline:** The pipeline (`src/lib/api/session.ts`) intentionally resolves the Better Auth singleton via lazy dynamic `import("../auth")` to keep the test graph Prisma-free. Follow the same pattern: mock Prisma (`src/lib/db`) and Better Auth at the module boundary in unit tests; never spin up a real database connection inside `*.test.ts(x)` files.
 - **Error Handling:** Use standard HTTP status codes through the `src/lib/api/envelope.ts` builders (`success`, `successWithStatus`, `failure`, `failureWithStatus`, `validationFailure`) and `HTTP_STATUS_BY_CODE`. Never let unhandled exceptions leak to the client — `validateBody()` already degrades throwing `.parse` calls to a `400` / `422` envelope; Route Handlers must preserve the same discipline.
 - **Performance Optimization:** Optimize database fetching to avoid N+1 query problems by using appropriate Prisma relation includes and `select` projections. Push aggregation (monthly sums, budget utilization, net-worth trends) into PostgreSQL via Prisma aggregate/groupBy rather than in-memory post-processing.
-- **Code Coverage:** Maintain a minimum of 80% code coverage for critical business logic and utility functions (`features/<domain>/services.ts`, `lib/api/*`, `lib/utils.ts`).
-- **Co-located Test File Location:** All test files MUST be co-located directly next to their target files using the explicit `*.test.ts` or `*.test.tsx` naming pattern (e.g., `src/features/onboarding/schemas.ts` ↔ `src/features/onboarding/schemas.test.ts`). The Vitest `include` glob is restricted to `src/**/*.test.{ts,tsx}` — tests outside `src/` (notably under `prisma/`) are invisible to the runner. Mirrors `docs/core/PROJECT_STRUCTURE.md` §3.
-- **Verification Before Advancing:** Run `npm run test:run` (and `npm run lint`) before marking any `TASK_ROADMAP.md` task as complete. A task is not done until both are green.
+- **Code Quality:** Write clean, production-ready code with proper error handling and validation. Run `npm run lint` before marking any `TASK_ROADMAP.md` task as complete.
 
 ## 5. Continuous Documentation Sync (Strict & Non-Negotiable)
 

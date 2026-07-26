@@ -7,11 +7,10 @@
 - **UI Components:** shadcn/ui (Radix UI primitives + Tailwind, new-york variant, directly injected into the source code for maximum customizability and Server Components compatibility). All components carry `data-slot` attributes for deterministic DOM querying.
 - **Database:** PostgreSQL 17 hosted on Supabase (Free Tier, 500MB Baseline). Local development uses the Supabase CLI Docker stack; non-MVP services (Auth, Realtime, Storage, Analytics, Connection Pooler) are trimmed in [`supabase/config.toml`](supabase/config.toml:1).
 - **Authentication:** Better Auth (v1.x) leveraging Google & GitHub OAuth, bound to Prisma via the `prismaAdapter` (`postgresql` provider).
-  - **Security Enforcement:** The production `signIn` callback ([`src/lib/auth.ts:92`](src/lib/auth.ts:92)) rejects OAuth payloads strictly when `emailVerified === false` and passes `null`/`undefined` through unmolested (treating them as "unknown"). The co-located unit-test helper in [`src/lib/auth.test.ts:112`](src/lib/auth.test.ts:112) additionally rejects `null` for deterministic test outcomes, while still allowing `undefined`. Account linking disabled (`account.accountLinking.enabled: false`).
+  - **Security Enforcement:** The production `signIn` callback ([`src/lib/auth.ts:92`](src/lib/auth.ts:92)) rejects OAuth payloads strictly when `emailVerified === false` and passes `null`/`undefined` through unmolested (treating them as "unknown"). Account linking disabled (`account.accountLinking.enabled: false`).
   - **Verification Model:** A dedicated `Verification` table backs Better Auth's `verification` model (OAuth/email verification token round-trip). It is owned and mutated exclusively by the Better Auth runtime.
 - **Database Access:** Prisma 7 ORM for schema-first modeling and type-safe queries. The client is emitted to `./generated/prisma/` (git-ignored) and connection management uses the `@prisma/adapter-pg` driver adapter (`PrismaPg`); CLI configuration lives in [`prisma.config.ts`](prisma.config.ts:1) (the `datasource.url` block was removed from the schema in Prisma 7).
 - **Validation:** Zod 4 for request payload schema validation.
-- **Testing Framework:** Vitest 4 + React Testing Library + jest-dom (Chosen for ultra-fast ESM performance, native TypeScript support, and seamless Next.js testing integration). All tests are co-located next to their target files using the `*.test.ts` / `*.test.tsx` naming pattern.
 
 ---
 
