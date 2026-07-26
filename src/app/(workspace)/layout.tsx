@@ -18,6 +18,8 @@
 import type { ReactNode } from 'react';
 import OnboardingGuardWrapper from '@/components/guards/onboarding-guard-wrapper';
 import Sidebar from '@/components/shared/sidebar';
+import { TopBar } from '@/components/shared/workspace/top-bar';
+import { SidebarProvider } from '@/components/shared/sidebar';
 import { WorkspaceProvider } from '@/components/shared/workspace-context';
 
 interface DashboardLayoutProps {
@@ -28,10 +30,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <OnboardingGuardWrapper>
       <WorkspaceProvider>
-        <div className="flex min-h-screen bg-background text-foreground">
-          <Sidebar />
-          <main className="flex-1 p-6">{children}</main>
-        </div>
+        <SidebarProvider>
+          <div className="min-h-screen bg-background text-foreground">
+            <TopBar />
+            <div className="flex flex-1 lg:pt-0">
+              <Sidebar />
+              <main className="flex-1 p-6 lg:ml-64">{children}</main>
+            </div>
+          </div>
+        </SidebarProvider>
       </WorkspaceProvider>
     </OnboardingGuardWrapper>
   );

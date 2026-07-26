@@ -1,24 +1,10 @@
 'use client';
 
+import React, { useState, useRef, useEffect, useContext, createContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FintrackoLogo } from './fintracko-logo';
-import { useWorkspace } from './workspace-context';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Home,
-  Briefcase,
-  Banknote,
-  CreditCard,
-  PiggyBank,
-  BarChart3,
-} from 'lucide-react';
+import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3 } from 'lucide-react';
 
 const navItems = [
   {
@@ -26,12 +12,6 @@ const navItems = [
     label: 'Dashboard',
     icon: Home,
     isActive: (p: string) => p === '/' || p === '/dashboard',
-  },
-  {
-    href: '/workspaces',
-    label: 'Workspaces',
-    icon: Briefcase,
-    isActive: (p: string) => p === '/workspaces',
   },
   {
     href: '/accounts',
@@ -59,79 +39,134 @@ const navItems = [
   },
 ];
 
+const settingsItem = {
+  href: '/settings/workspace',
+  label: 'Settings',
+  icon: Settings,
+  isActive: (p: string) => p.startsWith('/settings'),
+};
+
+// Context for sharing sidebar state between TopBar and Sidebar
+const SidebarContext = createContext<{
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+} | null>(null);
+
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <SidebarContext.Provider value={{ isOpen, setIsOpen }}>
+      {children}
+    </SidebarContext.Provider>
+  );
+}
+
+export function useSidebarContext() {
+  const context = useContext(SidebarContext);
+  if (!context) {
+    throw new Error('useSidebarContext must be used within a SidebarProvider');
+  }
+  return context;
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading } =
-    useWorkspace();
+  const { isOpen, setIsOpen } = useSidebarContext();
+  const sidebarRef = useRef<HTMLElement>(null);
 
-  const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
+  // Close sidebar when clicking a link on mobile
+  const handleLinkClick = () => {
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
+  };
+
+  // Handle escape key to close sidebar
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, setIsOpen]);
 
   return (
-    <aside className="shrink-0 w-64 bg-card text-foreground border-r border-muted flex flex-col">
-      <div className="flex items-center p-4 border-b border-muted">
-        <FintrackoLogo className="h-8 w-8" />
-        <span className="ml-3 text-xl font-semibold">Fintracko</span>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Workspace Selector at the top of the menu list */}
-      <div className="p-4 border-b border-muted">
-        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          Active Workspace
-        </label>
-        {isLoading ? (
-          <div className="text-xs text-muted-foreground animate-pulse py-2">
-            Loading workspaces...
-          </div>
-        ) : workspaces.length === 0 ? (
-          <div className="text-xs text-muted-foreground py-1">
-            No workspace found
-          </div>
-        ) : (
-          <Select
-            value={activeWorkspaceId || ''}
-            onValueChange={(val) => setActiveWorkspaceId(val)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select workspace">
-                {activeWorkspace
-                  ? `${activeWorkspace.name} (${activeWorkspace.role.toLowerCase()})`
-                  : 'Select workspace'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((ws) => (
-                <SelectItem key={ws.id} value={ws.id}>
-                  {ws.name} ({ws.role.toLowerCase()})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      <aside
+        ref={sidebarRef}
+        className={`
+          shrink-0 w-64 bg-card text-foreground border-r border-muted flex flex-col
+          lg:fixed lg:top-16 lg:bottom-0 lg:left-0 lg:z-50
+          transform transition-transform duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        aria-label="Main navigation"
+      >
+          <nav className="mt-4 px-3 space-y-1 flex-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const active = item.isActive(pathname);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={handleLinkClick}
+                className={`
+                  flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
+                  ${
+                    active
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
+                  }
+                `}
+              >
+                <Icon className="mr-3 h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
 
-      <nav className="mt-4 px-3 space-y-1 flex-1">
-        {navItems.map((item) => {
-          const active = item.isActive(pathname);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`
-                flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                ${
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
-                }
-              `}
-            >
-              <Icon className="mr-3 h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+          {/* Settings at bottom */}
+          <div className="border-t border-muted mt-4 pt-4">
+            {(() => {
+              const item = settingsItem;
+              const active = item.isActive(pathname);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleLinkClick}
+                  className={`
+                    flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
+                    ${
+                      active
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
+                    }
+                  `}
+                >
+                  <Icon className="mr-3 h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })()}
+          </div>
+        </nav>
+      </aside>
+    </>
   );
 }
