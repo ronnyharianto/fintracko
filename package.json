@@ -9,13 +9,16 @@
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "supabase:status": "supabase status"
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
