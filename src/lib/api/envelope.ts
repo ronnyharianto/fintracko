@@ -80,7 +80,8 @@ export interface FieldValidationError {
 
 /**
  * Failure envelope payload (without the outer `success` / `timestamp`
- * wrapper). Exposed for unit-level assertions on the constructed body.
+ * wrapper). Exported so consuming modules can type failure responses
+ * precisely.
  */
 export interface FailureEnvelope {
   success: false;
@@ -121,9 +122,8 @@ export const HTTP_STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> =
 /**
  * Returns the current instant as a UTC ISO-8601 string with a trailing `Z`.
  *
- * Extracted as a seam so unit tests can assert on the produced timestamp
- * format without depending on wall-clock time — the seam is exercised by
- * the co-located tests via spy injection.
+ * Extracted as a seam so callers can override or assert on the produced
+ * timestamp format without depending on wall-clock time.
  */
 export function nowTimestamp(): string {
   return new Date().toISOString();
@@ -160,8 +160,8 @@ export function buildSuccessEnvelope<T>(data: T): SuccessEnvelope<T> {
 }
 
 /**
- * Build the failure envelope object (no HTTP wrapping). Useful for
- * unit-level assertions on the constructed body shape.
+ * Build the failure envelope object (no HTTP wrapping). Useful when a
+ * handler needs the raw body.
  */
 export function buildFailureEnvelope(
   code: ApiErrorCode,

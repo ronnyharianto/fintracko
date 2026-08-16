@@ -40,10 +40,6 @@ export async function getUserWorkspaces(userId: string) {
  * Retrieves all workspaces owned by the user, including members and counts.
  */
 export async function getOwnedWorkspaces(userId: string) {
-  console.log(
-    `Fetching owned workspaces for userId: ${userId} on Service layer getOwnedWorkspaces`,
-  );
-
   const workspaces = await db.workspace.findMany({
     where: {
       members: {

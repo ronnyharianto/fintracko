@@ -23,10 +23,6 @@ import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   return withSession(request, async ({ userId }) => {
-    console.log(
-      `Fetching workspaces for userId: ${userId} on GET /api/v1/workspaces`,
-    );
-
     const profile = await db.profile.findUnique({
       where: { userId },
       select: { id: true },

@@ -15,12 +15,10 @@ import { db } from "./db";
 /**
  * Better Auth `signIn` callback.
  *
- * Extracted as a named export so the co-located unit suite can assert its
- * exact behaviour (reject `emailVerified === false`, pass through every other
- * value including `null`/`undefined`) without spinning up Better Auth or a
- * database. AGENT_RULES.md §4 ("Mocking Discipline") requires that Prisma
- * and Better Auth be mocked at the module boundary; testing the raw callback
- * function directly is the most faithful application of that rule.
+ * Extracted as a named export so the exact behaviour (reject
+ * `emailVerified === false`, pass through every other value including
+ * `null`/`undefined`) lives in one place and stays independently verifiable
+ * without spinning up Better Auth or a database.
  *
  * Google and GitHub OAuth payloads include an `email_verified` flag. We reject
  * any sign-in attempt where the email has not been verified by the provider,
@@ -119,10 +117,10 @@ export const auth = betterAuth({
     /**
      * Enforce email verification for OAuth sign-ins.
      *
-     * Delegates to {@link signInCallback} so the exact same logic is
-     * unit-testable in isolation (see `auth.test.ts`). Keeping the function
-     * hoisted out of the `betterAuth({...})` literal avoids a stale
-     * duplicate that drifted from the real configured behavior.
+     * Delegates to {@link signInCallback} so the exact same logic lives in
+     * one place. Keeping the function hoisted out of the `betterAuth({...})`
+     * literal avoids a stale duplicate that could drift from the real
+     * configured behavior.
      */
     signIn: signInCallback,
   },
@@ -133,13 +131,3 @@ export const auth = betterAuth({
   },
 });
 
-/**
- * Type-safe auth client for use in route handlers and server utilities.
- *
- * Usage in a route handler:
- * ```ts
- * import { auth } from "@/lib/auth";
- * const session = await auth.api.getSession({ headers: request.headers });
- * ```
- */
-export type AuthClient = typeof auth;

@@ -87,21 +87,6 @@ export function sanitizeString(
 }
 
 /**
- * Sanitize an array of strings (e.g. `FinancialTransaction.tags`).
- *
- * Non-array input is returned untouched. `null`/`undefined` array elements
- * are preserved as-is so the Zod-level optional handling remains canonical.
- */
-export function sanitizeStringArray(
-  value: ReadonlyArray<string | null | undefined> | null | undefined
-): Array<string | null | undefined> {
-  if (!Array.isArray(value)) {
-    return value as unknown as Array<string | null | undefined>;
-  }
-  return value.map((element) => sanitizeString(element as string));
-}
-
-/**
  * Walk a plain object and sanitize every string-topped leaf value.
  *
  * Used as a final safety net on a fully-parsed, Zod-validated payload:
@@ -126,8 +111,7 @@ export function sanitizeObject<T>(payload: T): T {
 
 /**
  * Recursive worker for {@link sanitizeObject}. Public callers should use the
- * typed wrapper; this entry point is exported only for unit-level invocation
- * against internal edge cases.
+ * typed wrapper; this entry point is internal to this module.
  */
 function walkAndSanitize<T>(node: T, visited: WeakSet<object>): T {
   if (node === null || node === undefined) {

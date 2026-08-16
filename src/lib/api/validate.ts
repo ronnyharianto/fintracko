@@ -51,8 +51,8 @@ export type ValidateBodyResult<T> =
  * is acceptable (it usually isn't for mutating routes).
  *
  * Extracted from the main validator so the error-handling branches stay
- * readable and so the unit suite can exercise the syntactic-vs-semantic
- * failure split independently.
+ * readable and the syntactic-vs-semantic failure split stays testable in
+ * isolation.
  */
 export async function readJsonBody(
   request: NextRequest

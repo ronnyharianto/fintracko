@@ -30,8 +30,8 @@ import { failure, type FailureEnvelope } from './envelope';
 /**
  * The minimal shape of the Better Auth instance we depend on. Using a
  * structural type (instead of `typeof auth` directly) gives us a stable
- * injection seam for unit tests: a fake Better Auth object implementing
- * only `api.getSession` is sufficient to exercise every code path.
+ * injection seam, so callers can supply a minimal Better Auth-shaped object
+ * instead of the full singleton.
  */
 export interface AuthLike {
   api: {
@@ -79,9 +79,9 @@ export interface AuthContext {
  *
  * Defaults to the real Better Auth instance imported from [`../auth`](../auth)
  * — keeping this as a parameter (with the production default filled by
- * `getSession` below) preserves an injection seam the test suite exercises
- * via [`session.test.ts`](session.test.ts). This seam is the *only* reason
- * `AuthLike` is structural rather than `typeof auth`.
+ * `getSession` below) preserves an injection seam for callers that need a
+ * custom or faked auth instance. This seam is the *only* reason `AuthLike`
+ * is structural rather than `typeof auth`.
  *
  * Throws are explicitly caught so a transient Better Auth failure (e.g. a
  * dropped database connection during session lookup) degrades to a clean
@@ -125,11 +125,10 @@ export async function resolveSession(
  * Imported lazily (inside the function body) for two reasons:
  *   1. Keeping the module-load graph small — importing the auth singleton
  *      eagerly would force the Prisma adapter and `DATABASE_URL` to be
- *      resolved at import time of every module that touches the pipeline,
- *      which is hostile to unit tests that mock `authInstance` instead.
+ *      resolved at import time of every module that touches the pipeline.
  *   2. Avoiding a circular import hazard: `../auth` imports `../db`, and
  *      importing it at module top-of-file here would pin a finish-order
- *      that's brittle under Vitest module isolation.
+ *      that's brittle under Next.js hot module reloading.
  */
 export async function getProductionAuth(): Promise<AuthLike> {
   const { auth } = await import('../auth');
@@ -138,8 +137,8 @@ export async function getProductionAuth(): Promise<AuthLike> {
 
 /**
  * Convenience wrapper that resolves the session using the production Better
- * Auth singleton (unless an explicit `authInstance` is injected — typically
- * only by the unit tests or a future E2E harness) and either hands the
+ * Auth singleton (unless an explicit `authInstance` is injected — e.g. by a
+ * future E2E harness) and either hands the
  * authenticated context to `onSuccess` or short-circuits with the envelope
  * failure response.
  *

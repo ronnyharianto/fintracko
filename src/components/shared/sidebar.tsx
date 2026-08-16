@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useContext, createContext } from 'react';
+import React, { useState, useEffect, useContext, createContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3 } from 'lucide-react';
@@ -71,7 +71,6 @@ export function useSidebarContext() {
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, setIsOpen } = useSidebarContext();
-  const sidebarRef = useRef<HTMLElement>(null);
 
   // Close sidebar when clicking a link on mobile
   const handleLinkClick = () => {
@@ -105,7 +104,6 @@ export default function Sidebar() {
       )}
 
       <aside
-        ref={sidebarRef}
         className={`
           shrink-0 w-64 bg-card text-foreground border-r border-muted flex flex-col
           lg:fixed lg:top-16 lg:bottom-0 lg:left-0 lg:z-50
