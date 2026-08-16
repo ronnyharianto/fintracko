@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: July 2026
+        Last updated: August 2026
       </p>
 
       <div className="mt-10 space-y-8 text-base leading-relaxed text-foreground">
@@ -81,8 +81,8 @@ export default function PrivacyPolicyPage() {
           <p>
             During mandatory onboarding, you provide your phone number
             (optional), company name (optional), biography, date of birth,
-            gender, currency preference, and language preference. This
-            information is stored in your Profile record.
+            gender, and currency preference. This information is stored in
+            your Profile record.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">2.3 Financial Data</h3>
           <p>

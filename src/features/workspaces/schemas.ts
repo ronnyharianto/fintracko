@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { CurrencyEnum } from '@/features/onboarding/schemas';
 
 /**
  * Workspace template name enum.
@@ -27,6 +28,12 @@ export const CreateWorkspaceSchema = z.object({
     .min(1, 'Workspace name is required')
     .max(100, 'Workspace name must be at most 100 characters'),
   templateName: WorkspaceTemplateEnum,
+  /**
+   * Optional currency override. When omitted, the server defaults the
+   * workspace currency to the creator's profile currencyPreference
+   * (PRD §3.2). Once created, the currency can never be changed.
+   */
+  currency: CurrencyEnum.optional(),
 });
 
 /**

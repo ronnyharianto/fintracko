@@ -33,15 +33,16 @@ export async function completeOnboarding(
         dateOfBirth: new Date(data.dateOfBirth),
         gender: data.gender,
         currencyPreference: data.currencyPreference,
-        languagePreference: data.languagePreference,
       },
     });
 
-    // Create first Workspace with default name
+    // Create first Workspace with default name, using the currency
+    // preference collected during onboarding (PRD §3.2: workspace currency
+    // defaults to the profile's currencyPreference and is locked after).
     const workspace = await tx.workspace.create({
       data: {
         name: 'My Workspace',
-        ownerId: userId,
+        currency: data.currencyPreference,
       },
     });
 

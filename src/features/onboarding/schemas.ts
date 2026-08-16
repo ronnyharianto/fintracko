@@ -15,12 +15,7 @@ export const GenderEnum = z.enum(['MALE', 'FEMALE', 'OTHER']);
 /**
  * Supported currencies for the MVP.
  */
-export const CurrencyEnum = z.enum(['USD', 'IDR', 'EUR', 'GBP', 'JPY', 'SGD']);
-
-/**
- * Supported languages for the MVP.
- */
-export const LanguageEnum = z.enum(['en', 'id', 'es']);
+export const CurrencyEnum = z.enum(['USD', 'IDR']);
 
 /**
  * Onboarding completion request schema.
@@ -29,10 +24,9 @@ export const LanguageEnum = z.enum(['en', 'id', 'es']);
  */
 export const CompleteOnboardingSchema = z.object({
   bio: z.string().max(500).nullable().optional(),
-  dateOfBirth: z.string().datetime(),
+  dateOfBirth: z.iso.datetime(),
   gender: GenderEnum,
   currencyPreference: CurrencyEnum,
-  languagePreference: LanguageEnum,
 });
 
 /**

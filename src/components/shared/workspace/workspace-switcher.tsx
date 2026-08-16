@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWorkspace } from '@/components/shared/workspace-context';
 import { ChevronDown, Plus, Briefcase, Building2 } from 'lucide-react';
@@ -14,37 +14,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-interface Workspace {
-  id: string;
-  name: string;
-  role: string;
-}
-
 export function WorkspaceSwitcher() {
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, refreshWorkspaces, isLoading } =
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading } =
     useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLButtonElement>(null);
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handleWorkspaceChange = async (workspaceId: string) => {
+  const handleWorkspaceChange = (workspaceId: string) => {
     setActiveWorkspaceId(workspaceId);
-    await refreshWorkspaces();
     setIsOpen(false);
   };
 
@@ -61,11 +39,7 @@ export function WorkspaceSwitcher() {
     return (
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="h-9 px-3 gap-2 text-sm"
-            ref={dropdownRef}
-          >
+          <Button variant="ghost" className="h-9 px-3 gap-2 text-sm">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <span>No Workspace</span>
             <ChevronDown className="h-4 w-4" />
@@ -78,9 +52,11 @@ export function WorkspaceSwitcher() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-center text-muted-foreground py-3"
-            onClick={() => setIsOpen(false)}
+            asChild
           >
-            No workspaces found. Create one from settings.
+            <Link href="/settings/workspace?tab=workspaces">
+              No workspaces found. Create one from settings.
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -93,7 +69,6 @@ export function WorkspaceSwitcher() {
         <Button
           variant="ghost"
           className="h-9 px-3 gap-2 text-sm font-medium hover:bg-accent"
-          ref={dropdownRef}
         >
           <Briefcase className="h-4 w-4 text-primary" />
           <span className="truncate max-w-45">

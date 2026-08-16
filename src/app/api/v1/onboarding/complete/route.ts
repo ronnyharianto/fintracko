@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
           id: result.profile.id,
           bio: result.profile.bio,
           currencyPreference: result.profile.currencyPreference,
-          languagePreference: result.profile.languagePreference,
         },
         workspace: {
           id: result.workspace.id,

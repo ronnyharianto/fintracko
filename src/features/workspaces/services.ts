@@ -5,12 +5,12 @@
  * creation and template-based category/subcategory seeding.
  */
 
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 import {
   WORKSPACE_TEMPLATES,
   type WorkspaceTemplateName,
-} from './constants/workspace-templates';
-import type { CreateWorkspaceInput } from './schemas';
+} from "./constants/workspace-templates";
+import type { CreateWorkspaceInput } from "./schemas";
 
 /**
  * Retrieves all workspaces where the user is a member.
@@ -24,11 +24,10 @@ export async function getUserWorkspaces(userId: string) {
           id: true,
           name: true,
           createdAt: true,
-          ownerId: true,
         },
       },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 
   return memberships.map((m) => ({
@@ -41,8 +40,19 @@ export async function getUserWorkspaces(userId: string) {
  * Retrieves all workspaces owned by the user, including members and counts.
  */
 export async function getOwnedWorkspaces(userId: string) {
+  console.log(
+    `Fetching owned workspaces for userId: ${userId} on Service layer getOwnedWorkspaces`,
+  );
+
   const workspaces = await db.workspace.findMany({
-    where: { ownerId: userId },
+    where: {
+      members: {
+        some: {
+          userId,
+          role: "OWNER",
+        },
+      },
+    },
     include: {
       members: {
         include: {
@@ -64,7 +74,7 @@ export async function getOwnedWorkspaces(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 
   return workspaces;
@@ -76,15 +86,18 @@ export async function getOwnedWorkspaces(userId: string) {
 export async function inviteCollaborator(
   userId: string,
   workspaceId: string,
-  email: string
+  email: string,
 ) {
   // 1. Verify user is owner of workspace
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { ownerId: true },
+  const isOwner = await db.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      userId,
+      role: "OWNER",
+    },
   });
-  if (!workspace || workspace.ownerId !== userId) {
-    throw new Error('FORBIDDEN');
+  if (!isOwner) {
+    throw new Error("FORBIDDEN");
   }
 
   // 2. Find user by email
@@ -93,7 +106,7 @@ export async function inviteCollaborator(
     select: { id: true },
   });
   if (!targetUser) {
-    throw new Error('USER_NOT_FOUND');
+    throw new Error("USER_NOT_FOUND");
   }
 
   // 3. Create or check membership
@@ -107,14 +120,14 @@ export async function inviteCollaborator(
   });
 
   if (existingMember) {
-    throw new Error('ALREADY_MEMBER');
+    throw new Error("ALREADY_MEMBER");
   }
 
   return await db.workspaceMember.create({
     data: {
       workspaceId,
       userId: targetUser.id,
-      role: 'COLLABORATOR',
+      role: "COLLABORATOR",
     },
     include: {
       user: {
@@ -135,15 +148,18 @@ export async function inviteCollaborator(
 export async function removeCollaborator(
   userId: string,
   workspaceId: string,
-  memberId: string
+  memberId: string,
 ) {
   // 1. Verify user is owner of workspace
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { ownerId: true },
+  const isOwner = await db.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      userId,
+      role: "OWNER",
+    },
   });
-  if (!workspace || workspace.ownerId !== userId) {
-    throw new Error('FORBIDDEN');
+  if (!isOwner) {
+    throw new Error("FORBIDDEN");
   }
 
   // 2. Find member
@@ -151,11 +167,11 @@ export async function removeCollaborator(
     where: { id: memberId },
   });
   if (!member || member.workspaceId !== workspaceId) {
-    throw new Error('MEMBER_NOT_FOUND');
+    throw new Error("MEMBER_NOT_FOUND");
   }
 
   if (member.userId === userId) {
-    throw new Error('CANNOT_REMOVE_OWNER');
+    throw new Error("CANNOT_REMOVE_OWNER");
   }
 
   await db.workspaceMember.delete({
@@ -170,12 +186,15 @@ export async function removeCollaborator(
  */
 export async function deleteWorkspace(userId: string, workspaceId: string) {
   // 1. Verify user is owner of workspace
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { ownerId: true },
+  const isOwner = await db.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      userId,
+      role: "OWNER",
+    },
   });
-  if (!workspace || workspace.ownerId !== userId) {
-    throw new Error('FORBIDDEN');
+  if (!isOwner) {
+    throw new Error("FORBIDDEN");
   }
 
   // 2. Delete workspace (cascade handles accounts, categories, transactions, budgets, members)
@@ -192,14 +211,18 @@ export async function deleteWorkspace(userId: string, workspaceId: string) {
 export async function updateWorkspace(
   userId: string,
   workspaceId: string,
-  name: string
+  name: string,
 ) {
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { ownerId: true },
+  // Check if the user is an owner of the workspace via WorkspaceMember
+  const isOwner = await db.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      userId,
+      role: "OWNER",
+    },
   });
-  if (!workspace || workspace.ownerId !== userId) {
-    throw new Error('FORBIDDEN');
+  if (!isOwner) {
+    throw new Error("FORBIDDEN");
   }
 
   return await db.workspace.update({
@@ -219,7 +242,7 @@ export async function updateWorkspace(
  */
 export async function createWorkspace(
   userId: string,
-  data: CreateWorkspaceInput
+  data: CreateWorkspaceInput,
 ) {
   const template =
     WORKSPACE_TEMPLATES[data.templateName as WorkspaceTemplateName];
@@ -232,7 +255,7 @@ export async function createWorkspace(
     const workspace = await tx.workspace.create({
       data: {
         name: data.name,
-        ownerId: userId,
+        currency: data.currency,
       },
     });
 
@@ -241,7 +264,7 @@ export async function createWorkspace(
       data: {
         workspaceId: workspace.id,
         userId,
-        role: 'OWNER',
+        role: "OWNER",
       },
     });
 

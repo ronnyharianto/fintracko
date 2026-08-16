@@ -7,8 +7,7 @@
  * - bio (optional)
  * - dateOfBirth (required)
  * - gender (required: MALE, FEMALE, OTHER)
- * - currencyPreference (required: USD, IDR, EUR, etc.)
- * - languagePreference (required: en, id, es, etc.)
+ * - currencyPreference (required: USD, IDR)
  * - Legal compliance checkboxes (required: Terms of Service, Privacy Policy)
  */
 
@@ -38,7 +37,6 @@ interface OnboardingFormData {
   dateOfBirth: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   currencyPreference: string;
-  languagePreference: string;
   acceptTerms: boolean;
   acceptPrivacy: boolean;
 }
@@ -51,7 +49,6 @@ export function OnboardingForm() {
     dateOfBirth: '',
     gender: 'OTHER',
     currencyPreference: 'USD',
-    languagePreference: 'en',
     acceptTerms: false,
     acceptPrivacy: false,
   });
@@ -80,7 +77,6 @@ export function OnboardingForm() {
           dateOfBirth: isoDate,
           gender: formData.gender,
           currencyPreference: formData.currencyPreference,
-          languagePreference: formData.languagePreference,
         }),
       });
 
@@ -185,48 +181,24 @@ export function OnboardingForm() {
               <SelectContent>
                 <SelectItem value="USD">USD - US Dollar</SelectItem>
                 <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
-                <SelectItem value="EUR">EUR - Euro</SelectItem>
-                <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
-                <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Language Preference (required) */}
-          <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="languagePreference">Language Preference *</Label>
-            <Select
-              value={formData.languagePreference}
-              onValueChange={(value) =>
-                setFormData({ ...formData, languagePreference: value })
-              }
-            >
-              <SelectTrigger id="languagePreference">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                <SelectItem value="es">Español</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Legal Compliance Checkboxes */}
           <div className="space-y-4 pt-2 md:col-span-2">
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="acceptTerms"
-                required
-                disabled={!hasReadTerms}
-                checked={formData.acceptTerms}
-                onCheckedChange={(checked: boolean) =>
-                  setFormData({ ...formData, acceptTerms: checked })
-                }
-                className="mt-1 shrink-0"
-              />
-              <div className="space-y-1">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="acceptTerms"
+                  required
+                  disabled={!hasReadTerms}
+                  checked={formData.acceptTerms}
+                  onCheckedChange={(checked: boolean) =>
+                    setFormData({ ...formData, acceptTerms: checked })
+                  }
+                  className="shrink-0"
+                />
                 <label
                   htmlFor="acceptTerms"
                   className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? 'text-muted-foreground' : ''}`}
@@ -241,30 +213,30 @@ export function OnboardingForm() {
                     Terms of Service
                   </a>
                 </label>
-                {!hasReadTerms && (
-                  <span className="block text-xs text-amber-600 dark:text-amber-400">
-                    (Please click and read the Terms of Service above to enable
-                    the checkbox)
-                  </span>
-                )}
               </div>
+              {!hasReadTerms && (
+                <p className="pl-7 text-xs text-amber-600 dark:text-amber-400">
+                  (Please click and read the Terms of Service above to enable
+                  the checkbox)
+                </p>
+              )}
             </div>
 
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="acceptPrivacy"
-                required
-                disabled={!hasReadPrivacy}
-                checked={formData.acceptPrivacy}
-                onCheckedChange={(checked: boolean) =>
-                  setFormData({
-                    ...formData,
-                    acceptPrivacy: checked,
-                  })
-                }
-                className="mt-1 shrink-0"
-              />
-              <div className="space-y-1">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="acceptPrivacy"
+                  required
+                  disabled={!hasReadPrivacy}
+                  checked={formData.acceptPrivacy}
+                  onCheckedChange={(checked: boolean) =>
+                    setFormData({
+                      ...formData,
+                      acceptPrivacy: checked,
+                    })
+                  }
+                  className="shrink-0"
+                />
                 <label
                   htmlFor="acceptPrivacy"
                   className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? 'text-muted-foreground' : ''}`}
@@ -279,13 +251,13 @@ export function OnboardingForm() {
                     Privacy Policy
                   </a>
                 </label>
-                {!hasReadPrivacy && (
-                  <span className="block text-xs text-amber-600 dark:text-amber-400">
-                    (Please click and read the Privacy Policy above to enable
-                    the checkbox)
-                  </span>
-                )}
               </div>
+              {!hasReadPrivacy && (
+                <p className="pl-7 text-xs text-amber-600 dark:text-amber-400">
+                  (Please click and read the Privacy Policy above to enable
+                  the checkbox)
+                </p>
+              )}
             </div>
           </div>
 

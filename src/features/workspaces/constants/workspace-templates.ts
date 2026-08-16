@@ -7,7 +7,7 @@
  * object and bulk-inserts Category (Level 1) and SubCategory (Level 2) rows.
  */
 
-import type { CategoryType } from '../../../../generated/prisma/client';
+import type { TransactionType } from '../../../../generated/prisma/client';
 
 export interface SubCategoryTemplate {
   name: string;
@@ -15,7 +15,7 @@ export interface SubCategoryTemplate {
 
 export interface CategoryTemplate {
   name: string;
-  type: CategoryType;
+  type: TransactionType;
   subCategories: SubCategoryTemplate[];
 }
 

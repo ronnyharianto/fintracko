@@ -35,6 +35,7 @@ export function CreateWorkspaceDialog({
   const [templateName, setTemplateName] = useState<
     'PERSONAL' | 'FAMILY' | 'SMALL_BUSINESS'
   >('PERSONAL');
+  const [currency, setCurrency] = useState<'USD' | 'IDR'>('USD');
   const [isCreating, setIsCreating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +50,7 @@ export function CreateWorkspaceDialog({
         body: JSON.stringify({
           name: name.trim(),
           templateName,
+          currency,
         }),
       });
 
@@ -93,7 +95,11 @@ export function CreateWorkspaceDialog({
             <Label htmlFor="create-template">Template</Label>
             <Select
               value={templateName}
-              onValueChange={(val) => setTemplateName(val as any)}
+              onValueChange={(val) =>
+                setTemplateName(
+                  val as 'PERSONAL' | 'FAMILY' | 'SMALL_BUSINESS'
+                )
+              }
             >
               <SelectTrigger id="create-template" className="w-full">
                 <SelectValue placeholder="Select template" />
@@ -104,6 +110,24 @@ export function CreateWorkspaceDialog({
                 <SelectItem value="SMALL_BUSINESS">Small Business</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="create-currency">Currency</Label>
+            <Select
+              value={currency}
+              onValueChange={(val) => setCurrency(val as 'USD' | 'IDR')}
+            >
+              <SelectTrigger id="create-currency" className="w-full">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD - US Dollar</SelectItem>
+                <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Currency cannot be changed after the workspace is created.
+            </p>
           </div>
           <DialogFooter>
             <Button

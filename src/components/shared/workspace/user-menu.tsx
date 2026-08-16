@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { authClient } from '@/lib/auth-client';
-import { LogOut, User, Settings, Shield, Bell } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { authClient } from "@/lib/auth-client";
+import { LogOut, User, Settings, Shield, Bell } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +12,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface User {
   id: string;
@@ -27,33 +27,42 @@ export function UserMenu() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchSession = async () => {
       try {
+        // Retry transient network failures (dev-server restarts drop the
+        // in-flight request), which would otherwise keep the avatar hidden
+        // even though the user is signed in.
         const res = await authClient.getSession();
-        if (res?.data?.user) {
+        if (!cancelled && res?.data?.user) {
           setUser(res.data.user);
         }
       } catch (error) {
-        console.error('Failed to fetch session:', error);
+        console.error("Failed to fetch session:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    window.location.href = '/login';
+    window.location.href = "/login";
   };
 
   const getInitials = (name?: string | null) => {
-    if (!name) return '?';
+    if (!name) return "?";
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .slice(0, 2)
       .toUpperCase();
   };
@@ -62,7 +71,10 @@ export function UserMenu() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 animate-pulse">
+          <Button
+            variant="ghost"
+            className="relative h-9 w-9 rounded-full p-0 animate-pulse"
+          >
             <div className="h-9 w-9 rounded-full bg-muted" />
           </Button>
         </DropdownMenuTrigger>
@@ -79,7 +91,10 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user?.image || undefined} alt={user?.name || 'User'} />
+            <AvatarImage
+              src={user?.image || undefined}
+              alt={user?.name || "User"}
+            />
             <AvatarFallback className="text-xs font-medium">
               {getInitials(user?.name)}
             </AvatarFallback>
@@ -89,8 +104,12 @@ export function UserMenu() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <div className="flex items-center gap-2 px-2 py-1">
           <div>
-            <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <p className="text-sm font-medium truncate">
+              {user?.name || "User"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user?.email}
+            </p>
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -123,7 +142,10 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleSignOut}>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={handleSignOut}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
