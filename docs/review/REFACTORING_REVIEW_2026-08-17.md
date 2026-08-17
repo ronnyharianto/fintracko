@@ -15,7 +15,7 @@ This document catalogs refactoring opportunities found during a senior-dev read-
 | ID | Severity | Category | Issue | Location |
 |----|----------|----------|-------|----------|
 | H1 | 🔴 High | Refactor ✅ | Ownership guard (`findFirst` + throw `FORBIDDEN`) duplicated 4× in the workspace service layer | `src/features/workspaces/services.ts` (lines 89, 151, 186, 214) |
-| H2 | 🔴 High | Bug | Sidebar links to 4 routes that do not exist (`/accounts`, `/transactions`, `/budgets`, `/analytics`) — 4 of 6 nav items 404 | `src/components/shared/sidebar.tsx` |
+| H2 | 🔴 High | Bug ✅ | Sidebar links to 4 routes that do not exist (`/accounts`, `/transactions`, `/budgets`, `/analytics`) — 4 of 6 nav items 404 | `src/components/shared/sidebar.tsx` |
 | H3 | 🔴 High | Refactor | ~6 hand-rolled `fetch` + envelope-unwrap + `alert()` blocks on the client; mixes `alert()` and sonner `toast` | workspace dialogs + `settings/workspace/page.tsx` |
 | H4 | 🟠 Medium | Refactor | `Member` / `Workspace` interfaces copy-pasted across 3 client files (Member ×3, Workspace ×2) plus a third thinner `Workspace` shape in the workspace context | `settings/workspace/page.tsx`, `workspace-card.tsx`, `collaborator-list.tsx`, `workspace-context.tsx` |
 | M1 | 🟠 Medium | Refactor | Route try/catch boilerplate (`workspaceErrorFailure` mapping + generic 500 fallback) repeated in 4 handlers | `workspaces/[id]/route.ts` ×2, `members/route.ts`, `members/[memberId]/route.ts` |
@@ -35,6 +35,7 @@ This document catalogs refactoring opportunities found during a senior-dev read-
 
 | ID | Resolution |
 |----|------------|
+| H2 | ✅ Shipped placeholder pages for `/accounts`, `/transactions`, `/budgets`, and `/analytics` (`src/app/(workspace)/<route>/page.tsx`), styled exactly like the existing Dashboard stub, so all 6 sidebar nav links resolve instead of 404ing. Verified 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` — all four routes render as `ƒ` dynamic (they sit under the `(workspace)` layout's `OnboardingGuardWrapper`, matching `/dashboard`). Product decision (per review): ship placeholders rather than hide the items. |
 | H1 | ✅ Extracted `findWorkspaceOwner(userId, workspaceId)` in `src/features/workspaces/services.ts` — a private helper that returns the OWNER membership row (`{ id }` via a compound-filtered `WorkspaceMember` lookup on `workspaceId` + `userId` + `role: "OWNER"`) or `null`. The 4 duplicated guard blocks in `inviteCollaborator`, `removeCollaborator`, `deleteWorkspace`, and `updateWorkspace` now call the helper and throw `WorkspaceServiceError("FORBIDDEN")` **at their own call site** when it returns `null`, keeping the error handling visible where it happens (per review feedback on 2026-08-17 — the helper returns a result, it does not throw). Verified with `npx tsc --noEmit` (clean) and `npx eslint src/features/workspaces/services.ts` (clean). No behavior change. |
 
 ---
