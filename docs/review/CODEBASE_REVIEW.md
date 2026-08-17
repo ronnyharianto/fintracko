@@ -20,7 +20,7 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | B6 | 🟠 Medium | Bug ✅ | User menu tab links (`?tab=security`) are ignored by the account page | `src/components/shared/workspace/user-menu.tsx`, `settings/account/page.tsx` |
 | B7 | 🟠 Medium | Bug | `trustedOrigins` hardcoded to localhost; ignores `BETTER_AUTH_URL` | `src/lib/auth.ts` |
 | B8 | 🟡 Low | Bug | All session failures (incl. DB down) surface as 401 | `src/lib/api/session.ts` |
-| P1 | 🟠 Medium | Performance | N+1 template seeding on workspace creation (~19 sequential inserts) | `src/features/workspaces/services.ts` |
+| P1 | 🟠 Medium | Performance ✅ | N+1 template seeding on workspace creation (~19 sequential inserts) | `src/features/workspaces/services.ts` |
 | P2 | 🟡 Low | Performance ✅ | Duplicated onboarding-guard `profile` query on every API request | 6 route handlers |
 | D1 | 🟠 Medium | Dead code ✅ | `pipeline.ts` orchestrator has zero callers; routes re-wire stages manually | `src/lib/api/pipeline.ts` |
 | D2 | 🟡 Low | Dead code ✅ | `sanitizeStringArray` unused | `src/lib/api/sanitize.ts` |
@@ -71,6 +71,12 @@ Dead-code items D1–D8 were removed on **2026-08-16**. All removals verified wi
 | B4 | ✅ Account settings no longer fakes saves. The profile form now persists the name through `authClient.updateUser({ name })` (a real Better Auth round-trip) and surfaces the server error via toast on failure. The fake 1s-`setTimeout` success path is gone. The "Change Password" form — impossible to satisfy in an OAuth-only app (`emailAndPassword.enabled: false`) — was removed and replaced with an honest card explaining that sign-in is managed via the Google/GitHub provider. 2FA and Delete Account cards were already honest (disabled / "not implemented yet") and left as-is. |
 | B5 | ✅ Danger Zone no longer silently targets `workspaces[0]`. The tab now has an explicit workspace picker (`ui/select`) and the delete button stays disabled until a workspace is chosen. `DeleteWorkspaceDialog` gained an optional `workspaceName` prop and renders the targeted workspace's name ("…delete \"Name\"?") in the confirmation — this also names the workspace for the card-based delete flow, since the page derives the name from the current `deleteWorkspaceId`. |
 | B6 | ✅ The account page now reads `?tab=` from `useSearchParams()` (inside a `<Suspense>` boundary, matching the B3 /error fix), validates it against `profile`/`security`/`notifications`, and uses it to initialize **and** keep the Tabs in sync — so the user-menu links `/settings/account?tab=security` and `?tab=notifications` land on the right tab even when navigating between them without a remount. Tabs switched from uncontrolled (`defaultValue`) to controlled (`value`). |
+
+### Performance fixes completed (2026-08-17)
+
+| ID | Resolution |
+|----|------------|
+| P1 | ✅ Replaced the per-row seeding loop in `createWorkspace` (`src/features/workspaces/services.ts`) with batched inserts: `tx.category.createManyAndReturn(...)` for all Level-1 categories (PostgreSQL `RETURNING` preserves input order, so index mapping back to `template.categories[i]` is safe), then a single `tx.subCategory.createMany(...)` for all Level-2 subcategories. Workspace creation now issues ~4 queries instead of ~21 (~19 sequential inserts → 2 batch inserts). Verified with `npx tsc --noEmit` (clean) and `npm run build` (passes). |
 
 ---
 
@@ -236,7 +242,7 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 1. **B1, B2, B3** — small, high-impact bug fixes (onboarding guard, duplicate settings page, build breaker). ✅ **Done 2026-08-16** — see Bugs fixed.
 2. **R1 + P2** — pipeline refactor (removes duplication and an extra DB query per request). ✅ **Done 2026-08-17** — see Refactors completed.
 3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages. ✅ **Done 2026-08-17** — see Bugs fixed.
-4. **P1** — batch template seeding.
+4. **P1** — batch template seeding. ✅ **Done 2026-08-17** — see Performance fixes completed.
 5. **D1–D8** — dead-code sweep (safe to do at any point; nothing references the removed items). ✅ **Done 2026-08-16** — see Resolution Log.
 6. **B7, B8, R2, R3** — hardening pass before wider development.
 
@@ -250,3 +256,4 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 - High-severity bug fixes (B1, B2, B3) verified on 2026-08-16 with `npx tsc --noEmit` and `npm run build` — both pass; `/error` now prerenders as static (`○ /error`), confirming the Suspense fix.
 - Pipeline refactor (R1 + P2) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API route files still render as `ƒ` dynamic).
 - Settings UX fixes (B4, B5, B6) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; `/settings/account` and `/settings/workspace` still render as `ƒ` dynamic — the account page's `useSearchParams` is wrapped in Suspense so no CSR-bailout regression).
+- Template-seeding batching (P1) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (passes).

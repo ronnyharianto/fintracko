@@ -264,27 +264,36 @@ export async function createWorkspace(
       },
     });
 
-    // 3. Seed Category (Level 1) and SubCategory (Level 2) rows from template
-    for (const catTemplate of template.categories) {
-      const category = await tx.category.create({
-        data: {
-          workspaceId: workspace.id,
-          name: catTemplate.name,
-          type: catTemplate.type,
-        },
-      });
+    // 3. Seed Category (Level 1) and SubCategory (Level 2) rows from template.
+    //    Batched (P1): the previous loop issued one INSERT per category and
+    //    per subcategory (~19 sequential network round-trips against a remote
+    //    DB); createMany/createManyAndReturn collapse this to 2 batch inserts.
+    const categories = await tx.category.createManyAndReturn({
+      data: template.categories.map((catTemplate) => ({
+        workspaceId: workspace.id,
+        name: catTemplate.name,
+        type: catTemplate.type,
+      })),
+    });
 
-      if (catTemplate.subCategories && catTemplate.subCategories.length > 0) {
-        for (const subCatTemplate of catTemplate.subCategories) {
-          await tx.subCategory.create({
-            data: {
-              workspaceId: workspace.id,
-              categoryId: category.id,
-              name: subCatTemplate.name,
-            },
-          });
-        }
+    // createManyAndReturn preserves input order (PostgreSQL RETURNING), so
+    // index i maps back to template.categories[i].
+    const subCategoryData: {
+      workspaceId: string;
+      categoryId: string;
+      name: string;
+    }[] = [];
+    template.categories.forEach((catTemplate, i) => {
+      for (const subCatTemplate of catTemplate.subCategories) {
+        subCategoryData.push({
+          workspaceId: workspace.id,
+          categoryId: categories[i].id,
+          name: subCatTemplate.name,
+        });
       }
+    });
+    if (subCategoryData.length > 0) {
+      await tx.subCategory.createMany({ data: subCategoryData });
     }
 
     return workspace;
