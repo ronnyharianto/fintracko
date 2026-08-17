@@ -4,13 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Briefcase, Trash2, Edit2, Users, Shield, AlertTriangle } from 'lucide-react';
+import { Plus, Briefcase, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { useWorkspace } from '@/components/shared/workspace-context';
 import { WorkspaceCard } from '@/app/(workspace)/workspaces/_components/workspace-card';
 import { CreateWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/create-workspace-dialog';
 import { EditWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/edit-workspace-dialog';
 import { InviteCollaboratorDialog } from '@/app/(workspace)/workspaces/_components/invite-collaborator-dialog';
 import { DeleteWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/delete-workspace-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Member {
   id: string;
@@ -49,26 +50,59 @@ export default function WorkspaceSettingsPage() {
   } | null>(null);
   const [inviteWorkspaceId, setInviteWorkspaceId] = useState<string | null>(null);
   const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null);
+  // Workspace explicitly chosen in the Danger Zone picker (B5) — the delete
+  // flow must never silently target the first workspace.
+  const [dangerZoneWorkspaceId, setDangerZoneWorkspaceId] = useState('');
 
-  const fetchOwnedWorkspaces = async () => {
-    setIsLoading(true);
+  /**
+   * Pure loader: fetches the owned workspaces and returns them, throwing on
+   * failure. Contains NO setState, so it is safe to call from the mount
+   * effect — the `react-hooks/set-state-in-effect` lint rule flags any
+   * component-scope function that sets state synchronously.
+   */
+  const fetchOwnedWorkspaces = async (): Promise<Workspace[]> => {
+    const res = await fetch('/api/v1/workspaces?owned=true');
+    if (!res.ok) {
+      throw new Error('Failed to fetch workspaces.');
+    }
+    const json = await res.json();
+    return (json.data?.workspaces as Workspace[]) || [];
+  };
+
+  const loadOwnedWorkspaces = async () => {
     try {
-      const res = await fetch('/api/v1/workspaces?owned=true');
-      if (res.ok) {
-        const json = await res.json();
-        setWorkspaces(json.data?.workspaces || []);
-      } else {
-        setError('Failed to fetch workspaces.');
-      }
-    } catch {
-      setError('An error occurred while fetching workspaces.');
-    } finally {
-      setIsLoading(false);
+      const workspaces = await fetchOwnedWorkspaces();
+      setWorkspaces(workspaces);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An error occurred while fetching workspaces.'
+      );
     }
   };
 
   useEffect(() => {
-    fetchOwnedWorkspaces();
+    let cancelled = false;
+    (async () => {
+      try {
+        const workspaces = await fetchOwnedWorkspaces();
+        if (!cancelled) setWorkspaces(workspaces);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'An error occurred while fetching workspaces.'
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleRemoveCollaborator = async (
@@ -86,7 +120,7 @@ export default function WorkspaceSettingsPage() {
       );
 
       if (res.ok) {
-        await fetchOwnedWorkspaces();
+        await loadOwnedWorkspaces();
         await refreshWorkspaces();
       } else {
         const json = await res.json();
@@ -98,7 +132,7 @@ export default function WorkspaceSettingsPage() {
   };
 
   const handleActionComplete = async () => {
-    await fetchOwnedWorkspaces();
+    await loadOwnedWorkspaces();
     await refreshWorkspaces();
   };
 
@@ -184,6 +218,7 @@ export default function WorkspaceSettingsPage() {
 
           <DeleteWorkspaceDialog
             workspaceId={deleteWorkspaceId}
+            workspaceName={workspaces.find((w) => w.id === deleteWorkspaceId)?.name}
             onOpenChange={(open) => !open && setDeleteWorkspaceId(null)}
             onDeleted={handleActionComplete}
           />
@@ -252,9 +287,30 @@ export default function WorkspaceSettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   Permanently delete a workspace and all its data. This action cannot be undone.
                 </p>
-                <Button variant="destructive" onClick={() => setDeleteWorkspaceId(workspaces[0]?.id || '')} disabled={workspaces.length === 0}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Workspace
-                </Button>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Select
+                    value={dangerZoneWorkspaceId}
+                    onValueChange={setDangerZoneWorkspaceId}
+                  >
+                    <SelectTrigger className="w-full sm:w-72">
+                      <SelectValue placeholder="Select a workspace…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workspaces.map((ws) => (
+                        <SelectItem key={ws.id} value={ws.id}>
+                          {ws.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteWorkspaceId(dangerZoneWorkspaceId)}
+                    disabled={!dangerZoneWorkspaceId}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Workspace
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

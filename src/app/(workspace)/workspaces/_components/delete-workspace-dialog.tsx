@@ -14,12 +14,18 @@ import { AlertTriangle } from 'lucide-react';
 
 interface DeleteWorkspaceDialogProps {
   workspaceId: string | null;
+  /**
+   * Name of the workspace being deleted, when known — shown in the
+   * confirmation so the user always sees *which* workspace is targeted.
+   */
+  workspaceName?: string | null;
   onOpenChange: (open: boolean) => void;
   onDeleted: () => void;
 }
 
 export function DeleteWorkspaceDialog({
   workspaceId,
+  workspaceName,
   onOpenChange,
   onDeleted,
 }: DeleteWorkspaceDialogProps) {
@@ -59,9 +65,16 @@ export function DeleteWorkspaceDialog({
             <AlertTriangle className="h-5 w-5" /> Delete Workspace
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this workspace? This action is
-            irreversible and will permanently delete all accounts, transactions,
-            budgets, and remove all collaborators.
+            Are you sure you want to delete{' '}
+            {workspaceName ? (
+              <span className="font-semibold text-foreground">
+                &quot;{workspaceName}&quot;
+              </span>
+            ) : (
+              'this workspace'
+            )}
+            ? This action is irreversible and will permanently delete all
+            accounts, transactions, budgets, and remove all collaborators.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

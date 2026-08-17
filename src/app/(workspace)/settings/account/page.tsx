@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,8 +12,51 @@ import { User, Shield, Bell, Key, Save, Loader2 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { toast } from 'sonner';
 
+/**
+ * Valid account-settings tabs, mirroring the TabsTrigger values below.
+ * The user menu (`user-menu.tsx`) deep-links here with `?tab=security` and
+ * `?tab=notifications`, so the query parameter must map onto a real tab.
+ */
+const ACCOUNT_TABS = ['profile', 'security', 'notifications'] as const;
+type AccountTab = (typeof ACCOUNT_TABS)[number];
+
+function parseTabParam(value: string | null): AccountTab {
+  return ACCOUNT_TABS.includes(value as AccountTab)
+    ? (value as AccountTab)
+    : 'profile';
+}
+
 export default function AccountSettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
+  // `useSearchParams` must be read inside a Suspense boundary so this route
+  // can be statically rendered — without it, `next build` fails with the
+  // `missing-suspense-with-csr-bailout` error (same fix as the /error route).
+  return (
+    <Suspense fallback={null}>
+      <AccountSettingsContent />
+    </Suspense>
+  );
+}
+
+function AccountSettingsContent() {
+  const searchParams = useSearchParams();
+  const tabFromUrl = parseTabParam(searchParams.get('tab'));
+
+  // Local tab state for manual switching, seeded from the `?tab=` query
+  // param (user-menu deep links) so the right tab shows on first paint
+  // instead of flashing "profile".
+  const [activeTab, setActiveTab] = useState<AccountTab>(tabFromUrl);
+
+  // Re-derive the tab when the URL changes without a remount (navigating
+  // between /settings/account and /settings/account?tab=security reuses the
+  // same page component, so the useState initializer never re-runs). Uses
+  // the "adjust state during render" pattern from the React docs
+  // (react.dev/learn/you-might-not-need-an-effect) rather than a
+  // setState-in-effect, which React's lint rules flag.
+  const [prevTabFromUrl, setPrevTabFromUrl] = useState(tabFromUrl);
+  if (tabFromUrl !== prevTabFromUrl) {
+    setPrevTabFromUrl(tabFromUrl);
+    setActiveTab(tabFromUrl);
+  }
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{
     name: string;
@@ -22,11 +66,6 @@ export default function AccountSettingsPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-  });
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,36 +99,19 @@ export default function AccountSettingsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // In a real app, this would call an API to update the profile
-      // For now, we'll just simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Persist the name through Better Auth's update-user endpoint — this
+      // is a real server round-trip, not a simulated success.
+      const res = await authClient.updateUser({ name: formData.name });
+      if (res.error) {
+        toast.error(res.error.message || 'Failed to update profile');
+        return;
+      }
       toast.success('Profile updated successfully');
-      setUser(prev => prev ? { ...prev, name: formData.name, email: formData.email } : null);
+      setUser((prev) =>
+        prev ? { ...prev, name: formData.name } : prev
+      );
     } catch {
       toast.error('Failed to update profile');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    if (passwordData.newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-    setIsSaving(true);
-    try {
-      // In a real app, this would call an API to change password
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Password changed successfully');
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch {
-      toast.error('Failed to change password');
     } finally {
       setIsSaving(false);
     }
@@ -121,7 +143,7 @@ export default function AccountSettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AccountTab)}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
@@ -226,60 +248,14 @@ export default function AccountSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Key className="h-5 w-5 text-primary" />
-                Change Password
+                Password
               </CardTitle>
               <CardDescription>
-                Your password must be at least 8 characters long.
+                Fintracko uses OAuth-only sign-in (Google or GitHub), so there
+                is no password to manage here. To change your sign-in security,
+                visit your OAuth provider&apos;s account settings.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    required
-                    minLength={8}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="mr-2 h-4 w-4" />
-                      Change Password
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
           </Card>
 
           <Card className="border-destructive/50 bg-destructive/5">
@@ -339,14 +315,14 @@ export default function AccountSettingsPage() {
                 Email Notifications
               </CardTitle>
               <CardDescription>
-                Choose which emails you'd like to receive.
+                Choose which emails you&apos;d like to receive.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Budget Alerts</p>
-                  <p className="text-sm text-muted-foreground">Notify me when I'm close to exceeding my budget</p>
+                  <p className="text-sm text-muted-foreground">Notify me when I&apos;m close to exceeding my budget</p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>

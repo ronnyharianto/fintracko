@@ -39,6 +39,7 @@ import { createAuthClient } from "better-auth/client";
  *   - `signIn.social({ provider })` — initiate an OAuth sign-in with Google or GitHub
  *   - `signOut()`                   — invalidate the current session and clear the cookie
  *   - `getSession()`                — fetch the active session (or null)
+ *   - `updateUser({ name })`        — persist profile changes (used by the account settings page)
  */
 export const authClient = createAuthClient({
   basePath: "/api/v1/auth",

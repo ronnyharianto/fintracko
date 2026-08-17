@@ -15,9 +15,9 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | B1 | 🔴 High | Bug ✅ | Onboarding can be re-submitted; returns 500 instead of a proper conflict | `src/app/api/v1/onboarding/complete/route.ts` |
 | B2 | 🔴 High | Bug ✅ | `/settings` renders the settings nav twice; active-tab highlight is dead | `src/app/(workspace)/settings/page.tsx` vs `settings/layout.tsx` |
 | B3 | 🔴 High | Bug ✅ | `useSearchParams` without Suspense breaks `next build` (CSR bailout) | `src/app/error/page.tsx` |
-| B4 | 🟠 Medium | Bug | Account settings fakes profile save & shows a password form for a passwordless app | `src/app/(workspace)/settings/account/page.tsx` |
-| B5 | 🟠 Medium | Bug | Danger Zone "Delete Workspace" targets the first workspace, not a chosen one | `src/app/(workspace)/settings/workspace/page.tsx` |
-| B6 | 🟠 Medium | Bug | User menu tab links (`?tab=security`) are ignored by the account page | `src/components/shared/workspace/user-menu.tsx`, `settings/account/page.tsx` |
+| B4 | 🟠 Medium | Bug ✅ | Account settings fakes profile save & shows a password form for a passwordless app | `src/app/(workspace)/settings/account/page.tsx` |
+| B5 | 🟠 Medium | Bug ✅ | Danger Zone "Delete Workspace" targets the first workspace, not a chosen one | `src/app/(workspace)/settings/workspace/page.tsx` |
+| B6 | 🟠 Medium | Bug ✅ | User menu tab links (`?tab=security`) are ignored by the account page | `src/components/shared/workspace/user-menu.tsx`, `settings/account/page.tsx` |
 | B7 | 🟠 Medium | Bug | `trustedOrigins` hardcoded to localhost; ignores `BETTER_AUTH_URL` | `src/lib/auth.ts` |
 | B8 | 🟡 Low | Bug | All session failures (incl. DB down) surface as 401 | `src/lib/api/session.ts` |
 | P1 | 🟠 Medium | Performance | N+1 template seeding on workspace creation (~19 sequential inserts) | `src/features/workspaces/services.ts` |
@@ -63,6 +63,14 @@ Dead-code items D1–D8 were removed on **2026-08-16**. All removals verified wi
 | ID | Resolution |
 |----|------------|
 | R1 + P2 | ✅ Rebuilt the shared pipeline at `src/lib/api/pipeline.ts` (`withPipeline`) and migrated **all 7 handlers** across the 5 route files under `src/app/api/v1/` to it. The pipeline composes the mandated steps — `withSession` → onboarding guard → `validateBody` → `sanitizeObject` — with per-route options: `{ schema?, requireOnboarding?, rejectIfOnboarded? }`. The onboarding guard now resolves the `Profile` row **once** and exposes it as `ctx.profile` (the POST /workspaces handler reuses `currencyPreference` from it), eliminating the 6 duplicated `db.profile.findUnique` calls (P2). `rejectIfOnboarded` subsumes the B1 guard on `/onboarding/complete` (409 on re-submission). Validated/sanitized bodies are handed to handlers as a typed second argument (`data: S['_output']`, no `!` assertions). `withSession`, `validateBody`, `sanitizeObject` remain exported for the pipeline; no route imports them directly anymore. Verified with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API routes remain dynamic). |
+
+### Bugs fixed (2026-08-17)
+
+| ID | Fix |
+|----|-----|
+| B4 | ✅ Account settings no longer fakes saves. The profile form now persists the name through `authClient.updateUser({ name })` (a real Better Auth round-trip) and surfaces the server error via toast on failure. The fake 1s-`setTimeout` success path is gone. The "Change Password" form — impossible to satisfy in an OAuth-only app (`emailAndPassword.enabled: false`) — was removed and replaced with an honest card explaining that sign-in is managed via the Google/GitHub provider. 2FA and Delete Account cards were already honest (disabled / "not implemented yet") and left as-is. |
+| B5 | ✅ Danger Zone no longer silently targets `workspaces[0]`. The tab now has an explicit workspace picker (`ui/select`) and the delete button stays disabled until a workspace is chosen. `DeleteWorkspaceDialog` gained an optional `workspaceName` prop and renders the targeted workspace's name ("…delete \"Name\"?") in the confirmation — this also names the workspace for the card-based delete flow, since the page derives the name from the current `deleteWorkspaceId`. |
+| B6 | ✅ The account page now reads `?tab=` from `useSearchParams()` (inside a `<Suspense>` boundary, matching the B3 /error fix), validates it against `profile`/`security`/`notifications`, and uses it to initialize **and** keep the Tabs in sync — so the user-menu links `/settings/account?tab=security` and `?tab=notifications` land on the right tab even when navigating between them without a remount. Tabs switched from uncontrolled (`defaultValue`) to controlled (`value`). |
 
 ---
 
@@ -227,7 +235,7 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 
 1. **B1, B2, B3** — small, high-impact bug fixes (onboarding guard, duplicate settings page, build breaker). ✅ **Done 2026-08-16** — see Bugs fixed.
 2. **R1 + P2** — pipeline refactor (removes duplication and an extra DB query per request). ✅ **Done 2026-08-17** — see Refactors completed.
-3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages.
+3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages. ✅ **Done 2026-08-17** — see Bugs fixed.
 4. **P1** — batch template seeding.
 5. **D1–D8** — dead-code sweep (safe to do at any point; nothing references the removed items). ✅ **Done 2026-08-16** — see Resolution Log.
 6. **B7, B8, R2, R3** — hardening pass before wider development.
@@ -241,3 +249,4 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 - Dead-code removal (D1–D8) verified on 2026-08-16 with `npx tsc --noEmit` — no type errors.
 - High-severity bug fixes (B1, B2, B3) verified on 2026-08-16 with `npx tsc --noEmit` and `npm run build` — both pass; `/error` now prerenders as static (`○ /error`), confirming the Suspense fix.
 - Pipeline refactor (R1 + P2) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API route files still render as `ƒ` dynamic).
+- Settings UX fixes (B4, B5, B6) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; `/settings/account` and `/settings/workspace` still render as `ƒ` dynamic — the account page's `useSearchParams` is wrapped in Suspense so no CSR-bailout regression).
