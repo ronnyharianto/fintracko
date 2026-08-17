@@ -48,6 +48,7 @@ export type ApiErrorCode =
   | 'CONFLICT'
   | 'ONBOARDING_REQUIRED'
   | 'UNAUTHORIZED_WORKSPACE_ACCESS'
+  | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL_SERVER_ERROR';
 
 /** Shape of the `error` block inside a failure envelope. */
@@ -116,6 +117,7 @@ export const HTTP_STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> =
     CONFLICT: 409,
     ONBOARDING_REQUIRED: 403,
     UNAUTHORIZED_WORKSPACE_ACCESS: 403,
+    SERVICE_UNAVAILABLE: 503,
     INTERNAL_SERVER_ERROR: 500,
   });
 

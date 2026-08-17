@@ -11,6 +11,7 @@ import {
   type WorkspaceTemplateName,
 } from "./constants/workspace-templates";
 import type { CreateWorkspaceInput } from "./schemas";
+import { WorkspaceServiceError } from "./errors";
 
 /**
  * Retrieves all workspaces where the user is a member.
@@ -93,7 +94,7 @@ export async function inviteCollaborator(
     },
   });
   if (!isOwner) {
-    throw new Error("FORBIDDEN");
+    throw new WorkspaceServiceError("FORBIDDEN");
   }
 
   // 2. Find user by email
@@ -102,7 +103,7 @@ export async function inviteCollaborator(
     select: { id: true },
   });
   if (!targetUser) {
-    throw new Error("USER_NOT_FOUND");
+    throw new WorkspaceServiceError("USER_NOT_FOUND");
   }
 
   // 3. Create or check membership
@@ -116,7 +117,7 @@ export async function inviteCollaborator(
   });
 
   if (existingMember) {
-    throw new Error("ALREADY_MEMBER");
+    throw new WorkspaceServiceError("ALREADY_MEMBER");
   }
 
   return await db.workspaceMember.create({
@@ -155,7 +156,7 @@ export async function removeCollaborator(
     },
   });
   if (!isOwner) {
-    throw new Error("FORBIDDEN");
+    throw new WorkspaceServiceError("FORBIDDEN");
   }
 
   // 2. Find member
@@ -163,11 +164,11 @@ export async function removeCollaborator(
     where: { id: memberId },
   });
   if (!member || member.workspaceId !== workspaceId) {
-    throw new Error("MEMBER_NOT_FOUND");
+    throw new WorkspaceServiceError("MEMBER_NOT_FOUND");
   }
 
   if (member.userId === userId) {
-    throw new Error("CANNOT_REMOVE_OWNER");
+    throw new WorkspaceServiceError("CANNOT_REMOVE_OWNER");
   }
 
   await db.workspaceMember.delete({
@@ -190,7 +191,7 @@ export async function deleteWorkspace(userId: string, workspaceId: string) {
     },
   });
   if (!isOwner) {
-    throw new Error("FORBIDDEN");
+    throw new WorkspaceServiceError("FORBIDDEN");
   }
 
   // 2. Delete workspace (cascade handles accounts, categories, transactions, budgets, members)
@@ -218,7 +219,7 @@ export async function updateWorkspace(
     },
   });
   if (!isOwner) {
-    throw new Error("FORBIDDEN");
+    throw new WorkspaceServiceError("FORBIDDEN");
   }
 
   return await db.workspace.update({

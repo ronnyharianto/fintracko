@@ -15,10 +15,14 @@
  *   that apply to its contract.
  *
  * Error handling:
- *   - No session / invalid session / unexpected Better Auth failure all map
- *     to the `UNAUTHORIZED` (HTTP 401) failure envelope
- *     ("Use standard HTTP status codes; never let unhandled exceptions
- *     leak to the client").
+ *   - No session / invalid session map to the `UNAUTHORIZED` (HTTP 401)
+ *     failure envelope ("Use standard HTTP status codes; never let
+ *     unhandled exceptions leak to the client").
+ *   - Unexpected Better Auth failures are split (B8): errors that look like
+ *     transient infrastructure problems (dropped DB connection, network
+ *     timeout) surface as `SERVICE_UNAVAILABLE` (HTTP 503) so monitoring and
+ *     clients can tell an outage apart from a genuine auth failure; everything
+ *     else degrades to the same clean 401.
  *   - The raw error from Better Auth is NEVER serialized to the response
  *     body (sensitive details such as session-token fragments or internal
  *     stack frames must not leak) — a generic message is emitted instead.
@@ -85,7 +89,8 @@ export interface AuthContext {
  *
  * Throws are explicitly caught so a transient Better Auth failure (e.g. a
  * dropped database connection during session lookup) degrades to a clean
- * `UNAUTHORIZED` envelope rather than leaking a 500 stack trace.
+ * envelope rather than leaking a 500 stack trace — see {@link
+ * isTransientSessionFailure} for the 503-vs-401 split.
  */
 export async function resolveSession(
   request: NextRequest,
@@ -105,10 +110,21 @@ export async function resolveSession(
       };
     }
     return { success: true, session };
-  } catch {
-    // Never leak Better Auth internals — a misconfigured session store or a
-    // dropped DB connection during token verification must surface as a
-    // plain 401, not a 500 with implementer-readable detail.
+  } catch (err) {
+    // Never leak Better Auth internals — the raw error (session-token
+    // fragments, driver details, stack frames) never reaches the client.
+    // Distinguish a transient infrastructure failure (503) from a genuine
+    // authentication failure (401) so monitoring can tell an outage apart
+    // from a user who simply isn't signed in (B8).
+    if (isTransientSessionFailure(err)) {
+      return {
+        success: false,
+        response: failure(
+          'SERVICE_UNAVAILABLE',
+          'Authentication service is temporarily unavailable. Please try again.'
+        ),
+      };
+    }
     return {
       success: false,
       response: failure(
@@ -117,6 +133,25 @@ export async function resolveSession(
       ),
     };
   }
+}
+
+/**
+ * Heuristic for recognizing transient infrastructure failures thrown by
+ * Better Auth / its Prisma driver (dropped connection, network timeouts,
+ * connection-pool exhaustion) so they can be reported as 503 instead of
+ * being masked as 401 (B8).
+ *
+ * Matches on recognizable transport/driver error signatures only — anything
+ * unrecognized falls through to `UNAUTHORIZED`, keeping the fail-safe
+ * behavior (an unauthenticated-looking response) intact.
+ */
+function isTransientSessionFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  return /ECONNREFUSED|ECONNRESET|ETIMEDOUT|socket hang up|P1001|P1002|connection (is|was) (closed|terminated)|database .* (unavailable|down)/i.test(
+    err.message
+  );
 }
 
 /**

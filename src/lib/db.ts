@@ -32,6 +32,7 @@
 // the bare `@prisma/client` package, which no longer re-exports it directly.
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { requireEnv } from './env';
 
 // Augment the global namespace so TypeScript recognises our cached client.
 // Declared here (and not in a separate `*.d.ts`) to keep the singleton logic
@@ -51,8 +52,10 @@ declare global {
  * string — this mirrors what `prisma.config.ts` provides to the CLI at
  * build time. Prisma 7 no longer accepts `datasourceUrl` directly.
  */
+// R3: fail fast with a clear message when DATABASE_URL is missing, instead
+// of letting the driver throw an opaque connection error at first use.
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: requireEnv('DATABASE_URL'),
 });
 
 const db: PrismaClient =

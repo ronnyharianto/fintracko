@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { withPipeline } from '@/lib/api/pipeline';
 import { success, failure } from '@/lib/api/envelope';
 import { removeCollaborator } from '@/features/workspaces/services';
+import { workspaceErrorFailure } from '@/features/workspaces/errors';
 
 export async function DELETE(
   request: NextRequest,
@@ -22,19 +23,23 @@ export async function DELETE(
       try {
         await removeCollaborator(userId, workspaceId, memberId);
         return success({ removed: true });
-      } catch (err: any) {
-        if (err.message === 'FORBIDDEN') {
-          return failure(
-            'FORBIDDEN',
-            'You do not have permission to remove collaborators from this workspace.'
-          );
-        }
-        if (err.message === 'MEMBER_NOT_FOUND') {
-          return failure('NOT_FOUND', 'Collaborator membership not found.');
-        }
-        if (err.message === 'CANNOT_REMOVE_OWNER') {
-          return failure('BAD_REQUEST', 'Cannot remove workspace owner.');
-        }
+      } catch (err) {
+        const mapped = workspaceErrorFailure(err, {
+          FORBIDDEN: {
+            code: 'FORBIDDEN',
+            message:
+              'You do not have permission to remove collaborators from this workspace.',
+          },
+          MEMBER_NOT_FOUND: {
+            code: 'NOT_FOUND',
+            message: 'Collaborator membership not found.',
+          },
+          CANNOT_REMOVE_OWNER: {
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove workspace owner.',
+          },
+        });
+        if (mapped) return mapped;
         return failure(
           'INTERNAL_SERVER_ERROR',
           'Failed to remove collaborator. Please try again.'

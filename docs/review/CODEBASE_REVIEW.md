@@ -18,8 +18,8 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | B4 | 🟠 Medium | Bug ✅ | Account settings fakes profile save & shows a password form for a passwordless app | `src/app/(workspace)/settings/account/page.tsx` |
 | B5 | 🟠 Medium | Bug ✅ | Danger Zone "Delete Workspace" targets the first workspace, not a chosen one | `src/app/(workspace)/settings/workspace/page.tsx` |
 | B6 | 🟠 Medium | Bug ✅ | User menu tab links (`?tab=security`) are ignored by the account page | `src/components/shared/workspace/user-menu.tsx`, `settings/account/page.tsx` |
-| B7 | 🟠 Medium | Bug | `trustedOrigins` hardcoded to localhost; ignores `BETTER_AUTH_URL` | `src/lib/auth.ts` |
-| B8 | 🟡 Low | Bug | All session failures (incl. DB down) surface as 401 | `src/lib/api/session.ts` |
+| B7 | 🟠 Medium | Bug ✅ | `trustedOrigins` hardcoded to localhost; ignores `BETTER_AUTH_URL` | `src/lib/auth.ts` |
+| B8 | 🟡 Low | Bug ✅ | All session failures (incl. DB down) surface as 401 | `src/lib/api/session.ts` |
 | P1 | 🟠 Medium | Performance ✅ | N+1 template seeding on workspace creation (~19 sequential inserts) | `src/features/workspaces/services.ts` |
 | P2 | 🟡 Low | Performance ✅ | Duplicated onboarding-guard `profile` query on every API request | 6 route handlers |
 | D1 | 🟠 Medium | Dead code ✅ | `pipeline.ts` orchestrator has zero callers; routes re-wire stages manually | `src/lib/api/pipeline.ts` |
@@ -31,7 +31,7 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | D7 | 🟢 Info | Dead code ✅ | Debug `console.log`s left in request paths | `services.ts`, `workspaces/route.ts` |
 | D8 | 🟢 Info | Dead code ✅ | Stale comments referencing removed unit-test files | `auth.ts`, `session.ts`, `envelope.ts`, … |
 | R1 | 🟠 Medium | Refactor ✅ | 6 route handlers duplicate session+validate+sanitize+onboarding-guard wiring | `src/app/api/v1/workspaces/**`, `onboarding/**` |
-| R2 | 🟡 Low | Refactor | Error signaling via `throw new Error("FORBIDDEN")` + string matching + `catch (err: any)` | `src/features/workspaces/services.ts`, routes |
+| R2 | 🟡 Low | Refactor ✅ | Error signaling via `throw new Error("FORBIDDEN")` + string matching + `catch (err: any)` | `src/features/workspaces/services.ts`, routes |
 
 ---
 
@@ -77,6 +77,15 @@ Dead-code items D1–D8 were removed on **2026-08-16**. All removals verified wi
 | ID | Resolution |
 |----|------------|
 | P1 | ✅ Replaced the per-row seeding loop in `createWorkspace` (`src/features/workspaces/services.ts`) with batched inserts: `tx.category.createManyAndReturn(...)` for all Level-1 categories (PostgreSQL `RETURNING` preserves input order, so index mapping back to `template.categories[i]` is safe), then a single `tx.subCategory.createMany(...)` for all Level-2 subcategories. Workspace creation now issues ~4 queries instead of ~21 (~19 sequential inserts → 2 batch inserts). Verified with `npx tsc --noEmit` (clean) and `npm run build` (passes). |
+
+### Hardening completed (2026-08-17)
+
+| ID | Resolution |
+|----|------------|
+| B7 | ✅ `trustedOrigins` in `src/lib/auth.ts` is now derived from `requireEnv("BETTER_AUTH_URL")` instead of the hardcoded `"http://localhost:3000"` literal — production deployments validate against the real app origin. |
+| B8 | ✅ `resolveSession` in `src/lib/api/session.ts` now splits unexpected Better Auth failures: errors matching known transient signatures (ECONNREFUSED/ECONNRESET/ETIMEDOUT, socket hang up, Prisma P1001/P1002, connection-closed/database-down patterns) map to the new `SERVICE_UNAVAILABLE` (HTTP 503) envelope code; everything else still degrades to a clean 401. The raw error is never serialized (no internals leak). |
+| R2 | ✅ Introduced typed domain errors in `src/features/workspaces/errors.ts` — `WorkspaceServiceError` carries a stable `code` (`FORBIDDEN`, `USER_NOT_FOUND`, `ALREADY_MEMBER`, `MEMBER_NOT_FOUND`, `CANNOT_REMOVE_OWNER`) and a `workspaceErrorFailure(err, messages)` mapper that returns a ready failure envelope or `null`. `services.ts` now throws `WorkspaceServiceError` instead of `new Error("FORBIDDEN")`, and the PATCH/DELETE `/workspaces/[id]`, POST `/members`, and DELETE `/members/[memberId]` handlers map `err.code` → envelope without `catch (err: any)` or string matching. This also clears the 4 `@typescript-eslint/no-explicit-any` lint errors those handlers carried. |
+| R3 | ✅ Added `src/lib/env.ts` (`requireEnv`) and replaced the `!` non-null assertions: `src/lib/db.ts` requires `DATABASE_URL`; `src/lib/auth.ts` requires `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` (now passed explicitly as `secret`), and the four OAuth credentials (`AUTH_GOOGLE_ID`/`SECRET`, `AUTH_GITHUB_ID`/`SECRET`). Misconfiguration now fails fast with a message pointing at `.env.example`. |
 
 ---
 
@@ -244,7 +253,7 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages. ✅ **Done 2026-08-17** — see Bugs fixed.
 4. **P1** — batch template seeding. ✅ **Done 2026-08-17** — see Performance fixes completed.
 5. **D1–D8** — dead-code sweep (safe to do at any point; nothing references the removed items). ✅ **Done 2026-08-16** — see Resolution Log.
-6. **B7, B8, R2, R3** — hardening pass before wider development.
+6. **B7, B8, R2, R3** — hardening pass before wider development. ✅ **Done 2026-08-17** — see Hardening completed.
 
 ---
 
@@ -257,3 +266,4 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 - Pipeline refactor (R1 + P2) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API route files still render as `ƒ` dynamic).
 - Settings UX fixes (B4, B5, B6) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; `/settings/account` and `/settings/workspace` still render as `ƒ` dynamic — the account page's `useSearchParams` is wrapped in Suspense so no CSR-bailout regression).
 - Template-seeding batching (P1) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (passes).
+- Hardening pass (B7, B8, R2, R3) verified on 2026-08-17 with `npx tsc --noEmit` (clean), `npm run lint` (the 4 route-handler `no-explicit-any` errors are gone; only pre-existing issues remain in untouched files), and `npm run build` (passes).

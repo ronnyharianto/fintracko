@@ -9,6 +9,7 @@ import { withPipeline } from '@/lib/api/pipeline';
 import { successWithStatus, failure } from '@/lib/api/envelope';
 import { InviteCollaboratorSchema } from '@/features/workspaces/schemas';
 import { inviteCollaborator } from '@/features/workspaces/services';
+import { workspaceErrorFailure } from '@/features/workspaces/errors';
 
 export async function POST(
   request: NextRequest,
@@ -28,22 +29,23 @@ export async function POST(
         );
 
         return successWithStatus({ member }, 201);
-      } catch (err: any) {
-        if (err.message === 'FORBIDDEN') {
-          return failure(
-            'FORBIDDEN',
-            'You do not have permission to invite collaborators to this workspace.'
-          );
-        }
-        if (err.message === 'USER_NOT_FOUND') {
-          return failure('NOT_FOUND', 'User with this email does not exist.');
-        }
-        if (err.message === 'ALREADY_MEMBER') {
-          return failure(
-            'CONFLICT',
-            'User is already a member of this workspace.'
-          );
-        }
+      } catch (err) {
+        const mapped = workspaceErrorFailure(err, {
+          FORBIDDEN: {
+            code: 'FORBIDDEN',
+            message:
+              'You do not have permission to invite collaborators to this workspace.',
+          },
+          USER_NOT_FOUND: {
+            code: 'NOT_FOUND',
+            message: 'User with this email does not exist.',
+          },
+          ALREADY_MEMBER: {
+            code: 'CONFLICT',
+            message: 'User is already a member of this workspace.',
+          },
+        });
+        if (mapped) return mapped;
         return failure(
           'INTERNAL_SERVER_ERROR',
           'Failed to invite collaborator. Please try again.'

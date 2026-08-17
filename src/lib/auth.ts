@@ -11,6 +11,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "./db";
+import { requireEnv } from "./env";
 
 /**
  * Better Auth `signIn` callback.
@@ -68,18 +69,24 @@ export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
-  trustedOrigins: ["http://localhost:3000"],
+  // B7: derive trusted origins from BETTER_AUTH_URL instead of a hardcoded
+  // localhost literal — in production the app origin must match the deployed
+  // host or OAuth callback / session validation can break.
+  trustedOrigins: [requireEnv("BETTER_AUTH_URL")],
+  // R3: validate the cookie-signing secret explicitly so a missing value
+  // fails fast with a clear message instead of a cryptic Better Auth error.
+  secret: requireEnv("BETTER_AUTH_SECRET"),
   emailAndPassword: {
     enabled: false,
   },
   socialProviders: {
     google: {
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      clientId: requireEnv("AUTH_GOOGLE_ID"),
+      clientSecret: requireEnv("AUTH_GOOGLE_SECRET"),
     },
     github: {
-      clientId: process.env.AUTH_GITHUB_ID!,
-      clientSecret: process.env.AUTH_GITHUB_SECRET!,
+      clientId: requireEnv("AUTH_GITHUB_ID"),
+      clientSecret: requireEnv("AUTH_GITHUB_SECRET"),
     },
   },
   // ---- Database model mapping (Task 2.2) -------------------------------------

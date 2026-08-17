@@ -12,6 +12,7 @@ import {
   deleteWorkspace,
   updateWorkspace,
 } from '@/features/workspaces/services';
+import { workspaceErrorFailure } from '@/features/workspaces/errors';
 import { z } from 'zod';
 
 const UpdateWorkspaceSchema = z.object({
@@ -38,13 +39,14 @@ export async function PATCH(
           data.name
         );
         return success({ workspace });
-      } catch (err: any) {
-        if (err.message === 'FORBIDDEN') {
-          return failure(
-            'FORBIDDEN',
-            'You do not have permission to update this workspace.'
-          );
-        }
+      } catch (err) {
+        const mapped = workspaceErrorFailure(err, {
+          FORBIDDEN: {
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to update this workspace.',
+          },
+        });
+        if (mapped) return mapped;
         return failure(
           'INTERNAL_SERVER_ERROR',
           'Failed to update workspace. Please try again.'
@@ -67,13 +69,14 @@ export async function DELETE(
       try {
         await deleteWorkspace(userId, workspaceId);
         return success({ deleted: true });
-      } catch (err: any) {
-        if (err.message === 'FORBIDDEN') {
-          return failure(
-            'FORBIDDEN',
-            'You do not have permission to delete this workspace.'
-          );
-        }
+      } catch (err) {
+        const mapped = workspaceErrorFailure(err, {
+          FORBIDDEN: {
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to delete this workspace.',
+          },
+        });
+        if (mapped) return mapped;
         return failure(
           'INTERNAL_SERVER_ERROR',
           'Failed to delete workspace. Please try again.'
