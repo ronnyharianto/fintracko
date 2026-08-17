@@ -16,13 +16,27 @@ import { NextRequest } from 'next/server';
 import { withSession } from '@/lib/api/session';
 import { validateBody } from '@/lib/api/validate';
 import { sanitizeObject } from '@/lib/api/sanitize';
-import { success } from '@/lib/api/envelope';
+import { success, failure } from '@/lib/api/envelope';
 import { CompleteOnboardingSchema } from '@/features/onboarding/schemas';
 import { completeOnboarding } from '@/features/onboarding/services';
-import { failure } from '@/lib/api/envelope';
+import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   return withSession(request, async ({ userId }) => {
+    // Onboarding Verification Guard: a Profile row must not exist yet.
+    // `Profile.userId` is unique, so a second submission would otherwise hit
+    // a constraint violation and surface as a misleading 500.
+    const existingProfile = await db.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (existingProfile) {
+      return failure(
+        'CONFLICT',
+        'Onboarding has already been completed for this account.'
+      );
+    }
+
     // Validate request body
     const validationResult = await validateBody(
       request,

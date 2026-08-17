@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { StatusScreen } from "@/components/shared/status-screen";
@@ -56,6 +57,17 @@ function resolveError(code: string | null) {
 }
 
 export default function AuthErrorPage() {
+  // `useSearchParams` must be read inside a Suspense boundary so this route
+  // can be statically rendered — without it, `next build` fails with the
+  // `missing-suspense-with-csr-bailout` error.
+  return (
+    <Suspense fallback={null}>
+      <AuthErrorContent />
+    </Suspense>
+  );
+}
+
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get("error");
   const { title, description } = resolveError(code);

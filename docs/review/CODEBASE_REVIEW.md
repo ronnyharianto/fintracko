@@ -12,9 +12,9 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 
 | ID | Severity | Category | Issue | Location |
 |----|----------|----------|-------|----------|
-| B1 | 🔴 High | Bug | Onboarding can be re-submitted; returns 500 instead of a proper conflict | `src/app/api/v1/onboarding/complete/route.ts` |
-| B2 | 🔴 High | Bug | `/settings` renders the settings nav twice; active-tab highlight is dead | `src/app/(workspace)/settings/page.tsx` vs `settings/layout.tsx` |
-| B3 | 🔴 High | Bug | `useSearchParams` without Suspense breaks `next build` (CSR bailout) | `src/app/error/page.tsx` |
+| B1 | 🔴 High | Bug ✅ | Onboarding can be re-submitted; returns 500 instead of a proper conflict | `src/app/api/v1/onboarding/complete/route.ts` |
+| B2 | 🔴 High | Bug ✅ | `/settings` renders the settings nav twice; active-tab highlight is dead | `src/app/(workspace)/settings/page.tsx` vs `settings/layout.tsx` |
+| B3 | 🔴 High | Bug ✅ | `useSearchParams` without Suspense breaks `next build` (CSR bailout) | `src/app/error/page.tsx` |
 | B4 | 🟠 Medium | Bug | Account settings fakes profile save & shows a password form for a passwordless app | `src/app/(workspace)/settings/account/page.tsx` |
 | B5 | 🟠 Medium | Bug | Danger Zone "Delete Workspace" targets the first workspace, not a chosen one | `src/app/(workspace)/settings/workspace/page.tsx` |
 | B6 | 🟠 Medium | Bug | User menu tab links (`?tab=security`) are ignored by the account page | `src/components/shared/workspace/user-menu.tsx`, `settings/account/page.tsx` |
@@ -50,7 +50,13 @@ Dead-code items D1–D8 were removed on **2026-08-16**. All removals verified wi
 | D7 | ✅ Removed leftover debug `console.log`s in `src/features/workspaces/services.ts` (`getOwnedWorkspaces`) and `src/app/api/v1/workspaces/route.ts` (GET). |
 | D8 | ✅ Rewrote stale comments referencing non-existent unit-test files (`auth.test.ts`, `session.test.ts`, co-located suites, Vitest isolation) in `src/lib/auth.ts`, `src/lib/api/session.ts`, `src/lib/api/envelope.ts`, `src/lib/api/validate.ts`, `src/lib/api/sanitize.ts`. |
 
-> **Note:** D5's removal resolves the duplicate-nav half of bug **B2**. The other half — `settings/layout.tsx` never highlighting the active tab — remains open under B2.
+### Bugs fixed (2026-08-16)
+
+| ID | Fix |
+|----|-----|
+| B1 | ✅ Added an Onboarding Verification Guard to `src/app/api/v1/onboarding/complete/route.ts` — if a `Profile` row already exists for the user, the handler returns `CONFLICT` (409) "Onboarding has already been completed for this account." instead of hitting the unique-constraint violation and returning 500. |
+| B2 | ✅ Duplicate nav removed in the D5 pass; the remaining half — `settings/layout.tsx` never highlighting the active tab — fixed by converting the layout to a client component that highlights the tab matching the current pathname (`usePathname` + `cn`). |
+| B3 | ✅ Wrapped the `useSearchParams` read in `src/app/error/page.tsx` inside a `<Suspense>` boundary (`AuthErrorContent`), so the route can be statically rendered without the `missing-suspense-with-csr-bailout` build error. |
 
 ---
 
@@ -213,7 +219,7 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 
 ## 5. Suggested Fix Order
 
-1. **B1, B2, B3** — small, high-impact bug fixes (onboarding guard, duplicate settings page, build breaker).
+1. **B1, B2, B3** — small, high-impact bug fixes (onboarding guard, duplicate settings page, build breaker). ✅ **Done 2026-08-16** — see Bugs fixed.
 2. **R1 + P2** — pipeline refactor (removes duplication and an extra DB query per request).
 3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages.
 4. **P1** — batch template seeding.
@@ -227,3 +233,4 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 - No test files exist in the repository (`**/*.test.*` / `*.spec.*` returned zero matches) despite extensive comments referencing unit suites — see D8.
 - Findings in this report are based on static code review; runtime behavior (e.g. the `next build` failure in B3, the 500 in B1) should be confirmed against the deployed environment before/after fixes.
 - Dead-code removal (D1–D8) verified on 2026-08-16 with `npx tsc --noEmit` — no type errors.
+- High-severity bug fixes (B1, B2, B3) verified on 2026-08-16 with `npx tsc --noEmit` and `npm run build` — both pass; `/error` now prerenders as static (`○ /error`), confirming the Suspense fix.
