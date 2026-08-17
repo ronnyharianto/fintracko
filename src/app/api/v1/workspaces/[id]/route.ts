@@ -12,14 +12,12 @@ import {
   deleteWorkspace,
   updateWorkspace,
 } from '@/features/workspaces/services';
-import { workspaceErrorFailure } from '@/features/workspaces/errors';
 import { z } from 'zod';
+import { workspaceErrorFailure } from '@/features/workspaces/errors';
+import { WorkspaceNameSchema } from '@/features/workspaces/schemas';
 
 const UpdateWorkspaceSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Workspace name is required')
-    .max(100, 'Workspace name must be at most 100 characters'),
+  name: WorkspaceNameSchema,
 });
 
 export async function PATCH(

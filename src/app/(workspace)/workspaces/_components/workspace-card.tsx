@@ -11,33 +11,11 @@ import {
 } from '@/components/ui/card';
 import { Briefcase, Trash2, Edit2 } from 'lucide-react';
 import { CollaboratorList } from './collaborator-list';
-
-interface Member {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image: string | null;
-  };
-}
-
-interface Workspace {
-  id: string;
-  name: string;
-  createdAt: string;
-  members: Member[];
-  _count: {
-    accounts: number;
-    transactions: number;
-    budgets: number;
-  };
-}
+import { OwnedWorkspace } from '@/features/workspaces/types';
 
 interface WorkspaceCardProps {
-  workspace: Workspace;
-  onEditClick: (workspace: Workspace) => void;
+  workspace: OwnedWorkspace;
+  onEditClick: (workspace: OwnedWorkspace) => void;
   onDeleteClick: (workspaceId: string) => void;
   onInviteClick: (workspaceId: string) => void;
   onRemoveMember: (workspaceId: string, memberId: string) => void;

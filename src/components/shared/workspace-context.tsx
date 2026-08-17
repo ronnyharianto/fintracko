@@ -1,15 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-interface Workspace {
-  id: string;
-  name: string;
-  role: string;
-}
+import type { WorkspaceSummary } from "@/features/workspaces/types";
 
 interface WorkspaceContextType {
-  workspaces: Workspace[];
+  workspaces: WorkspaceSummary[];
   activeWorkspaceId: string | null;
   setActiveWorkspaceId: (id: string) => void;
   isLoading: boolean;
@@ -32,7 +27,7 @@ const ACTIVE_WORKSPACE_KEY = "fintracko_active_workspace_id";
 const MAX_FETCH_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 500;
 
-async function fetchWorkspaces(): Promise<Workspace[]> {
+async function fetchWorkspaces(): Promise<WorkspaceSummary[]> {
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
@@ -64,13 +59,13 @@ async function fetchWorkspaces(): Promise<Workspace[]> {
 }
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const applyWorkspaces = (list: Workspace[]) => {
+  const applyWorkspaces = (list: WorkspaceSummary[]) => {
     setWorkspaces(list);
 
     if (list.length > 0) {

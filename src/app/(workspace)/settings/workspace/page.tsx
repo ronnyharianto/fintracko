@@ -12,33 +12,11 @@ import { EditWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/ed
 import { InviteCollaboratorDialog } from '@/app/(workspace)/workspaces/_components/invite-collaborator-dialog';
 import { DeleteWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/delete-workspace-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Member {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image: string | null;
-  };
-}
-
-interface Workspace {
-  id: string;
-  name: string;
-  createdAt: string;
-  members: Member[];
-  _count: {
-    accounts: number;
-    transactions: number;
-    budgets: number;
-  };
-}
+import { OwnedWorkspace } from '@/features/workspaces/types';
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<OwnedWorkspace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,13 +38,13 @@ export default function WorkspaceSettingsPage() {
    * effect — the `react-hooks/set-state-in-effect` lint rule flags any
    * component-scope function that sets state synchronously.
    */
-  const fetchOwnedWorkspaces = async (): Promise<Workspace[]> => {
+  const fetchOwnedWorkspaces = async (): Promise<OwnedWorkspace[]> => {
     const res = await fetch('/api/v1/workspaces?owned=true');
     if (!res.ok) {
       throw new Error('Failed to fetch workspaces.');
     }
     const json = await res.json();
-    return (json.data?.workspaces as Workspace[]) || [];
+    return (json.data?.workspaces as OwnedWorkspace[]) || [];
   };
 
   const loadOwnedWorkspaces = async () => {

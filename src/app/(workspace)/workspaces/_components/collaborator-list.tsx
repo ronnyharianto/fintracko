@@ -3,21 +3,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Users, UserPlus, Shield, UserX } from 'lucide-react';
-
-interface Member {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image: string | null;
-  };
-}
+import type { WorkspaceMemberView } from '@/features/workspaces/types';
 
 interface CollaboratorListProps {
   workspaceId: string;
-  members: Member[];
+  members: WorkspaceMemberView[];
   onInviteClick: () => void;
   onRemoveMember: (memberId: string) => void;
 }

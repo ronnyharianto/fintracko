@@ -18,15 +18,23 @@ export const WorkspaceTemplateEnum = z.enum([
 ]);
 
 /**
+ * Workspace name field validation.
+ *
+ * Shared by the create and update schemas (M2) so the name contract lives
+ * in exactly one place — in the feature schemas module per AGENT_RULES §2.
+ */
+export const WorkspaceNameSchema = z
+  .string()
+  .min(1, 'Workspace name is required')
+  .max(100, 'Workspace name must be at most 100 characters');
+
+/**
  * Create workspace request schema.
  *
  * Validates the payload sent to POST /api/v1/workspaces.
  */
 export const CreateWorkspaceSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Workspace name is required')
-    .max(100, 'Workspace name must be at most 100 characters'),
+  name: WorkspaceNameSchema,
   templateName: WorkspaceTemplateEnum,
   /**
    * Optional currency override. When omitted, the server defaults the
