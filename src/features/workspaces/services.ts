@@ -14,6 +14,28 @@ import type { CreateWorkspaceInput } from "./schemas";
 import { WorkspaceServiceError } from "./errors";
 
 /**
+ * Returns the OWNER membership row for `userId` in `workspaceId`, or `null`
+ * when the user is not an owner.
+ *
+ * Every mutating workspace operation must compound-filter on
+ * `WorkspaceMember` by both `workspaceId` and `userId` (AGENT_RULES §3,
+ * Anti-IDOR / Multi-Tenancy). Extracted so the lookup lives in exactly one
+ * place; each caller decides how to handle the `null` result — typically by
+ * throwing `WorkspaceServiceError("FORBIDDEN")` — so the error handling
+ * stays visible at the call site (H1).
+ */
+async function findWorkspaceOwner(userId: string, workspaceId: string) {
+  return db.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      userId,
+      role: "OWNER",
+    },
+    select: { id: true },
+  });
+}
+
+/**
  * Retrieves all workspaces where the user is a member.
  */
 export async function getUserWorkspaces(userId: string) {
@@ -86,13 +108,7 @@ export async function inviteCollaborator(
   email: string,
 ) {
   // 1. Verify user is owner of workspace
-  const isOwner = await db.workspaceMember.findFirst({
-    where: {
-      workspaceId,
-      userId,
-      role: "OWNER",
-    },
-  });
+  const isOwner = await findWorkspaceOwner(userId, workspaceId);
   if (!isOwner) {
     throw new WorkspaceServiceError("FORBIDDEN");
   }
@@ -148,13 +164,7 @@ export async function removeCollaborator(
   memberId: string,
 ) {
   // 1. Verify user is owner of workspace
-  const isOwner = await db.workspaceMember.findFirst({
-    where: {
-      workspaceId,
-      userId,
-      role: "OWNER",
-    },
-  });
+  const isOwner = await findWorkspaceOwner(userId, workspaceId);
   if (!isOwner) {
     throw new WorkspaceServiceError("FORBIDDEN");
   }
@@ -183,13 +193,7 @@ export async function removeCollaborator(
  */
 export async function deleteWorkspace(userId: string, workspaceId: string) {
   // 1. Verify user is owner of workspace
-  const isOwner = await db.workspaceMember.findFirst({
-    where: {
-      workspaceId,
-      userId,
-      role: "OWNER",
-    },
-  });
+  const isOwner = await findWorkspaceOwner(userId, workspaceId);
   if (!isOwner) {
     throw new WorkspaceServiceError("FORBIDDEN");
   }
@@ -211,13 +215,7 @@ export async function updateWorkspace(
   name: string,
 ) {
   // Check if the user is an owner of the workspace via WorkspaceMember
-  const isOwner = await db.workspaceMember.findFirst({
-    where: {
-      workspaceId,
-      userId,
-      role: "OWNER",
-    },
-  });
+  const isOwner = await findWorkspaceOwner(userId, workspaceId);
   if (!isOwner) {
     throw new WorkspaceServiceError("FORBIDDEN");
   }
