@@ -13,63 +13,40 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withSession } from '@/lib/api/session';
-import { validateBody } from '@/lib/api/validate';
-import { sanitizeObject } from '@/lib/api/sanitize';
+import { withPipeline } from '@/lib/api/pipeline';
 import { success, failure } from '@/lib/api/envelope';
 import { CompleteOnboardingSchema } from '@/features/onboarding/schemas';
 import { completeOnboarding } from '@/features/onboarding/services';
-import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
-  return withSession(request, async ({ userId }) => {
-    // Onboarding Verification Guard: a Profile row must not exist yet.
-    // `Profile.userId` is unique, so a second submission would otherwise hit
-    // a constraint violation and surface as a misleading 500.
-    const existingProfile = await db.profile.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
-    if (existingProfile) {
-      return failure(
-        'CONFLICT',
-        'Onboarding has already been completed for this account.'
-      );
+  return withPipeline(
+    request,
+    { schema: CompleteOnboardingSchema, rejectIfOnboarded: true },
+    async ({ userId }, data) => {
+      try {
+        // Complete onboarding with atomic transaction
+        const result = await completeOnboarding(userId, data);
+
+        return success({
+          profile: {
+            id: result.profile.id,
+            bio: result.profile.bio,
+            currencyPreference: result.profile.currencyPreference,
+          },
+          workspace: {
+            id: result.workspace.id,
+            name: result.workspace.name,
+          },
+        });
+      } catch {
+        // Defensive: any failure here (e.g. a unique-constraint race between
+        // the guard and the insert) surfaces as a generic 500 — the common
+        // double-submission case is already caught by the pipeline guard.
+        return failure(
+          'INTERNAL_SERVER_ERROR',
+          'Failed to complete onboarding. Please try again.'
+        );
+      }
     }
-
-    // Validate request body
-    const validationResult = await validateBody(
-      request,
-      CompleteOnboardingSchema
-    );
-    if (!validationResult.success) {
-      return validationResult.response;
-    }
-
-    // Sanitize input to prevent XSS
-    const sanitizedData = sanitizeObject(validationResult.data);
-
-    try {
-      // Complete onboarding with atomic transaction
-      const result = await completeOnboarding(userId, sanitizedData);
-
-      return success({
-        profile: {
-          id: result.profile.id,
-          bio: result.profile.bio,
-          currencyPreference: result.profile.currencyPreference,
-        },
-        workspace: {
-          id: result.workspace.id,
-          name: result.workspace.name,
-        },
-      });
-    } catch {
-      // Handle potential errors (e.g., Profile already exists)
-      return failure(
-        'INTERNAL_SERVER_ERROR',
-        'Failed to complete onboarding. Please try again.'
-      );
-    }
-  });
+  );
 }

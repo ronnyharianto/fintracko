@@ -21,7 +21,7 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | B7 | 🟠 Medium | Bug | `trustedOrigins` hardcoded to localhost; ignores `BETTER_AUTH_URL` | `src/lib/auth.ts` |
 | B8 | 🟡 Low | Bug | All session failures (incl. DB down) surface as 401 | `src/lib/api/session.ts` |
 | P1 | 🟠 Medium | Performance | N+1 template seeding on workspace creation (~19 sequential inserts) | `src/features/workspaces/services.ts` |
-| P2 | 🟡 Low | Performance | Duplicated onboarding-guard `profile` query on every API request | 6 route handlers |
+| P2 | 🟡 Low | Performance ✅ | Duplicated onboarding-guard `profile` query on every API request | 6 route handlers |
 | D1 | 🟠 Medium | Dead code ✅ | `pipeline.ts` orchestrator has zero callers; routes re-wire stages manually | `src/lib/api/pipeline.ts` |
 | D2 | 🟡 Low | Dead code ✅ | `sanitizeStringArray` unused | `src/lib/api/sanitize.ts` |
 | D3 | 🟡 Low | Dead code ✅ | `AuthClient` type export unused | `src/lib/auth.ts` |
@@ -30,7 +30,7 @@ This report catalogs potential bugs, performance issues, dead code, and refactor
 | D6 | 🟢 Info | Dead code ✅ | `sidebarRef` set but never read | `src/components/shared/sidebar.tsx` |
 | D7 | 🟢 Info | Dead code ✅ | Debug `console.log`s left in request paths | `services.ts`, `workspaces/route.ts` |
 | D8 | 🟢 Info | Dead code ✅ | Stale comments referencing removed unit-test files | `auth.ts`, `session.ts`, `envelope.ts`, … |
-| R1 | 🟠 Medium | Refactor | 6 route handlers duplicate session+validate+sanitize+onboarding-guard wiring | `src/app/api/v1/workspaces/**`, `onboarding/**` |
+| R1 | 🟠 Medium | Refactor ✅ | 6 route handlers duplicate session+validate+sanitize+onboarding-guard wiring | `src/app/api/v1/workspaces/**`, `onboarding/**` |
 | R2 | 🟡 Low | Refactor | Error signaling via `throw new Error("FORBIDDEN")` + string matching + `catch (err: any)` | `src/features/workspaces/services.ts`, routes |
 
 ---
@@ -57,6 +57,12 @@ Dead-code items D1–D8 were removed on **2026-08-16**. All removals verified wi
 | B1 | ✅ Added an Onboarding Verification Guard to `src/app/api/v1/onboarding/complete/route.ts` — if a `Profile` row already exists for the user, the handler returns `CONFLICT` (409) "Onboarding has already been completed for this account." instead of hitting the unique-constraint violation and returning 500. |
 | B2 | ✅ Duplicate nav removed in the D5 pass; the remaining half — `settings/layout.tsx` never highlighting the active tab — fixed by converting the layout to a client component that highlights the tab matching the current pathname (`usePathname` + `cn`). |
 | B3 | ✅ Wrapped the `useSearchParams` read in `src/app/error/page.tsx` inside a `<Suspense>` boundary (`AuthErrorContent`), so the route can be statically rendered without the `missing-suspense-with-csr-bailout` build error. |
+
+### Refactors completed (2026-08-17)
+
+| ID | Resolution |
+|----|------------|
+| R1 + P2 | ✅ Rebuilt the shared pipeline at `src/lib/api/pipeline.ts` (`withPipeline`) and migrated **all 7 handlers** across the 5 route files under `src/app/api/v1/` to it. The pipeline composes the mandated steps — `withSession` → onboarding guard → `validateBody` → `sanitizeObject` — with per-route options: `{ schema?, requireOnboarding?, rejectIfOnboarded? }`. The onboarding guard now resolves the `Profile` row **once** and exposes it as `ctx.profile` (the POST /workspaces handler reuses `currencyPreference` from it), eliminating the 6 duplicated `db.profile.findUnique` calls (P2). `rejectIfOnboarded` subsumes the B1 guard on `/onboarding/complete` (409 on re-submission). Validated/sanitized bodies are handed to handlers as a typed second argument (`data: S['_output']`, no `!` assertions). `withSession`, `validateBody`, `sanitizeObject` remain exported for the pipeline; no route imports them directly anymore. Verified with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API routes remain dynamic). |
 
 ---
 
@@ -220,7 +226,7 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 ## 5. Suggested Fix Order
 
 1. **B1, B2, B3** — small, high-impact bug fixes (onboarding guard, duplicate settings page, build breaker). ✅ **Done 2026-08-16** — see Bugs fixed.
-2. **R1 + P2** — pipeline refactor (removes duplication and an extra DB query per request).
+2. **R1 + P2** — pipeline refactor (removes duplication and an extra DB query per request). ✅ **Done 2026-08-17** — see Refactors completed.
 3. **B4, B5, B6** — user-facing honesty/UX fixes on settings pages.
 4. **P1** — batch template seeding.
 5. **D1–D8** — dead-code sweep (safe to do at any point; nothing references the removed items). ✅ **Done 2026-08-16** — see Resolution Log.
@@ -234,3 +240,4 @@ Services signal domain failures by throwing `new Error("FORBIDDEN")` / `"USER_NO
 - Findings in this report are based on static code review; runtime behavior (e.g. the `next build` failure in B3, the 500 in B1) should be confirmed against the deployed environment before/after fixes.
 - Dead-code removal (D1–D8) verified on 2026-08-16 with `npx tsc --noEmit` — no type errors.
 - High-severity bug fixes (B1, B2, B3) verified on 2026-08-16 with `npx tsc --noEmit` and `npm run build` — both pass; `/error` now prerenders as static (`○ /error`), confirming the Suspense fix.
+- Pipeline refactor (R1 + P2) verified on 2026-08-17 with `npx tsc --noEmit` (clean) and `npm run build` (compiles; all 5 API route files still render as `ƒ` dynamic).
