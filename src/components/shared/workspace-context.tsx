@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { WorkspaceSummary } from "@/features/workspaces/types";
 
 interface WorkspaceContextType {
@@ -84,44 +84,44 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Core fetch+apply — no loading-state side effects so it can be called
+   * from both the mount effect (which manages loading itself) and
+   * `refreshWorkspaces`.
+   */
+  const fetchAndApply = useCallback(async () => {
+    const list = await fetchWorkspaces();
+    applyWorkspaces(list);
+  }, []);
+
+  // Mount fetch
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        if (!cancelled) await fetchAndApply();
+      } catch (error) {
+        if (!cancelled) console.error("Failed to fetch workspaces", error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchAndApply]);
+
   const refreshWorkspaces = async () => {
     try {
-      const list = await fetchWorkspaces();
-      applyWorkspaces(list);
+      await fetchAndApply();
     } catch (error) {
       console.error("Failed to fetch workspaces", error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadWorkspaces = async () => {
-      try {
-        const list = await fetchWorkspaces();
-
-        if (!cancelled) {
-          applyWorkspaces(list);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to fetch workspaces", error);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadWorkspaces();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const setActiveWorkspaceId = (id: string) => {
     setActiveWorkspaceIdState(id);

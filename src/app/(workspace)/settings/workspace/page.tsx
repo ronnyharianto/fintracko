@@ -1,26 +1,48 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Briefcase, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
-import { apiFetch } from '@/lib/api/client';
-import { useWorkspace } from '@/components/shared/workspace-context';
-import { WorkspaceCard } from '@/app/(workspace)/workspaces/_components/workspace-card';
-import { CreateWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/create-workspace-dialog';
-import { EditWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/edit-workspace-dialog';
-import { InviteCollaboratorDialog } from '@/app/(workspace)/workspaces/_components/invite-collaborator-dialog';
-import { DeleteWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/delete-workspace-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { OwnedWorkspace } from '@/features/workspaces/types';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Plus,
+  Briefcase,
+  Trash2,
+  Users,
+  Shield,
+  AlertTriangle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/api/client";
+import { useWorkspace } from "@/components/shared/workspace-context";
+import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
+import { WorkspaceCard } from "@/app/(workspace)/workspaces/_components/workspace-card";
+import { CreateWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/create-workspace-dialog";
+import { EditWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/edit-workspace-dialog";
+import { InviteCollaboratorDialog } from "@/app/(workspace)/workspaces/_components/invite-collaborator-dialog";
+import { DeleteWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/delete-workspace-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
-  const [workspaces, setWorkspaces] = useState<OwnedWorkspace[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    workspaces,
+    isLoading,
+    error,
+    refetch: refetchOwned,
+  } = useOwnedWorkspaces();
 
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -28,86 +50,38 @@ export default function WorkspaceSettingsPage() {
     id: string;
     name: string;
   } | null>(null);
-  const [inviteWorkspaceId, setInviteWorkspaceId] = useState<string | null>(null);
-  const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null);
+  const [inviteWorkspaceId, setInviteWorkspaceId] = useState<string | null>(
+    null,
+  );
+  const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(
+    null,
+  );
   // Workspace explicitly chosen in the Danger Zone picker (B5) — the delete
   // flow must never silently target the first workspace.
-  const [dangerZoneWorkspaceId, setDangerZoneWorkspaceId] = useState('');
-
-  /**
-   * Pure loader: fetches the owned workspaces and returns them, throwing on
-   * failure. Contains NO setState, so it is safe to call from the mount
-   * effect — the `react-hooks/set-state-in-effect` lint rule flags any
-   * component-scope function that sets state synchronously.
-   */
-  const fetchOwnedWorkspaces = async (): Promise<OwnedWorkspace[]> => {
-    const { workspaces } = await apiFetch<{
-      workspaces: OwnedWorkspace[];
-    }>('/api/v1/workspaces?owned=true');
-    return workspaces || [];
-  };
-
-  const loadOwnedWorkspaces = async () => {
-    try {
-      const workspaces = await fetchOwnedWorkspaces();
-      setWorkspaces(workspaces);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'An error occurred while fetching workspaces.'
-      );
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const workspaces = await fetchOwnedWorkspaces();
-        if (!cancelled) setWorkspaces(workspaces);
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'An error occurred while fetching workspaces.'
-          );
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [dangerZoneWorkspaceId, setDangerZoneWorkspaceId] = useState("");
 
   const handleRemoveCollaborator = async (
     workspaceId: string,
-    memberId: string
+    memberId: string,
   ) => {
-    if (!confirm('Are you sure you want to remove this collaborator?')) return;
+    if (!confirm("Are you sure you want to remove this collaborator?")) return;
 
     try {
-      await apiFetch(
-        `/api/v1/workspaces/${workspaceId}/members/${memberId}`,
-        { method: 'DELETE' },
-      );
-      toast.success('Collaborator removed.');
-      await loadOwnedWorkspaces();
+      await apiFetch(`/api/v1/workspaces/${workspaceId}/members/${memberId}`, {
+        method: "DELETE",
+      });
+      toast.success("Collaborator removed.");
+      await refetchOwned();
       await refreshWorkspaces();
     } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : 'Failed to remove collaborator.',
+        err instanceof Error ? err.message : "Failed to remove collaborator.",
       );
     }
   };
 
   const handleActionComplete = async () => {
-    await loadOwnedWorkspaces();
+    await refetchOwned();
     await refreshWorkspaces();
   };
 
@@ -115,7 +89,9 @@ export default function WorkspaceSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Workspace Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Workspace Management
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage your owned workspaces, templates, and collaborators.
           </p>
@@ -149,8 +125,8 @@ export default function WorkspaceSettingsPage() {
                 <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">No workspaces found</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  You do not own any workspaces yet. Create your first workspace to
-                  start tracking finances.
+                  You do not own any workspaces yet. Create your first workspace
+                  to start tracking finances.
                 </p>
                 <Button onClick={() => setIsCreateOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" /> Create Workspace
@@ -163,7 +139,9 @@ export default function WorkspaceSettingsPage() {
                 <WorkspaceCard
                   key={ws.id}
                   workspace={ws}
-                  onEditClick={(w) => setEditingWorkspace({ id: w.id, name: w.name })}
+                  onEditClick={(w) =>
+                    setEditingWorkspace({ id: w.id, name: w.name })
+                  }
                   onDeleteClick={(id) => setDeleteWorkspaceId(id)}
                   onInviteClick={(id) => setInviteWorkspaceId(id)}
                   onRemoveMember={handleRemoveCollaborator}
@@ -188,12 +166,14 @@ export default function WorkspaceSettingsPage() {
           <InviteCollaboratorDialog
             workspaceId={inviteWorkspaceId}
             onOpenChange={(open) => !open && setInviteWorkspaceId(null)}
-            onInvited={fetchOwnedWorkspaces}
+            onInvited={refetchOwned}
           />
 
           <DeleteWorkspaceDialog
             workspaceId={deleteWorkspaceId}
-            workspaceName={workspaces.find((w) => w.id === deleteWorkspaceId)?.name}
+            workspaceName={
+              workspaces.find((w) => w.id === deleteWorkspaceId)?.name
+            }
             onOpenChange={(open) => !open && setDeleteWorkspaceId(null)}
             onDeleted={handleActionComplete}
           />
@@ -207,8 +187,8 @@ export default function WorkspaceSettingsPage() {
                 Workspace Templates
               </CardTitle>
               <CardDescription>
-                Templates help you quickly set up a new workspace with pre-configured accounts,
-                categories, and budgets.
+                Templates help you quickly set up a new workspace with
+                pre-configured accounts, categories, and budgets.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -218,7 +198,8 @@ export default function WorkspaceSettingsPage() {
                     <Briefcase className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <h4 className="font-medium">Personal Finance</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Standard personal finance tracking with common expense categories.
+                      Standard personal finance tracking with common expense
+                      categories.
                     </p>
                   </CardContent>
                 </Card>
@@ -227,7 +208,8 @@ export default function WorkspaceSettingsPage() {
                     <Users className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <h4 className="font-medium">Family Finance</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Shared family budgeting with joint accounts and shared categories.
+                      Shared family budgeting with joint accounts and shared
+                      categories.
                     </p>
                   </CardContent>
                 </Card>
@@ -236,7 +218,8 @@ export default function WorkspaceSettingsPage() {
                     <Shield className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <h4 className="font-medium">Small Business</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Business expense tracking with income/expense categories and tax reports.
+                      Business expense tracking with income/expense categories
+                      and tax reports.
                     </p>
                   </CardContent>
                 </Card>
@@ -253,14 +236,16 @@ export default function WorkspaceSettingsPage() {
                 Danger Zone
               </CardTitle>
               <CardDescription>
-                Irreversible and destructive actions. Please proceed with caution.
+                Irreversible and destructive actions. Please proceed with
+                caution.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm font-medium">Delete Workspace</p>
                 <p className="text-sm text-muted-foreground">
-                  Permanently delete a workspace and all its data. This action cannot be undone.
+                  Permanently delete a workspace and all its data. This action
+                  cannot be undone.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Select
