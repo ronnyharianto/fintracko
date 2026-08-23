@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Briefcase, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api/client';
 import { useWorkspace } from '@/components/shared/workspace-context';
 import { WorkspaceCard } from '@/app/(workspace)/workspaces/_components/workspace-card';
 import { CreateWorkspaceDialog } from '@/app/(workspace)/workspaces/_components/create-workspace-dialog';
@@ -39,12 +41,10 @@ export default function WorkspaceSettingsPage() {
    * component-scope function that sets state synchronously.
    */
   const fetchOwnedWorkspaces = async (): Promise<OwnedWorkspace[]> => {
-    const res = await fetch('/api/v1/workspaces?owned=true');
-    if (!res.ok) {
-      throw new Error('Failed to fetch workspaces.');
-    }
-    const json = await res.json();
-    return (json.data?.workspaces as OwnedWorkspace[]) || [];
+    const { workspaces } = await apiFetch<{
+      workspaces: OwnedWorkspace[];
+    }>('/api/v1/workspaces?owned=true');
+    return workspaces || [];
   };
 
   const loadOwnedWorkspaces = async () => {
@@ -90,22 +90,19 @@ export default function WorkspaceSettingsPage() {
     if (!confirm('Are you sure you want to remove this collaborator?')) return;
 
     try {
-      const res = await fetch(
+      await apiFetch(
         `/api/v1/workspaces/${workspaceId}/members/${memberId}`,
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' },
       );
-
-      if (res.ok) {
-        await loadOwnedWorkspaces();
-        await refreshWorkspaces();
-      } else {
-        const json = await res.json();
-        alert(json.error?.message || 'Failed to remove collaborator.');
-      }
-    } catch {
-      alert('An error occurred while removing collaborator.');
+      toast.success('Collaborator removed.');
+      await loadOwnedWorkspaces();
+      await refreshWorkspaces();
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Failed to remove collaborator.',
+      );
     }
   };
 

@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api/client';
 
 interface DeleteWorkspaceDialogProps {
   workspaceId: string | null;
@@ -36,19 +38,16 @@ export function DeleteWorkspaceDialog({
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}`, {
+      await apiFetch(`/api/v1/workspaces/${workspaceId}`, {
         method: 'DELETE',
       });
-
-      if (res.ok) {
-        onOpenChange(false);
-        onDeleted();
-      } else {
-        const json = await res.json();
-        alert(json.error?.message || 'Failed to delete workspace.');
-      }
-    } catch {
-      alert('An error occurred while deleting workspace.');
+      toast.success('Workspace deleted.');
+      onOpenChange(false);
+      onDeleted();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to delete workspace.',
+      );
     } finally {
       setIsDeleting(false);
     }

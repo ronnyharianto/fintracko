@@ -12,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api/client';
 
 interface EditWorkspaceDialogProps {
   workspace: { id: string; name: string } | null;
@@ -39,21 +41,19 @@ export function EditWorkspaceDialog({
 
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/v1/workspaces/${workspace.id}`, {
+      await apiFetch(`/api/v1/workspaces/${workspace.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
+        body: { name: name.trim() },
       });
-
-      if (res.ok) {
-        onOpenChange(false);
-        onUpdated();
-      } else {
-        const json = await res.json();
-        alert(json.error?.message || 'Failed to update workspace name.');
-      }
-    } catch {
-      alert('An error occurred while updating workspace name.');
+      toast.success('Workspace name updated.');
+      onOpenChange(false);
+      onUpdated();
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update workspace name.',
+      );
     } finally {
       setIsUpdating(false);
     }

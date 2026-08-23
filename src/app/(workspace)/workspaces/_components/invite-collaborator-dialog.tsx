@@ -12,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api/client';
 
 interface InviteCollaboratorDialogProps {
   workspaceId: string | null;
@@ -33,22 +35,20 @@ export function InviteCollaboratorDialog({
 
     setIsInviting(true);
     try {
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/members`, {
+      await apiFetch(`/api/v1/workspaces/${workspaceId}/members`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: { email: email.trim() },
       });
-
-      if (res.ok) {
-        setEmail('');
-        onOpenChange(false);
-        onInvited();
-      } else {
-        const json = await res.json();
-        alert(json.error?.message || 'Failed to invite collaborator.');
-      }
-    } catch {
-      alert('An error occurred while inviting collaborator.');
+      toast.success('Invitation sent.');
+      setEmail('');
+      onOpenChange(false);
+      onInvited();
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Failed to invite collaborator.',
+      );
     } finally {
       setIsInviting(false);
     }

@@ -19,6 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api/client';
 
 interface CreateWorkspaceDialogProps {
   open: boolean;
@@ -44,26 +46,18 @@ export function CreateWorkspaceDialog({
 
     setIsCreating(true);
     try {
-      const res = await fetch('/api/v1/workspaces', {
+      await apiFetch('/api/v1/workspaces', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          templateName,
-          currency,
-        }),
+        body: { name: name.trim(), templateName, currency },
       });
-
-      if (res.ok) {
-        setName('');
-        onOpenChange(false);
-        onCreated();
-      } else {
-        const json = await res.json();
-        alert(json.error?.message || 'Failed to create workspace.');
-      }
-    } catch {
-      alert('An error occurred while creating workspace.');
+      toast.success('Workspace created.');
+      setName('');
+      onOpenChange(false);
+      onCreated();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to create workspace.',
+      );
     } finally {
       setIsCreating(false);
     }
