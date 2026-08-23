@@ -15,25 +15,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-
-/**
- * Minimal shape of the Better Auth instance we depend on.
- * Using a structural type for testability (injection seam).
- */
-interface AuthLike {
-  api: {
-    getSession: (input: { headers: Headers }) => Promise<SessionLike | null>;
-  };
-}
-
-/**
- * Minimal session shape we read off Better Auth's resolved session.
- */
-interface SessionLike {
-  user: {
-    id: string;
-  };
-}
+import { getProductionAuth } from '@/lib/api/session';
 
 /**
  * Minimal database client shape for Profile lookup.
@@ -49,17 +31,6 @@ interface DbLike {
 
 interface OnboardingGuardWrapperProps {
   children: ReactNode;
-}
-
-/**
- * Lazily resolves the production Better Auth singleton.
- *
- * Imported lazily to keep the module-load graph small and avoid
- * circular import hazards with the Prisma adapter.
- */
-async function getProductionAuth(): Promise<AuthLike> {
-  const { auth } = await import('@/lib/auth');
-  return auth as unknown as AuthLike;
 }
 
 /**
