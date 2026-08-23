@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { User, Shield, Bell, Key, Save, Loader2 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { toast } from 'sonner';
+import { getInitials } from '@/lib/utils';
 
 /**
  * Valid account-settings tabs, mirroring the TabsTrigger values below.
@@ -225,11 +226,12 @@ function AccountSettingsContent() {
               <div className="flex items-center gap-4">
                 <div className="relative">
                   {user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- OAuth avatar URL is external; next/image requires remotePatterns config
                     <img src={user.image} alt={user.name || 'Avatar'} className="h-20 w-20 rounded-full" />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
                       <span className="text-2xl font-medium text-muted-foreground">
-                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        {getInitials(user?.name)}
                       </span>
                     </div>
                   )}

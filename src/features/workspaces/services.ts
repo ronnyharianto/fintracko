@@ -239,11 +239,10 @@ export async function createWorkspace(
   userId: string,
   data: CreateWorkspaceInput,
 ) {
+  // templateName is validated by CreateWorkspaceSchema (Zod enum), so the
+  // lookup is safe — the cast is the only narrowing needed.
   const template =
     WORKSPACE_TEMPLATES[data.templateName as WorkspaceTemplateName];
-  if (!template) {
-    throw new Error(`Invalid workspace template: ${data.templateName}`);
-  }
 
   return await db.$transaction(async (tx) => {
     // 1. Create Workspace

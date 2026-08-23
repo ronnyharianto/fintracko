@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,11 +29,13 @@ export function EditWorkspaceDialog({
   const [name, setName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    if (workspace) {
-      setName(workspace.name);
-    }
-  }, [workspace]);
+  // Adjust state during render (React docs: you-might-not-need-an-effect)
+  // instead of a setState-in-effect, which the lint rule flags.
+  const [prevWorkspace, setPrevWorkspace] = useState(workspace);
+  if (workspace !== prevWorkspace) {
+    setPrevWorkspace(workspace);
+    setName(workspace?.name ?? '');
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

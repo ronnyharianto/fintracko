@@ -68,6 +68,36 @@ export function useSidebarContext() {
   return context;
 }
 
+function NavLink({
+  item,
+  pathname,
+  onClick,
+}: {
+  item: { href: string; label: string; icon: typeof Settings; isActive: (p: string) => boolean };
+  pathname: string;
+  onClick: () => void;
+}) {
+  const active = item.isActive(pathname);
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`
+        flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
+        ${
+          active
+            ? 'bg-primary/10 text-primary'
+            : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
+        }
+      `}
+    >
+      <Icon className="mr-3 h-4 w-4" />
+      {item.label}
+    </Link>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, setIsOpen } = useSidebarContext();
@@ -112,55 +142,14 @@ export default function Sidebar() {
         `}
         aria-label="Main navigation"
       >
-          <nav className="mt-4 px-3 space-y-1 flex-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const active = item.isActive(pathname);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleLinkClick}
-                className={`
-                  flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                  ${
-                    active
-                      ? 'bg-primary/10 text-primary'
-                      : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
-                  }
-                `}
-              >
-                <Icon className="mr-3 h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="mt-4 px-3 space-y-1 flex-1 overflow-y-auto">
+          {navItems.map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} onClick={handleLinkClick} />
+          ))}
 
           {/* Settings at bottom */}
           <div className="border-t border-muted mt-4 pt-4">
-            {(() => {
-              const item = settingsItem;
-              const active = item.isActive(pathname);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={handleLinkClick}
-                  className={`
-                    flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                    ${
-                      active
-                        ? 'bg-primary/10 text-primary'
-                        : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
-                    }
-                  `}
-                >
-                  <Icon className="mr-3 h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })()}
+            <NavLink item={settingsItem} pathname={pathname} onClick={handleLinkClick} />
           </div>
         </nav>
       </aside>

@@ -21,3 +21,22 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
+
+/**
+ * Derive up to 2 uppercase initials from a user's display name.
+ * Returns "?" when the name is empty or absent.
+ *
+ * @example
+ *   getInitials("Jane Doe")  // "JD"
+ *   getInitials("alice")     // "A"
+ *   getInitials(null)        // "?"
+ */
+export function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}

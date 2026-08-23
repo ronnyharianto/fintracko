@@ -6,14 +6,12 @@ import { Users, UserPlus, Shield, UserX } from 'lucide-react';
 import type { WorkspaceMemberView } from '@/features/workspaces/types';
 
 interface CollaboratorListProps {
-  workspaceId: string;
   members: WorkspaceMemberView[];
   onInviteClick: () => void;
   onRemoveMember: (memberId: string) => void;
 }
 
 export function CollaboratorList({
-  workspaceId,
   members,
   onInviteClick,
   onRemoveMember,

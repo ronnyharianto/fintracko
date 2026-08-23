@@ -5,6 +5,7 @@ import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { LogOut, User, Settings, Shield, Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,9 +31,6 @@ export function UserMenu() {
     let cancelled = false;
     const fetchSession = async () => {
       try {
-        // Retry transient network failures (dev-server restarts drop the
-        // in-flight request), which would otherwise keep the avatar hidden
-        // even though the user is signed in.
         const res = await authClient.getSession();
         if (!cancelled && res?.data?.user) {
           setUser(res.data.user);
@@ -55,16 +53,6 @@ export function UserMenu() {
   const handleSignOut = async () => {
     await authClient.signOut();
     window.location.href = "/login";
-  };
-
-  const getInitials = (name?: string | null) => {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
   };
 
   if (isLoading) {

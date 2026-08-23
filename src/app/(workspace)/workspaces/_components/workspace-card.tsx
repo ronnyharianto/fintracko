@@ -86,7 +86,6 @@ export function WorkspaceCard({
         </div>
 
         <CollaboratorList
-          workspaceId={workspace.id}
           members={workspace.members}
           onInviteClick={() => onInviteClick(workspace.id)}
           onRemoveMember={(memberId) => onRemoveMember(workspace.id, memberId)}
