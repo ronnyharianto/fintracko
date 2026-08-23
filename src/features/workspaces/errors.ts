@@ -60,3 +60,43 @@ export function workspaceErrorFailure(
   const mapped = messages[err.code];
   return mapped ? failure(mapped.code, mapped.message) : null;
 }
+
+/**
+ * Route-handler wrapper that catches {@link WorkspaceServiceError} instances
+ * thrown by the inner handler and maps them to failure envelopes.
+ *
+ * Eliminates the repeated try/catch + `workspaceErrorFailure` + fallback
+ * boilerplate from every workspace route handler. Unexpected errors
+ * (non-`WorkspaceServiceError`) fall through to the `fallbackMessage`
+ * envelope.
+ *
+ * @param messages  Per-error-code mapping (same shape as `workspaceErrorFailure`).
+ * @param fallbackMessage  Generic message for unexpected errors (500).
+ * @param handler   The route handler that may throw workspace domain errors.
+ *
+ * @example
+ * ```ts
+ * export async function POST(request: NextRequest) {
+ *   return withPipeline(request, { ... }, handleWorkspaceErrors(
+ *     { FORBIDDEN: { code: 'FORBIDDEN', message: 'No access.' } },
+ *     'Failed to …',
+ *     async ({ userId }) => { ... }
+ *   ));
+ * }
+ * ```
+ */
+export function handleWorkspaceErrors<Args extends unknown[]>(
+  messages: Partial<Record<WorkspaceServiceErrorCode, WorkspaceErrorMapping>>,
+  fallbackMessage: string,
+  handler: (...args: Args) => Promise<NextResponse>
+): (...args: Args) => Promise<NextResponse> {
+  return async (...args: Args) => {
+    try {
+      return await handler(...args);
+    } catch (err) {
+      const mapped = workspaceErrorFailure(err, messages);
+      if (mapped) return mapped;
+      return failure('INTERNAL_SERVER_ERROR', fallbackMessage);
+    }
+  };
+}

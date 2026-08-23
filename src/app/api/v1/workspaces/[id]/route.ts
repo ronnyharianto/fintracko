@@ -7,13 +7,13 @@
 
 import { NextRequest } from 'next/server';
 import { withPipeline } from '@/lib/api/pipeline';
-import { success, failure } from '@/lib/api/envelope';
+import { success } from '@/lib/api/envelope';
 import {
   deleteWorkspace,
   updateWorkspace,
 } from '@/features/workspaces/services';
 import { z } from 'zod';
-import { workspaceErrorFailure } from '@/features/workspaces/errors';
+import { handleWorkspaceErrors } from '@/features/workspaces/errors';
 import { WorkspaceNameSchema } from '@/features/workspaces/schemas';
 
 const UpdateWorkspaceSchema = z.object({
@@ -27,30 +27,20 @@ export async function PATCH(
   return withPipeline(
     request,
     { schema: UpdateWorkspaceSchema, requireOnboarding: true },
-    async ({ userId }, data) => {
-      const { id: workspaceId } = await params;
-
-      try {
-        const workspace = await updateWorkspace(
-          userId,
-          workspaceId,
-          data.name
-        );
+    handleWorkspaceErrors(
+      {
+        FORBIDDEN: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to update this workspace.',
+        },
+      },
+      'Failed to update workspace. Please try again.',
+      async ({ userId }, data) => {
+        const { id: workspaceId } = await params;
+        const workspace = await updateWorkspace(userId, workspaceId, data.name);
         return success({ workspace });
-      } catch (err) {
-        const mapped = workspaceErrorFailure(err, {
-          FORBIDDEN: {
-            code: 'FORBIDDEN',
-            message: 'You do not have permission to update this workspace.',
-          },
-        });
-        if (mapped) return mapped;
-        return failure(
-          'INTERNAL_SERVER_ERROR',
-          'Failed to update workspace. Please try again.'
-        );
-      }
-    }
+      },
+    )
   );
 }
 
@@ -61,25 +51,19 @@ export async function DELETE(
   return withPipeline(
     request,
     { requireOnboarding: true },
-    async ({ userId }) => {
-      const { id: workspaceId } = await params;
-
-      try {
+    handleWorkspaceErrors(
+      {
+        FORBIDDEN: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to delete this workspace.',
+        },
+      },
+      'Failed to delete workspace. Please try again.',
+      async ({ userId }) => {
+        const { id: workspaceId } = await params;
         await deleteWorkspace(userId, workspaceId);
         return success({ deleted: true });
-      } catch (err) {
-        const mapped = workspaceErrorFailure(err, {
-          FORBIDDEN: {
-            code: 'FORBIDDEN',
-            message: 'You do not have permission to delete this workspace.',
-          },
-        });
-        if (mapped) return mapped;
-        return failure(
-          'INTERNAL_SERVER_ERROR',
-          'Failed to delete workspace. Please try again.'
-        );
-      }
-    }
+      },
+    )
   );
 }
