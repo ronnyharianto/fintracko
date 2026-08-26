@@ -5,7 +5,7 @@ import { FintrackoLogo } from "@/components/shared/fintracko-logo";
 /**
  * Auth route group layout.
  *
- * Wraps all authentication screens (`/login`, `/register`) with a
+ * Wraps the authentication screen (`/account`) with a
  * minimal, distraction-free shell centered on the Fintracko brand
  * mark. Unlike the `(marketing)` layout, there is no NavBar or Footer
  * here — the goal is to funnel the visitor toward the OAuth
@@ -42,7 +42,7 @@ export default function AuthLayout({
  * be indexed — they are conversion entry points, not content.
  */
 export const metadata: Metadata = {
-  title: "Fintracko — Sign in",
+  title: "Fintracko — Account",
   robots: {
     index: false,
     follow: false,

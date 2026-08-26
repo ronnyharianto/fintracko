@@ -29,7 +29,7 @@ export function CtaSection({ className }: { className?: string }) {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/login"
+                href="/account"
                 className="inline-flex h-12 min-w-60 items-center justify-center rounded-xl bg-primary-foreground px-8 text-base font-semibold text-primary shadow-lg transition-all hover:bg-primary-foreground/90 hover:shadow-xl active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/50 focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
               >
                 Start Tracking Now

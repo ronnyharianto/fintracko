@@ -70,9 +70,9 @@ export default async function OnboardingLayout({
   const auth = await getProductionAuth();
   const session = await auth.api.getSession({ headers: headersList });
 
-  // If no session exists, redirect to login
+  // If no session exists, redirect to account page
   if (!session || !session.user?.id) {
-    redirect('/login');
+    redirect('/account');
   }
 
   // Check if user already has a Profile

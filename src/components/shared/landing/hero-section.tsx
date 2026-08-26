@@ -46,7 +46,7 @@ export function HeroSection({ className }: { className?: string }) {
         {/* CTAs */}
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row my-10">
           <Link
-            href="/login"
+            href="/account"
             className="inline-flex min-w-60 h-12 items-center justify-center rounded-xl bg-linear-to-r from-primary to-accent px-8 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-px"
           >
             Start Now

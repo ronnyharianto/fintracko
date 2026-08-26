@@ -52,7 +52,7 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    window.location.href = "/login";
+    window.location.href = "/account";
   };
 
   if (isLoading) {

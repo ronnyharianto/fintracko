@@ -3,7 +3,7 @@
  *
  * Implements the "Onboarding & Auth Guard" from ARCHITECTURE.md §3:
  *   - Retrieves the current active session via Better Auth server session helper
- *   - If no session exists, performs server-side redirect to /login
+ *   - If no session exists, performs server-side redirect to /account
  *   - Queries database for Profile record linked to authenticated userId
  *   - If no Profile exists, redirects to /onboarding
  *   - If Profile exists, renders children normally
@@ -12,10 +12,10 @@
  * dashboard pages at the layout level (src/app/(dashboard)/layout.tsx).
  */
 
-import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import type { ReactNode } from 'react';
-import { getProductionAuth } from '@/lib/api/session';
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import type { ReactNode } from "react";
+import { getProductionAuth } from "@/lib/api/session";
 
 /**
  * Minimal database client shape for Profile lookup.
@@ -40,7 +40,7 @@ interface OnboardingGuardWrapperProps {
  * forcing DATABASE_URL resolution at import time in tests.
  */
 async function getProductionDb(): Promise<DbLike> {
-  const { db } = await import('@/lib/db');
+  const { db } = await import("@/lib/db");
   return db as unknown as DbLike;
 }
 
@@ -49,7 +49,7 @@ async function getProductionDb(): Promise<DbLike> {
  *
  * This Server Component performs the following guard logic:
  * 1. Retrieve the current active session via Better Auth
- * 2. If no session → redirect to /login
+ * 2. If no session → redirect to /account
  * 3. Query database for Profile record linked to userId
  * 4. If no Profile → redirect to /onboarding
  * 5. If Profile exists → render children
@@ -66,7 +66,7 @@ export default async function OnboardingGuardWrapper({
 
   // If no session exists, redirect to login
   if (!session || !session.user?.id) {
-    redirect('/login');
+    redirect("/account");
   }
 
   // Query database for Profile record
@@ -77,7 +77,7 @@ export default async function OnboardingGuardWrapper({
 
   // If no Profile exists, user has not completed onboarding
   if (!profile) {
-    redirect('/onboarding');
+    redirect("/onboarding");
   }
 
   // Profile exists - render children normally

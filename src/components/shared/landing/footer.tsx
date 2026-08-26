@@ -68,7 +68,7 @@ export function Footer({ className }: { className?: string }) {
               </li>
               <li>
                 <Link
-                  href="/login"
+                  href="/account"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Sign In

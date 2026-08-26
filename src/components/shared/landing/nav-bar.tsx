@@ -88,7 +88,7 @@ export function NavBar({ className }: { className?: string }) {
                 type="button"
                 onClick={async () => {
                   await authClient.signOut();
-                  window.location.href = "/login";
+                  window.location.href = "/account";
                 }}
                 className="inline-flex h-9 items-center rounded-md px-4 text-sm font-medium text-foreground transition-colors hover:text-primary"
               >
@@ -96,20 +96,12 @@ export function NavBar({ className }: { className?: string }) {
               </button>
             </>
           ) : (
-            <>
-              <Link
-                href="/login"
-                className="hidden h-9 items-center rounded-md px-4 text-sm font-medium text-foreground transition-colors hover:text-primary sm:inline-flex"
-              >
-                Log In
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex h-9 items-center justify-center rounded-md bg-linear-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                Get Started
-              </Link>
-            </>
+            <Link
+              href="/account"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-linear-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Get Started
+            </Link>
           )}
         </div>
       </div>
