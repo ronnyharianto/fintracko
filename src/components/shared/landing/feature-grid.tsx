@@ -1,8 +1,6 @@
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Users,
-  Receipt,
   PiggyBank,
   BarChart3,
   ShieldCheck,
@@ -13,7 +11,6 @@ interface FeatureItem {
   icon: LucideIcon;
   title: string;
   description: string;
-  span?: string;
 }
 
 const FEATURES: FeatureItem[] = [
@@ -21,20 +18,7 @@ const FEATURES: FeatureItem[] = [
     icon: LayoutDashboard,
     title: "Multi-Workspace Management",
     description:
-      "Separate personal, family, and business finances into isolated workspaces — each with its own accounts, categories, and collaborators. Switch contexts instantly without data bleed.",
-    span: "md:col-span-2 md:row-span-2",
-  },
-  {
-    icon: Users,
-    title: "Real-Time Collaboration",
-    description:
-      "Invite partners or teammates to a workspace. Everyone sees the same up-to-date numbers with role-based access control.",
-  },
-  {
-    icon: Receipt,
-    title: "Smart Transaction Ledger",
-    description:
-      "Log income, expenses, and transfers with sub-category tagging, payee tracking, and optional receipt attachments.",
+      "Separate personal, family, and business finances into isolated workspaces — each with its own accounts, categories, and collaborators.",
   },
   {
     icon: PiggyBank,
@@ -53,12 +37,11 @@ const FEATURES: FeatureItem[] = [
     title: "Bank-Grade Security",
     description:
       "OAuth-only authentication, session validation on every request, workspace isolation, and input sanitization against XSS.",
-    span: "md:col-span-3",
   },
 ];
 
 /**
- * Landing page feature grid — color-enhanced bento layout.
+ * Landing page feature grid — 2-column card layout.
  *
  * Section uses a subtle teal-tinted gradient backdrop. Each card has a
  * teal/emerald gradient hover glow and a gradient-filled icon badge.
@@ -74,38 +57,30 @@ export function FeatureGrid({
     <section
       id={id}
       className={cn(
-        "relative overflow-hidden bg-linear-to-b from-background via-primary/5 to-background py-20 lg:py-28",
+        "relative overflow-hidden bg-linear-to-b from-background via-primary/5 to-background py-10 lg:py-20",
         className,
       )}
     >
-      {/* Decorative gradient wash */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-      >
-        <div className="absolute left-1/2 top-0 h-100 w-150 -translate-x-1/2 rounded-full bg-linear-to-b from-primary/10 to-transparent blur-3xl" />
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
         {/* Header */}
-        <div className="mb-14 text-center">
+        <div className="text-center space-y-3">
           <span className="inline-flex rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             Features
           </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Everything You Need to{" "}
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            Smarter Finances,{" "}
             <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
-              Stay on Top
+              One Dashboard
             </span>
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">
             From daily transaction logging to long-term budget planning,
             Fintracko provides a complete toolkit for financial clarity.
           </p>
         </div>
 
-        {/* Bento grid */}
-        <div className="grid auto-rows-[minmax(180px,auto)] grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
+        {/* Feature grid */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -113,7 +88,6 @@ export function FeatureGrid({
                 key={feature.title}
                 className={cn(
                   "group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 lg:p-8",
-                  feature.span,
                 )}
               >
                 {/* Gradient glow on hover */}
@@ -125,7 +99,7 @@ export function FeatureGrid({
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/20 ring-1 ring-primary/20 transition-transform group-hover:scale-110">
                     <Icon className="h-6 w-6" aria-hidden="true" />
                   </div>
-                  <h3 className="text-lg font-semibold text-card-foreground">
+                  <h3 className="text-2xl font-semibold text-card-foreground">
                     {feature.title}
                   </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">

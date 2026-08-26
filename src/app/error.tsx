@@ -14,12 +14,9 @@ import { StatusScreen } from "@/components/shared/status-screen";
  *
  * This boundary captures uncaught exceptions thrown by ANY Server/Client Component
  * below the root `layout.tsx` (excluding the layout itself). When an error lands
- * we:
- *   1. Log it to the browser console as an aid during development (no
- *      server-side leak — production logs are the Next.js runtime's job).
- *   2. Render the landing-consistent [`StatusScreen`](src/components/shared/status-screen.tsx)
- *      shell with a friendly message and dual CTAs: a primary "Back to Home"
- *      and a secondary "Try Again" that invokes `reset()`.
+ * we render the landing-consistent [`StatusScreen`](src/components/shared/status-screen.tsx)
+ * shell with a friendly message and dual CTAs: a primary "Back to Home"
+ * and a secondary "Try Again" that invokes `reset()`.
  */
 export default function Error({
   error,

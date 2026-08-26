@@ -15,6 +15,11 @@ import { authClient } from "@/lib/auth-client";
  *
  * @remarks Client Component.
  */
+const navLinks = [
+  { href: "/#features", label: "Features" },
+  { href: "/#how-it-works", label: "How It Works" },
+] as const;
+
 export function NavBar({ className }: { className?: string }) {
   const [session, setSession] = useState<{ user?: { id?: string } } | null>(
     null,
@@ -56,18 +61,15 @@ export function NavBar({ className }: { className?: string }) {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          <Link
-            href="/#features"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Features
-          </Link>
-          <Link
-            href="/#how-it-works"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            How It Works
-          </Link>
+          {navLinks.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              {label}
+            </Link>
+          ))}
         </nav>
 
         {/* CTA */}

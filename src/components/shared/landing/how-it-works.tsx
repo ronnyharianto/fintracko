@@ -12,7 +12,7 @@ const STEPS: Step[] = [
     icon: UserPlus,
     title: "Sign Up & Onboard",
     description:
-      "Create your account in seconds using Google or GitHub. Complete a quick one-time profile setup and choose your first workspace template.",
+      "Create your account, complete a quick profile setup, and choose your workspace template.",
   },
   {
     number: 2,
@@ -55,34 +55,24 @@ export function HowItWorks({
     <section
       id={id}
       className={cn(
-        "relative overflow-hidden bg-linear-to-b from-primary/5 via-background to-emerald-500/5 py-20 lg:py-28",
+        "relative overflow-hidden bg-linear-to-b from-primary/5 via-background to-emerald-500/5 py-10 lg:py-20",
         className,
       )}
     >
-      {/* Decorative gradient */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-      >
-        <div className="absolute bottom-0 left-0 h-75 w-125 rounded-full bg-linear-to-tr from-emerald-500/10 to-transparent blur-3xl" />
-        <div className="absolute right-0 top-0 h-75 w-100 rounded-full bg-linear-to-bl from-primary/10 to-transparent blur-3xl" />
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
         {/* Header */}
-        <div className="mb-14 text-center">
+        <div className="text-center space-y-3">
           <span className="inline-flex rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             How It Works
           </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Get Started in{" "}
             <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
               Three Simple Steps
             </span>
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            No complicated setup. No manual data entry marathons. Just a clean
-            workflow designed for real people.
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">
+            No complicated setup. Just a clean workflow designed for real people.
           </p>
         </div>
 
@@ -91,7 +81,7 @@ export function HowItWorks({
           {/* Connecting line (desktop) */}
           <div
             aria-hidden="true"
-            className="absolute left-0 right-0 top-12 mx-auto hidden h-1 max-w-5xl rounded-full bg-linear-to-r from-primary/40 via-emerald-500/40 to-primary/40 md:block"
+            className="absolute left-0 right-0 top-6 mx-auto hidden h-1 max-w-5xl rounded-full bg-linear-to-r from-primary/40 via-emerald-500/40 to-primary/40 md:block"
           />
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
