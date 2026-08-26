@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { NavBar } from "@/components/shared/landing/nav-bar";
 import { HeroSection } from "@/components/shared/landing/hero-section";
 import { FeatureGrid } from "@/components/shared/landing/feature-grid";
 import { HowItWorks } from "@/components/shared/landing/how-it-works";
 import { CtaSection } from "@/components/shared/landing/cta-section";
-import { Footer } from "@/components/shared/landing/footer";
 
 /**
  * Landing page SEO metadata.
@@ -32,17 +30,16 @@ export const metadata: Metadata = {
 /**
  * Public marketing landing page — the root route (`/`).
  *
- * Composed of six section components imported from
- * `src/components/shared/landing/`. Each section is a pure
- * Server Component with no client-side interactivity.
+ * Composed of section components imported from
+ * `src/components/shared/landing/`. NavBar and Footer are provided
+ * by the `(marketing)` layout — this page only renders the content
+ * sections.
  *
  * Sections (in order):
- * 1. NavBar        – sticky header with logo + Sign In CTA
- * 2. HeroSection   – headline, subtitle, dual CTAs, decorative blurs
- * 3. FeatureGrid   – 6-card grid showcasing product capabilities
- * 4. HowItWorks    – 3-step onboarding preview
- * 5. CtaSection    – bottom teal banner urging sign-up
- * 6. Footer        – 4-col footer with legal links
+ * 1. HeroSection   – headline, subtitle, dual CTAs, decorative blurs
+ * 2. FeatureGrid   – 6-card grid showcasing product capabilities
+ * 3. HowItWorks    – 3-step onboarding preview
+ * 4. CtaSection    – bottom teal banner urging sign-up
  *
  * @remarks This page replaces the default Next.js boilerplate
  * (previously Next.js logos, Vercel links) in compliance with
@@ -51,14 +48,10 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <>
-      <NavBar />
-      <main>
-        <HeroSection />
-        <FeatureGrid id="features" />
-        <HowItWorks id="how-it-works" />
-        <CtaSection />
-      </main>
-      <Footer />
+      <HeroSection />
+      <FeatureGrid id="features" />
+      <HowItWorks id="how-it-works" />
+      <CtaSection />
     </>
   );
 }
