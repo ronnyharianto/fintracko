@@ -10,8 +10,20 @@
  */
 
 import { OnboardingForm } from "@/components/shared/onboarding/onboarding-form";
+import { redirect } from "next/navigation";
+import { getOnboardingState } from "@/features/onboarding/guards";
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const { profile, workspace } = await getOnboardingState();
+
+  if (workspace) {
+    redirect("/dashboard");
+  }
+
+  if (profile) {
+    redirect("/onboarding/workspace");
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
       <OnboardingForm />

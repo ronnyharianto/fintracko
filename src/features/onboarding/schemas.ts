@@ -8,11 +8,6 @@
 import { z } from 'zod';
 
 /**
- * Gender enum matching the Prisma schema.
- */
-export const GenderEnum = z.enum(['MALE', 'FEMALE', 'OTHER']);
-
-/**
  * Supported currencies for the MVP.
  */
 export const CurrencyEnum = z.enum(['USD', 'IDR']);
@@ -21,11 +16,10 @@ export const CurrencyEnum = z.enum(['USD', 'IDR']);
  * Onboarding completion request schema.
  *
  * Validates the payload sent to POST /api/v1/onboarding/complete.
+ * Only collects profile essentials — workspace creation is a separate step.
  */
 export const CompleteOnboardingSchema = z.object({
-  bio: z.string().max(500).nullable().optional(),
-  dateOfBirth: z.iso.datetime(),
-  gender: GenderEnum,
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
   currencyPreference: CurrencyEnum,
 });
 

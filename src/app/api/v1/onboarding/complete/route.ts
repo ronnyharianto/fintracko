@@ -1,15 +1,15 @@
 /**
  * POST /api/v1/onboarding/complete
  *
- * Completes the onboarding process by creating a Profile and the first Workspace.
+ * Completes the onboarding process by creating a Profile and updating
+ * the User name. Workspace creation is a separate step handled by the
+ * workspace setup flow after onboarding.
  *
  * This endpoint follows the global security pipeline:
  * - Session & Identity Extraction
  * - Onboarding Verification Guard (ensures Profile doesn't already exist)
  * - Rate Limiting & Input Validation
  * - XSS Sanitization
- *
- * Uses atomic database transaction to create Profile + Workspace.
  */
 
 import { NextRequest } from 'next/server';
@@ -24,18 +24,13 @@ export async function POST(request: NextRequest) {
     { schema: CompleteOnboardingSchema, rejectIfOnboarded: true },
     async ({ userId }, data) => {
       try {
-        // Complete onboarding with atomic transaction
+        // Complete onboarding — creates Profile, updates User name
         const result = await completeOnboarding(userId, data);
 
         return success({
           profile: {
             id: result.profile.id,
-            bio: result.profile.bio,
             currencyPreference: result.profile.currencyPreference,
-          },
-          workspace: {
-            id: result.workspace.id,
-            name: result.workspace.name,
           },
         });
       } catch {

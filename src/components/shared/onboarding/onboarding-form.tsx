@@ -3,12 +3,12 @@
 /**
  * Onboarding Form Component.
  *
- * Collects mandatory user settings during onboarding:
- * - bio (optional)
- * - dateOfBirth (required)
- * - gender (required: MALE, FEMALE, OTHER)
+ * Step 1 of the onboarding flow. Collects profile essentials:
+ * - name (required)
  * - currencyPreference (required: USD, IDR)
  * - Legal compliance checkboxes (required: Terms of Service, Privacy Policy)
+ *
+ * On success, redirects to /onboarding/workspace for workspace creation.
  */
 
 import { useState } from 'react';
@@ -33,9 +33,7 @@ import {
 } from '@/components/ui/select';
 
 interface OnboardingFormData {
-  bio?: string;
-  dateOfBirth: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  name: string;
   currencyPreference: string;
   acceptTerms: boolean;
   acceptPrivacy: boolean;
@@ -46,8 +44,7 @@ export function OnboardingForm() {
   const [hasReadTerms, setHasReadTerms] = useState(false);
   const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
   const [formData, setFormData] = useState<OnboardingFormData>({
-    dateOfBirth: '',
-    gender: 'OTHER',
+    name: '',
     currencyPreference: 'USD',
     acceptTerms: false,
     acceptPrivacy: false,
@@ -64,18 +61,13 @@ export function OnboardingForm() {
     setIsLoading(true);
 
     try {
-      // Convert date from YYYY-MM-DD to ISO datetime format
-      const isoDate = new Date(formData.dateOfBirth).toISOString();
-
       const response = await fetch('/api/v1/onboarding/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          bio: formData.bio || null,
-          dateOfBirth: isoDate,
-          gender: formData.gender,
+          name: formData.name.trim(),
           currencyPreference: formData.currencyPreference,
         }),
       });
@@ -87,10 +79,10 @@ export function OnboardingForm() {
         return;
       }
 
-      toast.success('Profile created successfully!');
+      toast.success('Profile created! Now set up your first workspace.');
 
-      // Redirect to dashboard after successful onboarding
-      window.location.href = '/dashboard';
+      // Redirect to workspace setup step
+      window.location.href = '/onboarding/workspace';
     } catch {
       toast.error('An error occurred. Please try again.');
     } finally {
@@ -109,66 +101,25 @@ export function OnboardingForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
-        >
-          {/* Bio (optional) */}
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="bio">Bio (optional)</Label>
-            <textarea
-              id="bio"
-              placeholder="Tell us a bit about yourself (max 500 characters)"
-              rows={3}
-              maxLength={500}
-              value={formData.bio || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, bio: e.target.value })
-              }
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-            />
-          </div>
-
-          {/* Date of Birth (required) */}
-          <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name (required) */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Your Name <span className="text-red-500">*</span></Label>
             <Input
-              id="dateOfBirth"
-              type="date"
+              id="name"
+              placeholder="Enter your name"
               required
-              value={formData.dateOfBirth}
+              maxLength={100}
+              value={formData.name}
               onChange={(e) =>
-                setFormData({ ...formData, dateOfBirth: e.target.value })
+                setFormData({ ...formData, name: e.target.value })
               }
             />
-          </div>
-
-          {/* Gender (required) */}
-          <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="gender">Gender *</Label>
-            <Select
-              value={formData.gender}
-              onValueChange={(value: 'MALE' | 'FEMALE' | 'OTHER') =>
-                setFormData({
-                  ...formData,
-                  gender: value,
-                })
-              }
-            >
-              <SelectTrigger id="gender">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MALE">Male</SelectItem>
-                <SelectItem value="FEMALE">Female</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Currency Preference (required) */}
-          <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="currencyPreference">Currency Preference *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="currencyPreference">Currency Preference <span className="text-red-500">*</span></Label>
             <Select
               value={formData.currencyPreference}
               onValueChange={(value) =>
@@ -183,10 +134,13 @@ export function OnboardingForm() {
                 <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              This will be the default currency for your workspaces.
+            </p>
           </div>
 
           {/* Legal Compliance Checkboxes */}
-          <div className="space-y-4 pt-2 md:col-span-2">
+          <div className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center space-x-3">
                 <Checkbox
@@ -261,11 +215,9 @@ export function OnboardingForm() {
             </div>
           </div>
 
-          <div className="md:col-span-2 pt-2">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Completing...' : 'Complete Setup'}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Completing...' : 'Continue'}
+          </Button>
         </form>
       </CardContent>
     </Card>

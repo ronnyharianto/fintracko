@@ -1,63 +1,49 @@
 /**
  * Onboarding service layer.
  *
- * Handles database operations for onboarding, including the atomic
- * transaction that creates both the Profile and the first Workspace.
+ * Handles database operations for onboarding — creating the user Profile
+ * and updating the User record with the provided name. Workspace creation
+ * is a separate step handled by the workspace setup flow.
  */
 
 import { db } from '@/lib/db';
 import type { CompleteOnboardingInput } from './schemas';
 
 /**
- * Creates a Profile and the first Workspace in a single atomic transaction.
+ * Creates a Profile and updates the User name in a single atomic transaction.
  *
  * All financial mutations and calculations MUST be
  * wrapped in a Prisma $transaction block to ensure atomicity and consistency.
  *
  * This function:
- * 1. Creates the Profile record with user-provided data
- * 2. Creates the first Workspace with a default name
- * 3. Creates a WorkspaceMember entry with OWNER role
- * 4. Returns both the Profile and Workspace data
+ * 1. Updates the User record with the provided name
+ * 2. Creates the Profile record with currency preference
+ * 3. Returns the Profile data
+ *
+ * Workspace creation is handled separately by the workspace setup flow
+ * after onboarding is complete.
  */
 export async function completeOnboarding(
   userId: string,
   data: CompleteOnboardingInput
 ) {
   return await db.$transaction(async (tx) => {
-    // Create Profile record
+    // Update User name from onboarding input
+    await tx.user.update({
+      where: { id: userId },
+      data: { name: data.name },
+    });
+
+    // Create Profile record with currency preference
     const profile = await tx.profile.create({
       data: {
         userId,
-        bio: data.bio,
-        dateOfBirth: new Date(data.dateOfBirth),
-        gender: data.gender,
         currencyPreference: data.currencyPreference,
-      },
-    });
-
-    // Create first Workspace with default name, using the currency
-    // preference collected during onboarding (PRD §3.2: workspace currency
-    // defaults to the profile's currencyPreference and is locked after).
-    const workspace = await tx.workspace.create({
-      data: {
-        name: 'My Workspace',
-        currency: data.currencyPreference,
-      },
-    });
-
-    // Create WorkspaceMember entry with OWNER role
-    await tx.workspaceMember.create({
-      data: {
-        workspaceId: workspace.id,
-        userId,
-        role: 'OWNER',
       },
     });
 
     return {
       profile,
-      workspace,
     };
   });
 }

@@ -6,42 +6,19 @@
  *   - If no session exists, performs server-side redirect to /account
  *   - Queries database for Profile record linked to authenticated userId
  *   - If no Profile exists, redirects to /onboarding
- *   - If Profile exists, renders children normally
+ *   - If Profile exists but no workspace, redirects to /onboarding/workspace
+ *   - If Profile exists and has workspace, renders children normally
  *
  * This is a Server Component (no 'use client') that wraps all private
- * dashboard pages at the layout level (src/app/(dashboard)/layout.tsx).
+ * dashboard pages at the layout level (src/app/(workspace)/layout.tsx).
  */
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import type { ReactNode } from "react";
-import { getProductionAuth } from "@/lib/api/session";
-
-/**
- * Minimal database client shape for Profile lookup.
- * Using a structural type for testability.
- */
-interface DbLike {
-  profile: {
-    findUnique: (args: {
-      where: { userId: string };
-    }) => Promise<{ id: string } | null>;
-  };
-}
+import { getOnboardingState } from "@/features/onboarding/guards";
 
 interface OnboardingGuardWrapperProps {
   children: ReactNode;
-}
-
-/**
- * Lazily resolves the production Prisma client singleton.
- *
- * Imported lazily to keep the module-load graph small and avoid
- * forcing DATABASE_URL resolution at import time in tests.
- */
-async function getProductionDb(): Promise<DbLike> {
-  const { db } = await import("@/lib/db");
-  return db as unknown as DbLike;
 }
 
 /**
@@ -52,34 +29,30 @@ async function getProductionDb(): Promise<DbLike> {
  * 2. If no session → redirect to /account
  * 3. Query database for Profile record linked to userId
  * 4. If no Profile → redirect to /onboarding
- * 5. If Profile exists → render children
+ * 5. If Profile exists but no workspace → redirect to /onboarding/workspace
+ * 6. If Profile exists and has workspace → render children
  *
  * @param children - The child components to render if guard passes
  */
 export default async function OnboardingGuardWrapper({
   children,
 }: OnboardingGuardWrapperProps) {
-  // Retrieve session from request headers
-  const headersList = await headers();
-  const auth = await getProductionAuth();
-  const session = await auth.api.getSession({ headers: headersList });
+  const { session, profile, workspace } = await getOnboardingState();
 
-  // If no session exists, redirect to login
-  if (!session || !session.user?.id) {
+  if (!session) {
     redirect("/account");
   }
-
-  // Query database for Profile record
-  const db = await getProductionDb();
-  const profile = await db.profile.findUnique({
-    where: { userId: session.user.id },
-  });
 
   // If no Profile exists, user has not completed onboarding
   if (!profile) {
     redirect("/onboarding");
   }
 
-  // Profile exists - render children normally
+  // If no workspace, redirect to workspace setup
+  if (!workspace) {
+    redirect("/onboarding/workspace");
+  }
+
+  // Profile exists and has workspace — render children normally
   return <>{children}</>;
 }
