@@ -13,8 +13,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { User, Shield, Bell, Key, Save, Loader2 } from "lucide-react";
+import { User, Shield, Key, Save, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
@@ -23,9 +22,9 @@ import { useSession } from "@/components/shared/auth/session-provider";
 /**
  * Valid account-settings tabs, mirroring the TabsTrigger values below.
  * The user menu (`user-menu.tsx`) deep-links here with `?tab=security` and
- * `?tab=notifications`, so the query parameter must map onto a real tab.
+ * `?tab=security`, so the query parameter must map onto a real tab.
  */
-const ACCOUNT_TABS = ["profile", "security", "notifications"] as const;
+const ACCOUNT_TABS = ["profile", "security"] as const;
 type AccountTab = (typeof ACCOUNT_TABS)[number];
 
 function parseTabParam(value: string | null): AccountTab {
@@ -136,7 +135,7 @@ function AccountSettingsContent() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as AccountTab)}
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
             Profile
@@ -144,10 +143,6 @@ function AccountSettingsContent() {
           <TabsTrigger value="security">
             <Shield className="mr-2 h-4 w-4" />
             Security
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
           </TabsTrigger>
         </TabsList>
 
@@ -270,29 +265,6 @@ function AccountSettingsContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <Shield className="h-5 w-5" />
-                Two-Factor Authentication (2FA)
-              </CardTitle>
-              <CardDescription>
-                Add an extra layer of security to your account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Authenticator App</p>
-                  <p className="text-sm text-muted-foreground">Not enabled</p>
-                </div>
-                <Button variant="outline" disabled>
-                  Enable 2FA
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-destructive/50 bg-destructive/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <Shield className="h-5 w-5" />
                 Danger Zone
               </CardTitle>
               <CardDescription>
@@ -317,105 +289,6 @@ function AccountSettingsContent() {
                 >
                   Delete Account
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-6 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Email Notifications
-              </CardTitle>
-              <CardDescription>
-                Choose which emails you&apos;d like to receive.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Budget Alerts</p>
-                  <p className="text-sm text-muted-foreground">
-                    Notify me when I&apos;m close to exceeding my budget
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Transaction Reminders</p>
-                  <p className="text-sm text-muted-foreground">
-                    Weekly summary of your transactions
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Collaborator Activity</p>
-                  <p className="text-sm text-muted-foreground">
-                    Notify me when someone invites me or makes changes in shared
-                    workspaces
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Marketing Emails</p>
-                  <p className="text-sm text-muted-foreground">
-                    Tips, updates, and product news from Fintracko
-                  </p>
-                </div>
-                <Input type="checkbox" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                In-App Notifications
-              </CardTitle>
-              <CardDescription>
-                Control which notifications appear in the app.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Mentions</p>
-                  <p className="text-sm text-muted-foreground">
-                    When someone mentions you in a comment
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Budget Warnings</p>
-                  <p className="text-sm text-muted-foreground">
-                    When a budget is at 80% or more
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Bill Reminders</p>
-                  <p className="text-sm text-muted-foreground">
-                    Upcoming bill due dates
-                  </p>
-                </div>
-                <Input type="checkbox" defaultChecked />
               </div>
             </CardContent>
           </Card>

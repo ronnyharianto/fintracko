@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { useSession } from "@/components/shared/auth/session-provider";
-import { LogOut, User, Settings, Shield, Bell } from "lucide-react";
+import { LogOut, User, Settings, Shield } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import {
@@ -83,12 +83,7 @@ export function UserMenu() {
             Security
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings/account?tab=notifications">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
-          </Link>
-        </DropdownMenuItem>
+        <DropdownMenuItem asChild></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">
           Workspace
