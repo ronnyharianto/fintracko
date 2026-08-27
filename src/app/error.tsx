@@ -26,7 +26,9 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Unhandled route error:", error);
+    console.error("Unhandled route error", {
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

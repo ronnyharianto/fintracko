@@ -111,8 +111,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         if (!cancelled) await fetchAndApply();
-      } catch (error) {
-        if (!cancelled) console.error("Failed to fetch workspaces", error);
+      } catch {
+        if (!cancelled) console.error("Failed to fetch workspaces");
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -126,8 +126,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const refreshWorkspaces = async () => {
     try {
       await fetchAndApply();
-    } catch (error) {
-      console.error("Failed to fetch workspaces", error);
+    } catch {
+      console.error("Failed to fetch workspaces");
     } finally {
       setIsLoading(false);
     }
