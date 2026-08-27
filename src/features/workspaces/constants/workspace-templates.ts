@@ -36,41 +36,78 @@ export const WORKSPACE_TEMPLATES: Record<
     description: 'Standard personal finance tracking for individuals.',
     categories: [
       {
-        name: 'Salary & Income',
+        name: 'Income',
         type: 'INCOME',
         subCategories: [
           { name: 'Salary' },
           { name: 'Freelance' },
-          { name: 'Investments' },
+          { name: 'Side Hustle' },
         ],
       },
       {
-        name: 'Food & Dining',
+        name: 'Investment',
+        type: 'INCOME',
+        subCategories: [
+          { name: 'Interest' },
+          { name: 'Dividends' },
+          { name: 'Capital Gains' },
+        ],
+      },
+      {
+        name: 'Food',
         type: 'EXPENSE',
         subCategories: [
-          { name: 'Groceries' },
-          { name: 'Restaurants & Cafes' },
-          { name: 'Fast Food' },
+          { name: 'Proteins' },
+          { name: 'Fruits & Vegetables' },
+          { name: 'Dairy & Beverages' },
+          { name: 'Grains & Bakery' },
+          { name: 'Spices & Condiments' },
+          { name: 'Snacks' },
         ],
       },
       {
         name: 'Housing & Utilities',
         type: 'EXPENSE',
         subCategories: [
-          { name: 'Rent & Mortgage' },
+          { name: 'Rent/Mortgage' },
           { name: 'Electricity & Water' },
           { name: 'Internet & Phone' },
         ],
       },
       {
+        name: 'Transportation',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Fuel' },
+          { name: 'Public Transport' },
+          { name: 'Parking & Tolls' },
+        ],
+      },
+      {
         name: 'Entertainment',
         type: 'EXPENSE',
-        subCategories: [{ name: 'Subscriptions' }, { name: 'Movies & Games' }],
+        subCategories: [
+          { name: 'Subscriptions' },
+          { name: 'Hangout' },
+          { name: 'Vacation' },
+          { name: 'Movies & Games' },
+          { name: 'Hobbies' },
+          { name: 'Events & Concerts' },
+        ],
+      },
+      {
+        name: 'Personal Care',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Healthcare' },
+          { name: 'Fitness' },
+          { name: 'Toiletries & Grooming' },
+        ],
       },
       {
         name: 'Transfers',
         type: 'TRANSFER',
-        subCategories: [{ name: 'Savings Deposit' }],
+        subCategories: [{ name: 'General' }],
       },
     ],
   },
@@ -84,16 +121,46 @@ export const WORKSPACE_TEMPLATES: Record<
         subCategories: [
           { name: 'Primary Salary' },
           { name: 'Secondary Salary' },
-          { name: 'Family Support' },
+          { name: 'Side Hustle' },
         ],
       },
       {
-        name: 'Groceries & Household',
+        name: 'Investment',
+        type: 'INCOME',
+        subCategories: [
+          { name: 'Interest' },
+          { name: 'Dividends' },
+          { name: 'Capital Gains' },
+        ],
+      },
+      {
+        name: 'Food',
         type: 'EXPENSE',
         subCategories: [
-          { name: 'Supermarket' },
-          { name: 'Household Supplies' },
-          { name: 'Utilities' },
+          { name: 'Proteins' },
+          { name: 'Fruits & Vegetables' },
+          { name: 'Dairy & Beverages' },
+          { name: 'Grains & Bakery' },
+          { name: 'Spices & Condiments' },
+          { name: 'Snacks' },
+        ],
+      },
+      {
+        name: 'Housing & Utilities',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Rent/Mortgage' },
+          { name: 'Electricity & Water' },
+          { name: 'Internet & Phone' },
+        ],
+      },
+      {
+        name: 'Transportation',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Fuel' },
+          { name: 'Public Transport' },
+          { name: 'Parking & Tolls' },
         ],
       },
       {
@@ -103,17 +170,40 @@ export const WORKSPACE_TEMPLATES: Record<
           { name: 'School Fees' },
           { name: 'Books & Supplies' },
           { name: 'Activities' },
+          { name: 'Childcare' },
         ],
       },
       {
-        name: 'Healthcare',
+        name: 'Entertainment',
         type: 'EXPENSE',
-        subCategories: [{ name: 'Insurance' }, { name: 'Pharmacy & Doctor' }],
+        subCategories: [
+          { name: 'Subscriptions' },
+          { name: 'Family Outings' },
+          { name: 'Vacation' },
+          { name: 'Toys & Games' },
+        ],
+      },
+      {
+        name: 'Personal Care',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Healthcare' },
+          { name: 'Fitness' },
+          { name: 'Toiletries & Grooming' },
+        ],
+      },
+      {
+        name: 'Pets',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Pet Food' },
+          { name: 'Vet & Medicine' },
+        ],
       },
       {
         name: 'Transfers',
         type: 'TRANSFER',
-        subCategories: [{ name: 'Family Emergency Fund' }],
+        subCategories: [{ name: 'General' }],
       },
     ],
   },
@@ -125,9 +215,25 @@ export const WORKSPACE_TEMPLATES: Record<
         name: 'Business Revenue',
         type: 'INCOME',
         subCategories: [
-          { name: 'Client Sales' },
-          { name: 'Product Revenue' },
+          { name: 'Product Sales' },
           { name: 'Services' },
+        ],
+      },
+      {
+        name: 'Other Income',
+        type: 'INCOME',
+        subCategories: [
+          { name: 'Interest' },
+          { name: 'Miscellaneous' },
+        ],
+      },
+      {
+        name: 'Cost of Goods Sold',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Materials' },
+          { name: 'Shipping & Logistics' },
+          { name: 'Packaging' },
         ],
       },
       {
@@ -140,22 +246,80 @@ export const WORKSPACE_TEMPLATES: Record<
         ],
       },
       {
-        name: 'Team & Payroll',
+        name: 'Payroll & Team',
         type: 'EXPENSE',
         subCategories: [
-          { name: 'Salaries & Wages' },
-          { name: 'Contractor Fees' },
+          { name: 'Salaries' },
+          { name: 'Contractors' },
+          { name: 'Bonuses & Benefits' },
         ],
       },
       {
         name: 'Marketing & Sales',
         type: 'EXPENSE',
-        subCategories: [{ name: 'Advertising' }, { name: 'Promotions' }],
+        subCategories: [
+          { name: 'Advertising' },
+          { name: 'Promotions' },
+          { name: 'Events & Sponsorships' },
+        ],
+      },
+      {
+        name: 'Office & Workspace',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Rent' },
+          { name: 'Electricity' },
+          { name: 'Water' },
+          { name: 'Internet' },
+          { name: 'Phone' },
+        ],
+      },
+      {
+        name: 'Professional Services',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Legal' },
+          { name: 'Accounting & Audit' },
+          { name: 'Consulting' },
+        ],
+      },
+      {
+        name: 'Travel',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Business Travel' },
+          { name: 'Fuel' },
+          { name: 'Parking & Tolls' },
+        ],
+      },
+      {
+        name: 'Meals & Entertainment',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Client Meals' },
+          { name: 'Team Outings' },
+        ],
+      },
+      {
+        name: 'Insurance',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Business Insurance' },
+          { name: 'Liability Insurance' },
+        ],
+      },
+      {
+        name: 'Taxes',
+        type: 'EXPENSE',
+        subCategories: [
+          { name: 'Licenses & Permits' },
+          { name: 'Tax Payments' },
+        ],
       },
       {
         name: 'Transfers',
         type: 'TRANSFER',
-        subCategories: [{ name: 'Tax Reserve Transfer' }],
+        subCategories: [{ name: 'General' }],
       },
     ],
   },
