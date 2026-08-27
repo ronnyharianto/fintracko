@@ -13,8 +13,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { User, Shield, Key, Save, Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { apiFetch } from "@/lib/api/client";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
 import { useSession } from "@/components/shared/auth/session-provider";
@@ -26,6 +33,24 @@ import { useSession } from "@/components/shared/auth/session-provider";
  */
 const ACCOUNT_TABS = ["profile", "security"] as const;
 type AccountTab = (typeof ACCOUNT_TABS)[number];
+
+type ProfileFormData = {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  company: string;
+  bio: string;
+  dateOfBirth: string;
+  gender: "MALE" | "FEMALE" | "OTHER" | "";
+  currencyPreference: "USD" | "IDR";
+};
+
+type ProfileResponse = ProfileFormData & {
+  id: string;
+  dateOfBirth: string | null;
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
+  user: { name: string };
+};
 
 function parseTabParam(value: string | null): AccountTab {
   return ACCOUNT_TABS.includes(value as AccountTab)
@@ -65,17 +90,64 @@ function AccountSettingsContent() {
     setActiveTab(tabFromUrl);
   }
   const { user, isLoading, refresh } = useSession();
-  const [formData, setFormData] = useState({
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [formData, setFormData] = useState<ProfileFormData>({
     name: "",
     email: "",
+    phoneNumber: "",
+    company: "",
+    bio: "",
+    dateOfBirth: "",
+    gender: "",
+    currencyPreference: "USD",
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const [previousUserId, setPreviousUserId] = useState<string | null>(null);
   if (user && user.id !== previousUserId) {
     setPreviousUserId(user.id);
-    setFormData({ name: user.name, email: user.email });
+    setFormData((previous) => ({
+      ...previous,
+      name: user.name,
+      email: user.email,
+    }));
   }
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    void apiFetch<{ profile: ProfileResponse }>("/api/v1/profile")
+      .then(({ profile }) => {
+        if (!cancelled) {
+          setFormData((previous) => ({
+            ...previous,
+            name: profile.user.name,
+            phoneNumber: profile.phoneNumber || "",
+            company: profile.company || "",
+            bio: profile.bio || "",
+            dateOfBirth: profile.dateOfBirth
+              ? profile.dateOfBirth.slice(0, 10)
+              : "",
+            gender: profile.gender || "",
+            currencyPreference: profile.currencyPreference,
+          }));
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to load profile.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +155,18 @@ function AccountSettingsContent() {
     try {
       // Persist the name through Better Auth's update-user endpoint — this
       // is a real server round-trip, not a simulated success.
-      const res = await authClient.updateUser({ name: formData.name });
-      if (res.error) {
-        toast.error(res.error.message || "Failed to update profile");
-        return;
-      }
+      await apiFetch("/api/v1/profile", {
+        method: "PATCH",
+        body: {
+          name: formData.name,
+          phoneNumber: formData.phoneNumber,
+          company: formData.company,
+          bio: formData.bio,
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender || null,
+          currencyPreference: formData.currencyPreference,
+        },
+      });
       toast.success("Profile updated successfully");
       await refresh();
     } catch {
@@ -97,7 +176,7 @@ function AccountSettingsContent() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || profileLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -186,6 +265,101 @@ function AccountSettingsContent() {
                   <p className="text-xs text-muted-foreground">
                     Email cannot be changed. Contact support if needed.
                   </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phoneNumber: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company</Label>
+                  <Input
+                    id="company"
+                    value={formData.company}
+                    onChange={(e) =>
+                      setFormData({ ...formData, company: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <textarea
+                    id="bio"
+                    value={formData.bio}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bio: e.target.value })
+                    }
+                    rows={4}
+                    className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          dateOfBirth: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          gender: value as ProfileFormData["gender"],
+                        })
+                      }
+                    >
+                      <SelectTrigger id="gender">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MALE">Male</SelectItem>
+                        <SelectItem value="FEMALE">Female</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currencyPreference">
+                    Currency Preference
+                  </Label>
+                  <Select
+                    value={formData.currencyPreference}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        currencyPreference:
+                          value as ProfileFormData["currencyPreference"],
+                      })
+                    }
+                  >
+                    <SelectTrigger id="currencyPreference">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      <SelectItem value="IDR">
+                        IDR - Indonesian Rupiah
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button type="submit" disabled={isSaving}>
                   {isSaving ? (

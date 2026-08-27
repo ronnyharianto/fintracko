@@ -6,8 +6,8 @@
  * is a separate step handled by the workspace setup flow.
  */
 
-import { db } from '@/lib/db';
-import type { CompleteOnboardingInput } from './schemas';
+import { db } from "@/lib/db";
+import type { CompleteOnboardingInput, UpdateProfileInput } from "./schemas";
 
 /**
  * Creates a Profile and updates the User name in a single atomic transaction.
@@ -25,7 +25,7 @@ import type { CompleteOnboardingInput } from './schemas';
  */
 export async function completeOnboarding(
   userId: string,
-  data: CompleteOnboardingInput
+  data: CompleteOnboardingInput,
 ) {
   return await db.$transaction(async (tx) => {
     // Update User name from onboarding input
@@ -45,5 +45,58 @@ export async function completeOnboarding(
     return {
       profile,
     };
+  });
+}
+
+/** Retrieves the editable profile fields together with the user's name. */
+export async function getProfile(userId: string) {
+  return db.profile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      phoneNumber: true,
+      company: true,
+      bio: true,
+      dateOfBirth: true,
+      gender: true,
+      currencyPreference: true,
+      user: {
+        select: { name: true },
+      },
+    },
+  });
+}
+
+/** Updates the Profile and User name atomically. */
+export async function updateProfile(userId: string, data: UpdateProfileInput) {
+  return db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { name: data.name },
+    });
+
+    return tx.profile.update({
+      where: { userId },
+      data: {
+        phoneNumber: data.phoneNumber,
+        company: data.company,
+        bio: data.bio,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        currencyPreference: data.currencyPreference,
+      },
+      select: {
+        id: true,
+        phoneNumber: true,
+        company: true,
+        bio: true,
+        dateOfBirth: true,
+        gender: true,
+        currencyPreference: true,
+        user: {
+          select: { name: true },
+        },
+      },
+    });
   });
 }
