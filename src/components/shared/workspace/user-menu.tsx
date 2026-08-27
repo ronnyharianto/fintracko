@@ -83,7 +83,6 @@ export function UserMenu() {
             Security
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">
           Workspace

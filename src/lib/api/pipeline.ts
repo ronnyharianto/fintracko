@@ -28,13 +28,13 @@
  * service calls remain the handler's responsibility — each handler keeps its
  * own try/catch so it can map service failures to the correct envelope.
  */
-import type { NextRequest, NextResponse } from 'next/server';
-import type { ZodType } from 'zod';
-import { db } from '@/lib/db';
-import { failure } from './envelope';
-import { sanitizeObject } from './sanitize';
-import { withSession, type AuthContext } from './session';
-import { validateBody } from './validate';
+import type { NextRequest, NextResponse } from "next/server";
+import type { ZodType } from "zod";
+import { db } from "@/lib/db";
+import { failure } from "./envelope";
+import { sanitizeObject } from "./sanitize";
+import { withSession, type AuthContext } from "./session";
+import { validateBody } from "./validate";
 
 /**
  * Profile row resolved by the onboarding guard. `currencyPreference` is
@@ -88,7 +88,7 @@ export interface PipelineContext extends AuthContext {
 }
 
 const ONBOARDING_REQUIRED_MESSAGE =
-  'Profile not found. Please complete onboarding first.';
+  "Profile not found. Please complete onboarding first.";
 
 /**
  * Run the shared request pipeline and hand the resolved context and
@@ -103,24 +103,34 @@ const ONBOARDING_REQUIRED_MESSAGE =
 export async function withPipeline<S extends ZodType>(
   request: NextRequest,
   options: PipelineOptions<S> & { schema: S },
-  handler: (ctx: PipelineContext, data: S['_output']) => Promise<NextResponse>
+  handler: (ctx: PipelineContext, data: S["_output"]) => Promise<NextResponse>,
 ): Promise<NextResponse>;
 export async function withPipeline(
   request: NextRequest,
   options: PipelineOptions<never> & { schema?: undefined },
-  handler: (ctx: PipelineContext, data: undefined) => Promise<NextResponse>
+  handler: (ctx: PipelineContext, data: undefined) => Promise<NextResponse>,
 ): Promise<NextResponse>;
 export async function withPipeline<S extends ZodType = ZodType>(
   request: NextRequest,
   options: PipelineOptions<S>,
   handler: (
     ctx: PipelineContext,
-    data: S['_output'] | undefined
-  ) => Promise<NextResponse>
+    data: S["_output"] | undefined,
+  ) => Promise<NextResponse>,
 ): Promise<NextResponse> {
+  if (options.requireOnboarding && options.rejectIfOnboarded) {
+    return failure(
+      "INTERNAL_SERVER_ERROR",
+      "Invalid request pipeline configuration.",
+    );
+  }
+
   return withSession(request, async (authCtx) => {
-    const { schema, requireOnboarding = false, rejectIfOnboarded = false } =
-      options;
+    const {
+      schema,
+      requireOnboarding = false,
+      rejectIfOnboarded = false,
+    } = options;
 
     // Step 2 — Onboarding Verification Guard (optional, per route)
     let profile: OnboardingProfile | null | undefined;
@@ -131,18 +141,18 @@ export async function withPipeline<S extends ZodType = ZodType>(
       });
 
       if (requireOnboarding && !profile) {
-        return failure('ONBOARDING_REQUIRED', ONBOARDING_REQUIRED_MESSAGE);
+        return failure("ONBOARDING_REQUIRED", ONBOARDING_REQUIRED_MESSAGE);
       }
       if (rejectIfOnboarded && profile) {
         return failure(
-          'CONFLICT',
-          'Onboarding has already been completed for this account.'
+          "CONFLICT",
+          "Onboarding has already been completed for this account.",
         );
       }
     }
 
     // Steps 3–4 — Validation + sanitization (optional, body-less routes omit)
-    let data: S['_output'] | undefined;
+    let data: S["_output"] | undefined;
     if (schema) {
       const validationResult = await validateBody(request, schema);
       if (!validationResult.success) {

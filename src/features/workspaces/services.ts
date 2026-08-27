@@ -170,10 +170,10 @@ export async function removeCollaborator(
   }
 
   // 2. Find member
-  const member = await db.workspaceMember.findUnique({
-    where: { id: memberId },
+  const member = await db.workspaceMember.findFirst({
+    where: { id: memberId, workspaceId },
   });
-  if (!member || member.workspaceId !== workspaceId) {
+  if (!member) {
     throw new WorkspaceServiceError("MEMBER_NOT_FOUND");
   }
 

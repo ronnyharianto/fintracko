@@ -454,14 +454,8 @@ function AccountSettingsContent() {
                     This action cannot be undone.
                   </p>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={() =>
-                    confirm("Are you absolutely sure?") &&
-                    alert("Account deletion not implemented yet")
-                  }
-                >
-                  Delete Account
+                <Button variant="destructive" disabled>
+                  Delete Account (MVP 2)
                 </Button>
               </div>
             </CardContent>

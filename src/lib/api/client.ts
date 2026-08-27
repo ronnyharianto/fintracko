@@ -29,7 +29,24 @@
  *   }
  */
 
-import type { ApiErrorCode } from './envelope';
+import type { ApiErrorCode } from "./envelope";
+
+const API_ERROR_CODES: ReadonlySet<string> = new Set([
+  "BAD_REQUEST",
+  "VALIDATION_ERROR",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "CONFLICT",
+  "ONBOARDING_REQUIRED",
+  "UNAUTHORIZED_WORKSPACE_ACCESS",
+  "SERVICE_UNAVAILABLE",
+  "INTERNAL_SERVER_ERROR",
+]);
+
+function isApiErrorCode(value: string): value is ApiErrorCode {
+  return API_ERROR_CODES.has(value);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,7 +66,7 @@ export class ApiClientError extends Error {
     validationErrors?: ReadonlyArray<{ path: string; message: string }>,
   ) {
     super(message);
-    this.name = 'ApiClientError';
+    this.name = "ApiClientError";
     this.code = code;
     this.validationErrors = validationErrors;
   }
@@ -83,7 +100,7 @@ export async function apiFetch<T>(
     headers?: Record<string, string>;
   } = {},
 ): Promise<T> {
-  const { method = 'GET', body, headers: extraHeaders } = init;
+  const { method = "GET", body, headers: extraHeaders } = init;
 
   const headers: Record<string, string> = {
     ...extraHeaders,
@@ -91,7 +108,7 @@ export async function apiFetch<T>(
 
   // Only set Content-Type when we have a body to send.
   if (body !== undefined && body !== null) {
-    headers['Content-Type'] = 'application/json';
+    headers["Content-Type"] = "application/json";
   }
 
   let res: Response;
@@ -99,13 +116,14 @@ export async function apiFetch<T>(
     res = await fetch(path, {
       method,
       headers,
-      body: body !== undefined && body !== null ? JSON.stringify(body) : undefined,
+      body:
+        body !== undefined && body !== null ? JSON.stringify(body) : undefined,
     });
   } catch {
     // Network-level failure (DNS, offline, CORS, etc.)
     throw new ApiClientError(
-      'SERVICE_UNAVAILABLE',
-      'Network error. Please check your connection and try again.',
+      "SERVICE_UNAVAILABLE",
+      "Network error. Please check your connection and try again.",
     );
   }
 
@@ -114,8 +132,8 @@ export async function apiFetch<T>(
     json = await res.json();
   } catch {
     throw new ApiClientError(
-      'INTERNAL_SERVER_ERROR',
-      'The server returned an invalid response. Please try again.',
+      "INTERNAL_SERVER_ERROR",
+      "The server returned an invalid response. Please try again.",
     );
   }
 
@@ -129,9 +147,10 @@ export async function apiFetch<T>(
     | { code?: string; message?: string; validationErrors?: unknown }
     | undefined;
 
-  const code = (errorBlock?.code ?? 'INTERNAL_SERVER_ERROR') as ApiErrorCode;
+  const rawCode = errorBlock?.code ?? "";
+  const code = isApiErrorCode(rawCode) ? rawCode : "INTERNAL_SERVER_ERROR";
   const message =
-    errorBlock?.message ?? 'An unexpected error occurred. Please try again.';
+    errorBlock?.message ?? "An unexpected error occurred. Please try again.";
   const validationErrors = Array.isArray(errorBlock?.validationErrors)
     ? (errorBlock.validationErrors as Array<{ path: string; message: string }>)
     : undefined;
