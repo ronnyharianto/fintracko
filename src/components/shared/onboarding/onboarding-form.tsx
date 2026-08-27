@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Onboarding Form Component.
@@ -11,26 +11,27 @@
  * On success, redirects to /onboarding/workspace for workspace creation.
  */
 
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/api/client";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 interface OnboardingFormData {
   name: string;
@@ -44,8 +45,8 @@ export function OnboardingForm() {
   const [hasReadTerms, setHasReadTerms] = useState(false);
   const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
   const [formData, setFormData] = useState<OnboardingFormData>({
-    name: '',
-    currencyPreference: 'USD',
+    name: "",
+    currencyPreference: "USD",
     acceptTerms: false,
     acceptPrivacy: false,
   });
@@ -54,37 +55,27 @@ export function OnboardingForm() {
     e.preventDefault();
 
     if (!formData.acceptTerms || !formData.acceptPrivacy) {
-      toast.error('You must accept the Terms of Service and Privacy Policy.');
+      toast.error("You must accept the Terms of Service and Privacy Policy.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/onboarding/complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await apiFetch("/api/v1/onboarding/complete", {
+        method: "POST",
+        body: {
           name: formData.name.trim(),
           currencyPreference: formData.currencyPreference,
-        }),
+        },
       });
 
-      const result = await response.json();
-
-      if (!result.success) {
-        toast.error(result.error?.message || 'Failed to complete onboarding');
-        return;
-      }
-
-      toast.success('Profile created! Now set up your first workspace.');
+      toast.success("Profile created! Now set up your first workspace.");
 
       // Redirect to workspace setup step
-      window.location.href = '/onboarding/workspace';
+      window.location.href = "/onboarding/workspace";
     } catch {
-      toast.error('An error occurred. Please try again.');
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +95,9 @@ export function OnboardingForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name (required) */}
           <div className="space-y-2">
-            <Label htmlFor="name">Your Name <span className="text-red-500">*</span></Label>
+            <Label htmlFor="name">
+              Your Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="name"
               placeholder="Enter your name"
@@ -119,7 +112,9 @@ export function OnboardingForm() {
 
           {/* Currency Preference (required) */}
           <div className="space-y-2">
-            <Label htmlFor="currencyPreference">Currency Preference <span className="text-red-500">*</span></Label>
+            <Label htmlFor="currencyPreference">
+              Currency Preference <span className="text-red-500">*</span>
+            </Label>
             <Select
               value={formData.currencyPreference}
               onValueChange={(value) =>
@@ -155,9 +150,9 @@ export function OnboardingForm() {
                 />
                 <label
                   htmlFor="acceptTerms"
-                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? 'text-muted-foreground' : ''}`}
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadTerms ? "text-muted-foreground" : ""}`}
                 >
-                  I already read, acknowledge and accept the{' '}
+                  I already read, acknowledge and accept the{" "}
                   <a
                     href="/terms-of-service"
                     className="text-primary underline font-medium hover:text-primary/80"
@@ -193,9 +188,9 @@ export function OnboardingForm() {
                 />
                 <label
                   htmlFor="acceptPrivacy"
-                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? 'text-muted-foreground' : ''}`}
+                  className={`block text-sm leading-normal font-normal cursor-pointer ${!hasReadPrivacy ? "text-muted-foreground" : ""}`}
                 >
-                  I already read, acknowledge and accept the{' '}
+                  I already read, acknowledge and accept the{" "}
                   <a
                     href="/privacy-policy"
                     className="text-primary underline font-medium hover:text-primary/80"
@@ -208,15 +203,15 @@ export function OnboardingForm() {
               </div>
               {!hasReadPrivacy && (
                 <p className="pl-7 text-xs text-amber-600 dark:text-amber-400">
-                  (Please click and read the Privacy Policy above to enable
-                  the checkbox)
+                  (Please click and read the Privacy Policy above to enable the
+                  checkbox)
                 </p>
               )}
             </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Completing...' : 'Continue'}
+            {isLoading ? "Completing..." : "Continue"}
           </Button>
         </form>
       </CardContent>

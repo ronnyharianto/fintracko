@@ -10,11 +10,11 @@
  * that only need the data without the side-effects (e.g. the invite dialog's
  * `onInvited` callback).
  */
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { apiFetch } from '@/lib/api/client';
-import type { OwnedWorkspace } from '@/features/workspaces/types';
+import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/api/client";
+import type { OwnedWorkspace } from "@/features/workspaces/types";
 
 export interface UseOwnedWorkspacesResult {
   workspaces: OwnedWorkspace[];
@@ -31,10 +31,12 @@ export function useOwnedWorkspaces(): UseOwnedWorkspacesResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOwnedWorkspaces = useCallback(async (): Promise<OwnedWorkspace[]> => {
+  const fetchOwnedWorkspaces = useCallback(async (): Promise<
+    OwnedWorkspace[]
+  > => {
     const { workspaces: list } = await apiFetch<{
       workspaces: OwnedWorkspace[];
-    }>('/api/v1/workspaces?owned=true');
+    }>("/api/v1/workspaces?owned=true");
     return list || [];
   }, []);
 
@@ -47,31 +49,33 @@ export function useOwnedWorkspaces(): UseOwnedWorkspacesResult {
       setError(
         err instanceof Error
           ? err.message
-          : 'An error occurred while fetching workspaces.',
+          : "An error occurred while fetching workspaces.",
       );
     }
   }, [fetchOwnedWorkspaces]);
 
-  // Mount fetch
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
-      try {
-        const list = await fetchOwnedWorkspaces();
-        if (!cancelled) setWorkspaces(list);
-      } catch (err) {
+    void fetchOwnedWorkspaces()
+      .then((list) => {
+        if (!cancelled) {
+          setWorkspaces(list);
+          setError(null);
+        }
+      })
+      .catch((err) => {
         if (!cancelled) {
           setError(
             err instanceof Error
               ? err.message
-              : 'An error occurred while fetching workspaces.',
+              : "An error occurred while fetching workspaces.",
           );
         }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setIsLoading(false);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import Script from "next/script";
+import { SessionProvider } from "@/components/shared/auth/session-provider";
 
 /**
  * Pre-hydration theme script — runs synchronously before React hydrates to
@@ -47,7 +48,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
+        <SessionProvider>{children}</SessionProvider>
         <Toaster
           richColors
           closeButton

@@ -1,7 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import type { WorkspaceSummary } from "@/features/workspaces/types";
+import { ApiClientError, apiFetch } from "@/lib/api/client";
 
 interface WorkspaceContextType {
   workspaces: WorkspaceSummary[];
@@ -32,17 +39,20 @@ async function fetchWorkspaces(): Promise<WorkspaceSummary[]> {
 
   for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
     try {
-      const res = await fetch(WORKSPACES_ENDPOINT, { cache: "no-store" });
-
-      if (res.ok) {
-        const json = await res.json();
-        return json.data?.workspaces || [];
-      }
-
-      // Non-2xx responses (401/403/422/...) are deterministic — retrying
-      // won't change the outcome, so return an empty list immediately.
-      return [];
+      const data = await apiFetch<{ workspaces: WorkspaceSummary[] }>(
+        WORKSPACES_ENDPOINT,
+        { headers: { "Cache-Control": "no-cache" } },
+      );
+      return data.workspaces || [];
     } catch (error) {
+      // Auth and validation failures are deterministic; only retry network
+      // or service-unavailable failures.
+      if (
+        error instanceof ApiClientError &&
+        error.code !== "SERVICE_UNAVAILABLE"
+      ) {
+        return [];
+      }
       // Network-level failure: e.g. the dev server dropped the in-flight
       // request during a restart/recompile.
       lastError = error;

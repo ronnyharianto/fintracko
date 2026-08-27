@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/components/shared/auth/session-provider";
 import { LogOut, User, Settings, Shield, Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
@@ -16,39 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  image?: string | null;
-}
-
 export function UserMenu() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const fetchSession = async () => {
-      try {
-        const res = await authClient.getSession();
-        if (!cancelled && res?.data?.user) {
-          setUser(res.data.user);
-        }
-      } catch (error) {
-        console.error("Failed to fetch session:", error);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSession();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user, isLoading } = useSession();
 
   const handleSignOut = async () => {
     await authClient.signOut();

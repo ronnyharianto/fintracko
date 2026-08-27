@@ -1,30 +1,37 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { User, Shield, Bell, Key, Save, Loader2 } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { toast } from 'sonner';
-import { getInitials } from '@/lib/utils';
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { User, Shield, Bell, Key, Save, Loader2 } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
+import { useSession } from "@/components/shared/auth/session-provider";
 
 /**
  * Valid account-settings tabs, mirroring the TabsTrigger values below.
  * The user menu (`user-menu.tsx`) deep-links here with `?tab=security` and
  * `?tab=notifications`, so the query parameter must map onto a real tab.
  */
-const ACCOUNT_TABS = ['profile', 'security', 'notifications'] as const;
+const ACCOUNT_TABS = ["profile", "security", "notifications"] as const;
 type AccountTab = (typeof ACCOUNT_TABS)[number];
 
 function parseTabParam(value: string | null): AccountTab {
   return ACCOUNT_TABS.includes(value as AccountTab)
     ? (value as AccountTab)
-    : 'profile';
+    : "profile";
 }
 
 export default function AccountSettingsPage() {
@@ -40,7 +47,7 @@ export default function AccountSettingsPage() {
 
 function AccountSettingsContent() {
   const searchParams = useSearchParams();
-  const tabFromUrl = parseTabParam(searchParams.get('tab'));
+  const tabFromUrl = parseTabParam(searchParams.get("tab"));
 
   // Local tab state for manual switching, seeded from the `?tab=` query
   // param (user-menu deep links) so the right tab shows on first paint
@@ -58,43 +65,18 @@ function AccountSettingsContent() {
     setPrevTabFromUrl(tabFromUrl);
     setActiveTab(tabFromUrl);
   }
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<{
-    name: string;
-    email: string;
-    image?: string | null;
-  } | null>(null);
+  const { user, isLoading, refresh } = useSession();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+    name: "",
+    email: "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await authClient.getSession();
-        if (res?.data?.user) {
-          const userData = res.data.user;
-          setUser({
-            name: userData.name || '',
-            email: userData.email || '',
-            image: userData.image || null,
-          });
-          setFormData({
-            name: userData.name || '',
-            email: userData.email || '',
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
+  const [previousUserId, setPreviousUserId] = useState<string | null>(null);
+  if (user && user.id !== previousUserId) {
+    setPreviousUserId(user.id);
+    setFormData({ name: user.name, email: user.email });
+  }
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,15 +86,13 @@ function AccountSettingsContent() {
       // is a real server round-trip, not a simulated success.
       const res = await authClient.updateUser({ name: formData.name });
       if (res.error) {
-        toast.error(res.error.message || 'Failed to update profile');
+        toast.error(res.error.message || "Failed to update profile");
         return;
       }
-      toast.success('Profile updated successfully');
-      setUser((prev) =>
-        prev ? { ...prev, name: formData.name } : prev
-      );
+      toast.success("Profile updated successfully");
+      await refresh();
     } catch {
-      toast.error('Failed to update profile');
+      toast.error("Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -123,8 +103,12 @@ function AccountSettingsContent() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-            <p className="text-muted-foreground mt-1">Manage your account preferences and security.</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Account Settings
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your account preferences and security.
+            </p>
           </div>
         </div>
         <div className="animate-pulse space-y-4">
@@ -139,12 +123,19 @@ function AccountSettingsContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage your account preferences and security.</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Account Settings
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your account preferences and security.
+          </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AccountTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as AccountTab)}
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
@@ -168,7 +159,8 @@ function AccountSettingsContent() {
                 Profile Information
               </CardTitle>
               <CardDescription>
-                Update your personal information. This will be visible to other workspace members.
+                Update your personal information. This will be visible to other
+                workspace members.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -178,7 +170,9 @@ function AccountSettingsContent() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -188,11 +182,15 @@ function AccountSettingsContent() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     required
                     disabled
                   />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed. Contact support if needed.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed. Contact support if needed.
+                  </p>
                 </div>
                 <Button type="submit" disabled={isSaving}>
                   {isSaving ? (
@@ -218,7 +216,7 @@ function AccountSettingsContent() {
                 Avatar
               </CardTitle>
               <CardDescription>
-                Your avatar is synced with your OAuth provider (Google/GitHub). 
+                Your avatar is synced with your OAuth provider (Google/GitHub).
                 Update it there to see changes here.
               </CardDescription>
             </CardHeader>
@@ -227,7 +225,11 @@ function AccountSettingsContent() {
                 <div className="relative">
                   {user?.image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- OAuth avatar URL is external; next/image requires remotePatterns config
-                    <img src={user.image} alt={user.name || 'Avatar'} className="h-20 w-20 rounded-full" />
+                    <img
+                      src={user.image}
+                      alt={user.name || "Avatar"}
+                      className="h-20 w-20 rounded-full"
+                    />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
                       <span className="text-2xl font-medium text-muted-foreground">
@@ -237,8 +239,12 @@ function AccountSettingsContent() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{user?.name || 'No name'}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email || 'No email'}</p>
+                  <p className="text-sm font-medium">
+                    {user?.name || "No name"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {user?.email || "No email"}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -298,10 +304,17 @@ function AccountSettingsContent() {
                 <div>
                   <p className="text-sm font-medium">Delete Account</p>
                   <p className="text-sm text-muted-foreground">
-                    Permanently delete your account and all associated data. This action cannot be undone.
+                    Permanently delete your account and all associated data.
+                    This action cannot be undone.
                   </p>
                 </div>
-                <Button variant="destructive" onClick={() => confirm('Are you absolutely sure?') && alert('Account deletion not implemented yet')}>
+                <Button
+                  variant="destructive"
+                  onClick={() =>
+                    confirm("Are you absolutely sure?") &&
+                    alert("Account deletion not implemented yet")
+                  }
+                >
                   Delete Account
                 </Button>
               </div>
@@ -324,7 +337,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Budget Alerts</p>
-                  <p className="text-sm text-muted-foreground">Notify me when I&apos;m close to exceeding my budget</p>
+                  <p className="text-sm text-muted-foreground">
+                    Notify me when I&apos;m close to exceeding my budget
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>
@@ -332,7 +347,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Transaction Reminders</p>
-                  <p className="text-sm text-muted-foreground">Weekly summary of your transactions</p>
+                  <p className="text-sm text-muted-foreground">
+                    Weekly summary of your transactions
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>
@@ -340,7 +357,10 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Collaborator Activity</p>
-                  <p className="text-sm text-muted-foreground">Notify me when someone invites me or makes changes in shared workspaces</p>
+                  <p className="text-sm text-muted-foreground">
+                    Notify me when someone invites me or makes changes in shared
+                    workspaces
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>
@@ -348,7 +368,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Marketing Emails</p>
-                  <p className="text-sm text-muted-foreground">Tips, updates, and product news from Fintracko</p>
+                  <p className="text-sm text-muted-foreground">
+                    Tips, updates, and product news from Fintracko
+                  </p>
                 </div>
                 <Input type="checkbox" />
               </div>
@@ -369,7 +391,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Mentions</p>
-                  <p className="text-sm text-muted-foreground">When someone mentions you in a comment</p>
+                  <p className="text-sm text-muted-foreground">
+                    When someone mentions you in a comment
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>
@@ -377,7 +401,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Budget Warnings</p>
-                  <p className="text-sm text-muted-foreground">When a budget is at 80% or more</p>
+                  <p className="text-sm text-muted-foreground">
+                    When a budget is at 80% or more
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>
@@ -385,7 +411,9 @@ function AccountSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Bill Reminders</p>
-                  <p className="text-sm text-muted-foreground">Upcoming bill due dates</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upcoming bill due dates
+                  </p>
                 </div>
                 <Input type="checkbox" defaultChecked />
               </div>

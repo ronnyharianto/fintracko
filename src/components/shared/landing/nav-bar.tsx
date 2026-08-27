@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FintrackoLogo } from "@/components/shared/fintracko-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/components/shared/auth/session-provider";
 
 /**
  * Public landing page navigation bar — color-enhanced.
@@ -21,24 +21,8 @@ const navLinks = [
 ] as const;
 
 export function NavBar({ className }: { className?: string }) {
-  const [session, setSession] = useState<{ user?: { id?: string } } | null>(
-    null,
-  );
-
-  useEffect(() => {
-    authClient
-      .getSession()
-      .then((res) => {
-        if (res?.data) {
-          setSession(res.data);
-        }
-      })
-      .catch(() => {
-        setSession(null);
-      });
-  }, []);
-
-  const isAuthenticated = Boolean(session?.user?.id);
+  const { user } = useSession();
+  const isAuthenticated = Boolean(user?.id);
 
   return (
     <header
