@@ -52,7 +52,7 @@ export default function RootLayout({
         <Toaster
           richColors
           closeButton
-          position="top-right"
+          position="bottom-left"
           toastOptions={{
             classNames: {
               toast: "font-sans",
