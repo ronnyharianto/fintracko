@@ -16,7 +16,7 @@ export function TopBar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full h-16 border-b border-muted bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60",
+        "fixed top-0 z-50 w-full h-16 border-b border-muted bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60",
         "flex items-center justify-between px-4 lg:px-6"
       )}
     >
