@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Briefcase } from "lucide-react";
+import { apiFetch } from "@/lib/api/client";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWorkspace } from "@/components/shared/workspace-context";
 import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
 import { WorkspaceCard } from "@/app/(workspace)/settings/workspace/_components/workspace-card";
 import { CreateWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/create-workspace-dialog";
 import { EditWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/edit-workspace-dialog";
 import { InviteCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/invite-collaborator-dialog";
-import { DeleteWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/delete-workspace-dialog";
-import { RemoveCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/remove-collaborator-dialog";
-import { CancelInvitationDialog } from "@/app/(workspace)/settings/workspace/_components/cancel-invitation-dialog";
+
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
@@ -132,28 +132,82 @@ export default function WorkspaceSettingsPage() {
           onInvited={refetchOwned}
         />
 
-        <DeleteWorkspaceDialog
-          workspaceId={deleteWorkspaceId}
-          workspaceName={
-            workspaces.find((w) => w.id === deleteWorkspaceId)?.name
-          }
+        <ConfirmDialog
+          open={!!deleteWorkspaceId}
           onOpenChange={(open) => !open && setDeleteWorkspaceId(null)}
-          onDeleted={handleActionComplete}
+          onConfirm={async () => {
+            await apiFetch(`/api/v1/workspaces/${deleteWorkspaceId}`, {
+              method: 'DELETE',
+            });
+          }}
+          onSuccess={handleActionComplete}
+          title="Delete Workspace"
+          description={
+            <>Are you sure you want to delete {workspaces.find((w) => w.id === deleteWorkspaceId)?.name ? (
+              <span className="font-semibold text-foreground">
+                &quot;{workspaces.find((w) => w.id === deleteWorkspaceId)?.name}&quot;
+              </span>
+            ) : (
+              'this workspace'
+            )}? This action is irreversible and will permanently delete all accounts, transactions, budgets, and remove all collaborators.</>
+          }
+          confirmLabel="Yes, Delete Workspace"
+          loadingLabel="Deleting..."
+          successMessage="Workspace deleted."
+          errorMessage="Failed to delete workspace."
         />
 
-        <RemoveCollaboratorDialog
-          workspaceId={removeTarget?.workspaceId ?? null}
-          memberId={removeTarget?.memberId ?? null}
-          memberName={removeTarget?.memberName ?? null}
+        <ConfirmDialog
+          open={!!removeTarget?.workspaceId && !!removeTarget?.memberId}
           onOpenChange={(open) => !open && setRemoveTarget(null)}
-          onRemoved={handleActionComplete}
+          onConfirm={async () => {
+            if (!removeTarget) return;
+            await apiFetch(`/api/v1/workspaces/${removeTarget.workspaceId}/members/${removeTarget.memberId}`, {
+              method: 'DELETE',
+            });
+          }}
+          onSuccess={handleActionComplete}
+          title="Remove Collaborator"
+          description={
+            <>Are you sure you want to remove {removeTarget?.memberName ? (
+              <span className="font-semibold text-foreground">
+                {removeTarget.memberName}
+              </span>
+            ) : (
+              'this collaborator'
+            )} from the workspace? They will lose access to all accounts, transactions, and budgets in this workspace.</>
+          }
+          confirmLabel="Yes, Remove"
+          loadingLabel="Removing..."
+          successMessage="Collaborator removed."
+          errorMessage="Failed to remove collaborator."
         />
 
-        <CancelInvitationDialog
-          invitationId={cancelTarget?.invitationId ?? null}
-          inviteeName={cancelTarget?.inviteeName ?? null}
+        <ConfirmDialog
+          open={!!cancelTarget?.invitationId}
           onOpenChange={(open) => !open && setCancelTarget(null)}
-          onCancelled={handleActionComplete}
+          onConfirm={async () => {
+            if (!cancelTarget) return;
+            await apiFetch(`/api/v1/invitations/${cancelTarget.invitationId}`, {
+              method: 'DELETE',
+            });
+          }}
+          onSuccess={handleActionComplete}
+          title="Cancel Invitation"
+          description={
+            <>Are you sure you want to cancel the pending invitation for {cancelTarget?.inviteeName ? (
+              <span className="font-semibold text-foreground">
+                {cancelTarget.inviteeName}
+              </span>
+            ) : (
+              'this user'
+            )}? They will no longer be able to accept this invitation.</>
+          }
+          confirmLabel="Yes, Cancel"
+          loadingLabel="Cancelling..."
+          cancelLabel="Keep Invitation"
+          successMessage="Invitation cancelled."
+          errorMessage="Failed to cancel invitation."
         />
       </div>
     </div>
