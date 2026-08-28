@@ -18,7 +18,7 @@ interface WorkspaceCardProps {
   onEditClick: (workspace: OwnedWorkspace) => void;
   onDeleteClick: (workspaceId: string) => void;
   onInviteClick: (workspaceId: string) => void;
-  onRemoveMember: (workspaceId: string, memberId: string) => void;
+  onRemoveMember: (workspaceId: string, memberId: string, memberName: string) => void;
 }
 
 export function WorkspaceCard({
@@ -88,7 +88,7 @@ export function WorkspaceCard({
         <CollaboratorList
           members={workspace.members}
           onInviteClick={() => onInviteClick(workspace.id)}
-          onRemoveMember={(memberId) => onRemoveMember(workspace.id, memberId)}
+          onRemoveMember={(memberId, memberName) => onRemoveMember(workspace.id, memberId, memberName)}
         />
       </CardContent>
     </Card>

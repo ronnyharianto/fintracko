@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Briefcase } from "lucide-react";
-import { toast } from "sonner";
-import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace-context";
 import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
 import { WorkspaceCard } from "@/app/(workspace)/workspaces/_components/workspace-card";
@@ -13,6 +11,7 @@ import { CreateWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/
 import { EditWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/edit-workspace-dialog";
 import { InviteCollaboratorDialog } from "@/app/(workspace)/workspaces/_components/invite-collaborator-dialog";
 import { DeleteWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/delete-workspace-dialog";
+import { RemoveCollaboratorDialog } from "@/app/(workspace)/workspaces/_components/remove-collaborator-dialog";
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
@@ -35,25 +34,11 @@ export default function WorkspaceSettingsPage() {
   const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(
     null,
   );
-  const handleRemoveCollaborator = async (
-    workspaceId: string,
-    memberId: string,
-  ) => {
-    if (!confirm("Are you sure you want to remove this collaborator?")) return;
-
-    try {
-      await apiFetch(`/api/v1/workspaces/${workspaceId}/members/${memberId}`, {
-        method: "DELETE",
-      });
-      toast.success("Collaborator removed.");
-      await refetchOwned();
-      await refreshWorkspaces();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to remove collaborator.",
-      );
-    }
-  };
+  const [removeTarget, setRemoveTarget] = useState<{
+    workspaceId: string;
+    memberId: string;
+    memberName: string;
+  } | null>(null);
 
   const handleActionComplete = async () => {
     await refetchOwned();
@@ -112,7 +97,9 @@ export default function WorkspaceSettingsPage() {
                 }
                 onDeleteClick={(id) => setDeleteWorkspaceId(id)}
                 onInviteClick={(id) => setInviteWorkspaceId(id)}
-                onRemoveMember={handleRemoveCollaborator}
+                onRemoveMember={(workspaceId, memberId, memberName) =>
+                  setRemoveTarget({ workspaceId, memberId, memberName })
+                }
               />
             ))}
           </div>
@@ -144,6 +131,14 @@ export default function WorkspaceSettingsPage() {
           }
           onOpenChange={(open) => !open && setDeleteWorkspaceId(null)}
           onDeleted={handleActionComplete}
+        />
+
+        <RemoveCollaboratorDialog
+          workspaceId={removeTarget?.workspaceId ?? null}
+          memberId={removeTarget?.memberId ?? null}
+          memberName={removeTarget?.memberName ?? null}
+          onOpenChange={(open) => !open && setRemoveTarget(null)}
+          onRemoved={handleActionComplete}
         />
       </div>
     </div>

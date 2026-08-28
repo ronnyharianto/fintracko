@@ -8,7 +8,7 @@ import type { WorkspaceMemberView } from '@/features/workspaces/types';
 interface CollaboratorListProps {
   members: WorkspaceMemberView[];
   onInviteClick: () => void;
-  onRemoveMember: (memberId: string) => void;
+  onRemoveMember: (memberId: string, memberName: string) => void;
 }
 
 export function CollaboratorList({
@@ -54,7 +54,7 @@ export function CollaboratorList({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                    onClick={() => onRemoveMember(member.id)}
+                    onClick={() => onRemoveMember(member.id, member.user.name)}
                     title="Remove Collaborator"
                   >
                     <UserX className="h-3.5 w-3.5" />
