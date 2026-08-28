@@ -182,7 +182,7 @@ export async function removeCollaborator(
   }
 
   await db.workspaceMember.delete({
-    where: { id: memberId },
+    where: { id: memberId, workspaceId },
   });
 
   return { success: true };
