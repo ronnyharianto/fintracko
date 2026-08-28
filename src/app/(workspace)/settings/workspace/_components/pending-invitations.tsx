@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { withToast } from '@/lib/toast';
 import { usePendingInvitations } from '@/features/workspaces/hooks/use-pending-invitations';
 
 interface PendingInvitationsProps {
@@ -16,27 +16,20 @@ export function PendingInvitations({ onAccepted }: PendingInvitationsProps) {
     usePendingInvitations();
 
   const handleAccept = async (invitationId: string) => {
-    try {
-      await acceptInvitation(invitationId);
-      toast.success('Invitation accepted. You are now a collaborator.');
-      onAccepted?.();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to accept invitation.',
-      );
-    }
+    await withToast(
+      () => acceptInvitation(invitationId),
+      'Invitation accepted. You are now a collaborator.',
+      'Failed to accept invitation.',
+    );
+    onAccepted?.();
   };
 
-  const handleReject = async (invitationId: string) => {
-    try {
-      await rejectInvitation(invitationId);
-      toast.success('Invitation rejected.');
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to reject invitation.',
-      );
-    }
-  };
+  const handleReject = (invitationId: string) =>
+    withToast(
+      () => rejectInvitation(invitationId),
+      'Invitation rejected.',
+      'Failed to reject invitation.',
+    );
 
   if (isLoading) {
     return (

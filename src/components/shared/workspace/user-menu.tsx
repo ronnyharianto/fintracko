@@ -50,11 +50,11 @@ export function UserMenu() {
         <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src={user?.image || undefined}
-              alt={user?.name || "User"}
+              src={user.image || undefined}
+              alt={user.name || "User"}
             />
             <AvatarFallback className="text-xs font-medium">
-              {getInitials(user?.name)}
+              {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -63,10 +63,10 @@ export function UserMenu() {
         <div className="flex items-center gap-2 px-2 py-1">
           <div>
             <p className="text-sm font-medium truncate">
-              {user?.name || "User"}
+              {user.name || "User"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
+              {user.email}
             </p>
           </div>
         </div>

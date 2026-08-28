@@ -13,30 +13,26 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { withToast } from '@/lib/toast';
 
 export function WorkspaceSwitcher() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading, invitations, acceptInvitation, rejectInvitation } =
     useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleAccept = async (invitationId: string) => {
-    try {
-      await acceptInvitation(invitationId);
-      toast.success('Invitation accepted.');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to accept invitation.');
-    }
-  };
+  const handleAccept = (invitationId: string) =>
+    withToast(
+      () => acceptInvitation(invitationId),
+      'Invitation accepted.',
+      'Failed to accept invitation.',
+    );
 
-  const handleReject = async (invitationId: string) => {
-    try {
-      await rejectInvitation(invitationId);
-      toast.success('Invitation rejected.');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reject invitation.');
-    }
-  }
+  const handleReject = (invitationId: string) =>
+    withToast(
+      () => rejectInvitation(invitationId),
+      'Invitation rejected.',
+      'Failed to reject invitation.',
+    );
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
 

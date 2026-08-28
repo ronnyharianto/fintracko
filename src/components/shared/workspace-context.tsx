@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import type { WorkspaceSummary, PendingInvitation } from "@/features/workspaces/types";
@@ -91,7 +92,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const applyWorkspaces = (list: WorkspaceSummary[]) => {
+  const applyWorkspaces = useCallback((list: WorkspaceSummary[]) => {
     setWorkspaces(list);
 
     if (list.length > 0) {
@@ -108,7 +109,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspaceIdState(null);
       localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
     }
-  };
+  }, []);
 
   /**
    * Core fetch+apply — no loading-state side effects so it can be called
@@ -118,7 +119,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const fetchAndApply = useCallback(async () => {
     const list = await fetchWorkspaces();
     applyWorkspaces(list);
-  }, []);
+  }, [applyWorkspaces]);
 
   // Mount fetch + invitation polling
   useEffect(() => {
@@ -152,7 +153,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchAndApply, fetchInvitations]);
 
-  const refreshWorkspaces = async () => {
+  const refreshWorkspaces = useCallback(async () => {
     try {
       await fetchAndApply();
     } catch {
@@ -160,46 +161,55 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchAndApply]);
 
-  const refreshInvitations = async () => {
-    await fetchInvitations();
-  };
-
-  const handleAcceptInvitation = async (invitationId: string) => {
+  const handleAcceptInvitation = useCallback(async (invitationId: string) => {
     await apiFetch(`/api/v1/invitations/${invitationId}/accept`, {
       method: "POST",
     });
     await fetchInvitations();
     await fetchAndApply();
-  };
+  }, [fetchInvitations, fetchAndApply]);
 
-  const handleRejectInvitation = async (invitationId: string) => {
+  const handleRejectInvitation = useCallback(async (invitationId: string) => {
     await apiFetch(`/api/v1/invitations/${invitationId}/reject`, {
       method: "POST",
     });
     await fetchInvitations();
-  };
+  }, [fetchInvitations]);
 
-  const setActiveWorkspaceId = (id: string) => {
+  const setActiveWorkspaceId = useCallback((id: string) => {
     setActiveWorkspaceIdState(id);
     localStorage.setItem(ACTIVE_WORKSPACE_KEY, id);
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      workspaces,
+      activeWorkspaceId,
+      setActiveWorkspaceId,
+      isLoading,
+      refreshWorkspaces,
+      invitations,
+      refreshInvitations: fetchInvitations,
+      acceptInvitation: handleAcceptInvitation,
+      rejectInvitation: handleRejectInvitation,
+    }),
+    [
+      workspaces,
+      activeWorkspaceId,
+      setActiveWorkspaceId,
+      isLoading,
+      refreshWorkspaces,
+      invitations,
+      fetchInvitations,
+      handleAcceptInvitation,
+      handleRejectInvitation,
+    ],
+  );
 
   return (
-    <WorkspaceContext.Provider
-      value={{
-        workspaces,
-        activeWorkspaceId,
-        setActiveWorkspaceId,
-        isLoading,
-        refreshWorkspaces,
-        invitations,
-        refreshInvitations,
-        acceptInvitation: handleAcceptInvitation,
-        rejectInvitation: handleRejectInvitation,
-      }}
-    >
+    <WorkspaceContext.Provider value={contextValue}>
       {children}
     </WorkspaceContext.Provider>
   );

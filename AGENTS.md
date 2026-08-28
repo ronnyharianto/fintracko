@@ -120,6 +120,12 @@ and evidence from validation.
   provide accessible labels for unfamiliar icon-only controls.
 - Avoid adding a new client dependency when an existing local helper or
   installed package solves the problem.
+- Use `withToast()` from `@/lib/toast` for async actions that show success/
+  error toast notifications. It eliminates the repeated try/catch +
+  toast.success/toast.error pattern. Do not use it when the action also
+  manages loading state or has side effects beyond the toast (e.g. closing
+  a dialog, resetting a form) — in those cases the explicit try/catch is
+  clearer.
 
 ## 7. Validation Gates
 
