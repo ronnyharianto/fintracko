@@ -1,7 +1,7 @@
 /**
  * POST /api/v1/workspaces/[id]/members
  *
- * Invites a collaborator by email to an owned workspace.
+ * Sends a collaboration invitation by email to an owned workspace.
  */
 
 import { NextRequest } from 'next/server';
@@ -33,12 +33,16 @@ export async function POST(
           code: 'CONFLICT',
           message: 'User is already a member of this workspace.',
         },
+        INVITATION_EXISTS: {
+          code: 'CONFLICT',
+          message: 'An invitation has already been sent to this user.',
+        },
       },
-      'Failed to invite collaborator. Please try again.',
+      'Failed to send invitation. Please try again.',
       async ({ userId }, data) => {
         const { id: workspaceId } = await params;
-        const member = await inviteCollaborator(userId, workspaceId, data.email);
-        return successWithStatus({ member }, 201);
+        const invitation = await inviteCollaborator(userId, workspaceId, data.email);
+        return successWithStatus({ invitation }, 201);
       },
     )
   );

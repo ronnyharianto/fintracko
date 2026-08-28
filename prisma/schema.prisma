@@ -3,19 +3,19 @@
 // ============================================================================
 // This schema implements the multi-tenant data contract
 //
-// Models (12 total):
+// Models (13 total):
 //   1. User             — Authenticated user. (Schema: ft_auth)
 //   2. AuthAccount      — OAuth provider identity linkage. (Schema: ft_auth)
 //   3. Session          — HttpOnly session tokens. (Schema: ft_auth)
 //   4. Verification     — OAuth/email verification tokens. (Schema: ft_auth)
 //   5. Profile          — Onboarding-completion marker + user preferences. (Schema: ft_core)
 //   6. Workspace        — Root multi-tenancy isolation boundary. (Schema: ft_core)
-//   7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR). (Schema: ft_core)
-//   8. FinancialAccount — Financial ledger node (Bank, Cash, Wallet). (Schema: ft_core)
-//   9. Category         — Level 1 transaction classification. (Schema: ft_core)
-//  10. SubCategory      — Level 2 transaction classification. (Schema: ft_core)
-//  11. Budget           — Spending limit bound to a SubCategory (L2) + interval. (Schema: ft_core)
-//  12. FinancialTransaction — Core financial mutation ledger entry. (Schema: ft_core)
+//  7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR). (Schema: ft_core)
+//  8. WorkspaceInvitation — Pending collaboration invitations (PENDING | ACCEPTED | REJECTED). (Schema: ft_core)
+//  9. FinancialAccount — Financial ledger node (Bank, Cash, Wallet). (Schema: ft_core)// 10. Category         — Level 1 transaction classification. (Schema: ft_core)
+// 11. SubCategory      — Level 2 transaction classification. (Schema: ft_core)
+// 12. Budget           — Spending limit bound to a SubCategory (L2) + interval. (Schema: ft_core)
+// 13. FinancialTransaction — Core financial mutation ledger entry. (Schema: ft_core)
 //
 // Conventions enforced everywhere:
 //   - UUID primary keys via native PostgreSQL `@db.Uuid`.
@@ -48,6 +48,15 @@ datasource db {
 enum WorkspaceRole {
   OWNER
   COLLABORATOR
+
+  @@schema("ft_core")
+}
+
+/// Status of a workspace collaboration invitation.
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 
   @@schema("ft_core")
 }
@@ -95,6 +104,8 @@ model User {
   authAccounts    AuthAccount[]
   sessions        Session[]
   memberships     WorkspaceMember[]
+  sentInvitations     WorkspaceInvitation[] @relation("InvitationSentBy")
+  receivedInvitations WorkspaceInvitation[] @relation("InvitationSentTo")
 
   createdTransactions FinancialTransaction[] @relation("TransactionCreatedBy")
   updatedTransactions FinancialTransaction[] @relation("TransactionUpdatedBy")
@@ -200,6 +211,7 @@ model Workspace {
 
   // Members with explicit roles for access control.
   members         WorkspaceMember[]
+  invitations     WorkspaceInvitation[]
   accounts        FinancialAccount[]
   categories      Category[]
   subCategories   SubCategory[]
@@ -231,7 +243,30 @@ model WorkspaceMember {
 }
 
 // ----------------------------------------------------------------------------
-// 8. FinancialAccount — Financial ledger node (Bank, Cash, Digital Wallet, ...)
+// 8. WorkspaceInvitation — Pending collaboration invitations
+// ----------------------------------------------------------------------------
+
+model WorkspaceInvitation {
+  id          String             @id @default(uuid()) @db.Uuid
+  workspaceId String             @db.Uuid
+  inviterId   String             @db.Uuid
+  inviteeId   String             @db.Uuid
+  status      InvitationStatus   @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime           @default(now())
+
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter     User               @relation("InvitationSentBy", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee     User               @relation("InvitationSentTo", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, inviteeId])
+  @@index([inviteeId, status])
+  @@index([workspaceId])
+  @@schema("ft_core")
+}
+
+// ----------------------------------------------------------------------------
+// 9. FinancialAccount — Financial ledger node (Bank, Cash, Digital Wallet, ...)
 // ----------------------------------------------------------------------------
 // Balance invariant: Final Balance = initialBalance + netTransactionSum
 // Every `Transaction` mutation must adjust `netTransactionSum` on the

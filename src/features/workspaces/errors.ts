@@ -20,7 +20,10 @@ export type WorkspaceServiceErrorCode =
   | 'USER_NOT_FOUND'
   | 'ALREADY_MEMBER'
   | 'MEMBER_NOT_FOUND'
-  | 'CANNOT_REMOVE_OWNER';
+  | 'CANNOT_REMOVE_OWNER'
+  | 'INVITATION_EXISTS'
+  | 'INVITATION_NOT_FOUND'
+  | 'INVITATION_EXPIRED';
 
 /**
  * Domain error thrown by `src/features/workspaces/services.ts`. The `code`

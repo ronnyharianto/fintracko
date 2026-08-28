@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWorkspace } from '@/components/shared/workspace-context';
-import { ChevronDown, Plus, Briefcase, Building2 } from 'lucide-react';
+import { ChevronDown, Plus, Briefcase, Building2, Mail, Check, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,11 +13,33 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { usePendingInvitations } from '@/features/workspaces/hooks/use-pending-invitations';
+import { toast } from 'sonner';
 
 export function WorkspaceSwitcher() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading } =
     useWorkspace();
+  const { invitations, acceptInvitation, rejectInvitation } =
+    usePendingInvitations();
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleAccept = async (invitationId: string) => {
+    try {
+      await acceptInvitation(invitationId);
+      toast.success('Invitation accepted.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to accept invitation.');
+    }
+  };
+
+  const handleReject = async (invitationId: string) => {
+    try {
+      await rejectInvitation(invitationId);
+      toast.success('Invitation rejected.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reject invitation.');
+    }
+  };
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
 
@@ -70,18 +92,25 @@ export function WorkspaceSwitcher() {
           variant="ghost"
           className="h-9 px-3 gap-2 text-sm font-medium hover:bg-accent"
         >
-          <Briefcase className="h-4 w-4 text-primary" />
+          <span className="relative">
+            <Briefcase className="h-4 w-4 text-primary" />
+            {invitations.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
+            )}
+          </span>
           <span className="truncate max-w-45">
             {activeWorkspace?.name || 'Select Workspace'}
           </span>
+          {invitations.length > 0 && (
+            <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+              {invitations.length}
+            </span>
+          )}
           <ChevronDown className="h-4 w-4 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64 min-w-55">
         <div className="flex items-center justify-between px-2 py-1">
-          <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">
-            Your Workspaces
-          </DropdownMenuLabel>
           <Button
             variant="ghost"
             size="icon"
@@ -94,6 +123,60 @@ export function WorkspaceSwitcher() {
             </Link>
           </Button>
         </div>
+        {invitations.length > 0 && (
+          <>
+            <div className="px-2 py-1.5">
+              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                Pending Invitations ({invitations.length})
+              </span>
+            </div>
+            <div className="mx-2 mb-1 space-y-1">
+              {invitations.map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 p-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium text-sm text-amber-900 dark:text-amber-100">
+                      {invitation.workspace.name}
+                    </span>
+                  </div>
+                  <span className="text-xs text-amber-700 dark:text-amber-300">
+                    Invited by {invitation.inviter.name}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Button
+                      size="sm"
+                      className="h-6 px-2.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAccept(invitation.id);
+                      }}
+                    >
+                      <Check className="h-3 w-3 mr-1" /> Accept
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2.5 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReject(invitation.id);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">
+          Your Workspaces
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {workspaces.map((workspace) => (
           <DropdownMenuItem

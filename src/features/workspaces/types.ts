@@ -26,11 +26,25 @@ export interface WorkspaceMemberView {
  * Full owned-workspace shape returned by GET /api/v1/workspaces?owned=true
  * (service: `getOwnedWorkspaces`), including members and aggregate counts.
  */
+export interface WorkspaceInvitationView {
+  id: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  invitee: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+}
+
 export interface OwnedWorkspace {
   id: string;
   name: string;
   createdAt: string;
   members: WorkspaceMemberView[];
+  invitations: WorkspaceInvitationView[];
   _count: {
     accounts: number;
     transactions: number;
@@ -47,4 +61,24 @@ export interface WorkspaceSummary {
   id: string;
   name: string;
   role: string;
+}
+
+/**
+ * Pending invitation shape returned by GET /api/v1/invitations.
+ */
+export interface PendingInvitation {
+  id: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  workspace: {
+    id: string;
+    name: string;
+  };
+  inviter: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
 }

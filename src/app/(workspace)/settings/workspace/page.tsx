@@ -12,6 +12,8 @@ import { EditWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_compo
 import { InviteCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/invite-collaborator-dialog";
 import { DeleteWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/delete-workspace-dialog";
 import { RemoveCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/remove-collaborator-dialog";
+import { CancelInvitationDialog } from "@/app/(workspace)/settings/workspace/_components/cancel-invitation-dialog";
+import { PendingInvitations } from "@/app/(workspace)/settings/workspace/_components/pending-invitations";
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
@@ -39,6 +41,10 @@ export default function WorkspaceSettingsPage() {
     memberId: string;
     memberName: string;
   } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{
+    invitationId: string;
+    inviteeName: string;
+  } | null>(null);
 
   const handleActionComplete = async () => {
     await refetchOwned();
@@ -60,6 +66,8 @@ export default function WorkspaceSettingsPage() {
           <Plus className="mr-2 h-4 w-4" /> New Workspace
         </Button>
       </div>
+
+      <PendingInvitations onAccepted={handleActionComplete} />
 
       {error && (
         <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm">
@@ -100,6 +108,9 @@ export default function WorkspaceSettingsPage() {
                 onRemoveMember={(workspaceId, memberId, memberName) =>
                   setRemoveTarget({ workspaceId, memberId, memberName })
                 }
+                onCancelInvitation={(_workspaceId, invitationId, inviteeName) =>
+                  setCancelTarget({ invitationId, inviteeName })
+                }
               />
             ))}
           </div>
@@ -139,6 +150,13 @@ export default function WorkspaceSettingsPage() {
           memberName={removeTarget?.memberName ?? null}
           onOpenChange={(open) => !open && setRemoveTarget(null)}
           onRemoved={handleActionComplete}
+        />
+
+        <CancelInvitationDialog
+          invitationId={cancelTarget?.invitationId ?? null}
+          inviteeName={cancelTarget?.inviteeName ?? null}
+          onOpenChange={(open) => !open && setCancelTarget(null)}
+          onCancelled={handleActionComplete}
         />
       </div>
     </div>

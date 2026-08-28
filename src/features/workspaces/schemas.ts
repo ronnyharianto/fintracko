@@ -53,7 +53,17 @@ export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceSchema>;
  * Invite collaborator request schema.
  */
 export const InviteCollaboratorSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.email('Invalid email address'),
 });
 
 export type InviteCollaboratorInput = z.infer<typeof InviteCollaboratorSchema>;
+
+/**
+ * Accept/reject invitation request schema.
+ * The invitation ID comes from the URL params, no body needed.
+ */
+export const InvitationIdParamSchema = z.object({
+  id: z.uuid('Invalid invitation ID'),
+});
+
+export type InvitationIdParam = z.infer<typeof InvitationIdParamSchema>;

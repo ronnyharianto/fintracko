@@ -19,6 +19,7 @@ interface WorkspaceCardProps {
   onDeleteClick: (workspaceId: string) => void;
   onInviteClick: (workspaceId: string) => void;
   onRemoveMember: (workspaceId: string, memberId: string, memberName: string) => void;
+  onCancelInvitation: (workspaceId: string, invitationId: string, inviteeName: string) => void;
 }
 
 export function WorkspaceCard({
@@ -27,6 +28,7 @@ export function WorkspaceCard({
   onDeleteClick,
   onInviteClick,
   onRemoveMember,
+  onCancelInvitation,
 }: WorkspaceCardProps) {
   return (
     <Card className="flex flex-col justify-between">
@@ -87,8 +89,10 @@ export function WorkspaceCard({
 
         <CollaboratorList
           members={workspace.members}
+          invitations={workspace.invitations}
           onInviteClick={() => onInviteClick(workspace.id)}
           onRemoveMember={(memberId, memberName) => onRemoveMember(workspace.id, memberId, memberName)}
+          onCancelInvitation={(invitationId, inviteeName) => onCancelInvitation(workspace.id, invitationId, inviteeName)}
         />
       </CardContent>
     </Card>

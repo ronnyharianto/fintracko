@@ -2,19 +2,23 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Users, UserPlus, Shield, UserX } from 'lucide-react';
-import type { WorkspaceMemberView } from '@/features/workspaces/types';
+import { Users, UserPlus, Shield, UserX, Clock, Ban } from 'lucide-react';
+import type { WorkspaceMemberView, WorkspaceInvitationView } from '@/features/workspaces/types';
 
 interface CollaboratorListProps {
   members: WorkspaceMemberView[];
+  invitations: WorkspaceInvitationView[];
   onInviteClick: () => void;
   onRemoveMember: (memberId: string, memberName: string) => void;
+  onCancelInvitation: (invitationId: string, inviteeName: string) => void;
 }
 
 export function CollaboratorList({
   members,
+  invitations,
   onInviteClick,
   onRemoveMember,
+  onCancelInvitation,
 }: CollaboratorListProps) {
   return (
     <div className="space-y-2">
@@ -61,6 +65,33 @@ export function CollaboratorList({
                   </Button>
                 </>
               )}
+            </div>
+          </div>
+        ))}
+        {invitations.map((invitation) => (
+          <div
+            key={invitation.id}
+            className="flex items-center justify-between bg-background border border-dashed border-muted rounded-md px-3 py-1.5 text-sm opacity-70"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <span className="font-medium truncate">{invitation.invitee.name}</span>
+              <span className="text-xs text-muted-foreground truncate">
+                ({invitation.invitee.email})
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Pending
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                onClick={() => onCancelInvitation(invitation.id, invitation.invitee.name)}
+                title="Cancel Invitation"
+              >
+                <Ban className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         ))}
