@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useWorkspace } from '@/components/shared/workspace-context';
+import { useWorkspace } from '@/components/shared/workspace/workspace-context';
 import { ChevronDown, Plus, Briefcase, Building2, Mail, Check, X } from 'lucide-react';
 import {
   DropdownMenu,

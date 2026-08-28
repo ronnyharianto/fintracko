@@ -8,7 +8,7 @@ import { WorkspaceSwitcher } from './workspace-switcher';
 import { UserMenu } from './user-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useSidebarContext } from '@/components/shared/sidebar';
+import { useSidebarContext } from '@/components/shared/workspace/sidebar';
 
 export function TopBar() {
   const { isOpen, setIsOpen } = useSidebarContext();

@@ -11,10 +11,10 @@
 
 import type { ReactNode } from 'react';
 import OnboardingGuardWrapper from '@/components/guards/onboarding-guard-wrapper';
-import Sidebar from '@/components/shared/sidebar';
+import Sidebar from '@/components/shared/workspace/sidebar';
 import { TopBar } from '@/components/shared/workspace/top-bar';
-import { SidebarProvider } from '@/components/shared/sidebar';
-import { WorkspaceProvider } from '@/components/shared/workspace-context';
+import { SidebarProvider } from '@/components/shared/workspace/sidebar';
+import { WorkspaceProvider } from '@/components/shared/workspace/workspace-context';
 
 interface DashboardLayoutProps {
   children: ReactNode;

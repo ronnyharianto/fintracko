@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Briefcase } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { useWorkspace } from "@/components/shared/workspace-context";
+import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
 import { WorkspaceCard } from "@/app/(workspace)/settings/workspace/_components/workspace-card";
 import { CreateWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/create-workspace-dialog";
