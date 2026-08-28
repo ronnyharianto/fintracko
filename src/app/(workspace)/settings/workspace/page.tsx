@@ -6,12 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Briefcase } from "lucide-react";
 import { useWorkspace } from "@/components/shared/workspace-context";
 import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
-import { WorkspaceCard } from "@/app/(workspace)/workspaces/_components/workspace-card";
-import { CreateWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/create-workspace-dialog";
-import { EditWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/edit-workspace-dialog";
-import { InviteCollaboratorDialog } from "@/app/(workspace)/workspaces/_components/invite-collaborator-dialog";
-import { DeleteWorkspaceDialog } from "@/app/(workspace)/workspaces/_components/delete-workspace-dialog";
-import { RemoveCollaboratorDialog } from "@/app/(workspace)/workspaces/_components/remove-collaborator-dialog";
+import { WorkspaceCard } from "@/app/(workspace)/settings/workspace/_components/workspace-card";
+import { CreateWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/create-workspace-dialog";
+import { EditWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/edit-workspace-dialog";
+import { InviteCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/invite-collaborator-dialog";
+import { DeleteWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/delete-workspace-dialog";
+import { RemoveCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/remove-collaborator-dialog";
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
