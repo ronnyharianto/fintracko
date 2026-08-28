@@ -13,7 +13,6 @@ import { InviteCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_
 import { DeleteWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/delete-workspace-dialog";
 import { RemoveCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/remove-collaborator-dialog";
 import { CancelInvitationDialog } from "@/app/(workspace)/settings/workspace/_components/cancel-invitation-dialog";
-import { PendingInvitations } from "@/app/(workspace)/settings/workspace/_components/pending-invitations";
 
 export default function WorkspaceSettingsPage() {
   const { refreshWorkspaces } = useWorkspace();
@@ -66,8 +65,6 @@ export default function WorkspaceSettingsPage() {
           <Plus className="mr-2 h-4 w-4" /> New Workspace
         </Button>
       </div>
-
-      <PendingInvitations onAccepted={handleActionComplete} />
 
       {error && (
         <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm">
