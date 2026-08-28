@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api/client";
 import type { PendingInvitation } from "@/features/workspaces/types";
 
+export interface UsePendingInvitationsOptions {
+  /** Called after an invitation is accepted, so the caller can refresh related data. */
+  onAccepted?: () => void;
+}
+
 export interface UsePendingInvitationsResult {
   invitations: PendingInvitation[];
   isLoading: boolean;
@@ -13,7 +18,10 @@ export interface UsePendingInvitationsResult {
   rejectInvitation: (invitationId: string) => Promise<void>;
 }
 
-export function usePendingInvitations(): UsePendingInvitationsResult {
+export function usePendingInvitations(
+  options?: UsePendingInvitationsOptions,
+): UsePendingInvitationsResult {
+  const onAccepted = options?.onAccepted;
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +70,25 @@ export function usePendingInvitations(): UsePendingInvitationsResult {
         if (!cancelled) setIsLoading(false);
       });
 
+    const pollInterval = Number(
+      process.env.NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS,
+    ) || 30000;
+    const interval = setInterval(() => {
+      void fetchInvitations()
+        .then((list) => {
+          if (!cancelled) {
+            setInvitations(list);
+            setError(null);
+          }
+        })
+        .catch(() => {
+          // Silently ignore poll errors to avoid noisy UI
+        });
+    }, pollInterval);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [fetchInvitations]);
 
@@ -79,8 +104,9 @@ export function usePendingInvitations(): UsePendingInvitationsResult {
         method: "POST",
       });
       await refetch();
+      onAccepted?.();
     },
-    [refetch],
+    [refetch, onAccepted],
   );
 
   const handleReject = useCallback(

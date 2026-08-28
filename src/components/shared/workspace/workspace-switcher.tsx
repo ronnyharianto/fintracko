@@ -17,10 +17,10 @@ import { usePendingInvitations } from '@/features/workspaces/hooks/use-pending-i
 import { toast } from 'sonner';
 
 export function WorkspaceSwitcher() {
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading } =
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading, refreshWorkspaces } =
     useWorkspace();
   const { invitations, acceptInvitation, rejectInvitation } =
-    usePendingInvitations();
+    usePendingInvitations({ onAccepted: refreshWorkspaces });
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAccept = async (invitationId: string) => {
@@ -110,19 +110,6 @@ export function WorkspaceSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64 min-w-55">
-        <div className="flex items-center justify-between px-2 py-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            asChild
-            onClick={() => setIsOpen(false)}
-          >
-            <Link href="/settings/workspace?tab=workspaces">
-              <Plus className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
         {invitations.length > 0 && (
           <>
             <div className="px-2 py-1.5">
