@@ -230,6 +230,47 @@ function AccountSettingsContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
+                Avatar
+              </CardTitle>
+              <CardDescription>
+                Your avatar is synced with your OAuth provider. Update it there
+                to see changes here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  {user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- OAuth avatar URL is external; next/image requires remotePatterns config
+                    <img
+                      src={user.image}
+                      alt={user.name || "Avatar"}
+                      className="h-20 w-20 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-2xl font-medium text-muted-foreground">
+                        {getInitials(user?.name)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {user?.name || "No name"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {user?.email || "No email"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
                 Profile Information
               </CardTitle>
               <CardDescription>
@@ -375,47 +416,6 @@ function AccountSettingsContent() {
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Avatar
-              </CardTitle>
-              <CardDescription>
-                Your avatar is synced with your OAuth provider (Google/GitHub).
-                Update it there to see changes here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  {user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- OAuth avatar URL is external; next/image requires remotePatterns config
-                    <img
-                      src={user.image}
-                      alt={user.name || "Avatar"}
-                      className="h-20 w-20 rounded-full"
-                    />
-                  ) : (
-                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-2xl font-medium text-muted-foreground">
-                        {getInitials(user?.name)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">
-                    {user?.name || "No name"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {user?.email || "No email"}
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
