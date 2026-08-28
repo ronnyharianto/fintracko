@@ -13,14 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { usePendingInvitations } from '@/features/workspaces/hooks/use-pending-invitations';
 import { toast } from 'sonner';
 
 export function WorkspaceSwitcher() {
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading, refreshWorkspaces } =
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading, invitations, acceptInvitation, rejectInvitation } =
     useWorkspace();
-  const { invitations, acceptInvitation, rejectInvitation } =
-    usePendingInvitations({ onAccepted: refreshWorkspaces });
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAccept = async (invitationId: string) => {
@@ -39,7 +36,7 @@ export function WorkspaceSwitcher() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to reject invitation.');
     }
-  };
+  }
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
 

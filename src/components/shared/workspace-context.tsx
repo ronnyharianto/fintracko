@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import type { WorkspaceSummary } from "@/features/workspaces/types";
+import type { WorkspaceSummary, PendingInvitation } from "@/features/workspaces/types";
 import { ApiClientError, apiFetch } from "@/lib/api/client";
 
 interface WorkspaceContextType {
@@ -16,6 +16,10 @@ interface WorkspaceContextType {
   setActiveWorkspaceId: (id: string) => void;
   isLoading: boolean;
   refreshWorkspaces: () => Promise<void>;
+  invitations: PendingInvitation[];
+  refreshInvitations: () => Promise<void>;
+  acceptInvitation: (invitationId: string) => Promise<void>;
+  rejectInvitation: (invitationId: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
@@ -74,6 +78,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
+
+  const fetchInvitations = useCallback(async () => {
+    try {
+      const { invitations: list } = await apiFetch<{
+        invitations: PendingInvitation[];
+      }>("/api/v1/invitations");
+      setInvitations(list || []);
+    } catch {
+      // Silently ignore — invitations are non-critical
+    }
+  }, []);
 
   const applyWorkspaces = (list: WorkspaceSummary[]) => {
     setWorkspaces(list);
@@ -104,13 +120,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     applyWorkspaces(list);
   }, []);
 
-  // Mount fetch
+  // Mount fetch + invitation polling
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
       try {
-        if (!cancelled) await fetchAndApply();
+        if (!cancelled) {
+          await fetchAndApply();
+          await fetchInvitations();
+        }
       } catch {
         if (!cancelled) console.error("Failed to fetch workspaces");
       } finally {
@@ -118,10 +137,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
+    const pollInterval = Number(
+      process.env.NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS,
+    ) || 30000;
+    const interval = setInterval(() => {
+      if (!cancelled) {
+        void fetchInvitations();
+      }
+    }, pollInterval);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
-  }, [fetchAndApply]);
+  }, [fetchAndApply, fetchInvitations]);
 
   const refreshWorkspaces = async () => {
     try {
@@ -131,6 +160,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshInvitations = async () => {
+    await fetchInvitations();
+  };
+
+  const handleAcceptInvitation = async (invitationId: string) => {
+    await apiFetch(`/api/v1/invitations/${invitationId}/accept`, {
+      method: "POST",
+    });
+    await fetchInvitations();
+    await fetchAndApply();
+  };
+
+  const handleRejectInvitation = async (invitationId: string) => {
+    await apiFetch(`/api/v1/invitations/${invitationId}/reject`, {
+      method: "POST",
+    });
+    await fetchInvitations();
   };
 
   const setActiveWorkspaceId = (id: string) => {
@@ -146,6 +194,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setActiveWorkspaceId,
         isLoading,
         refreshWorkspaces,
+        invitations,
+        refreshInvitations,
+        acceptInvitation: handleAcceptInvitation,
+        rejectInvitation: handleRejectInvitation,
       }}
     >
       {children}

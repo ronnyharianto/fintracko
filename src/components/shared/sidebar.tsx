@@ -4,6 +4,7 @@ import React, { useState, useEffect, useContext, createContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3 } from 'lucide-react';
+import { WorkspaceSwitcher } from '@/components/shared/workspace/workspace-switcher';
 
 const navItems = [
   {
@@ -142,6 +143,11 @@ export default function Sidebar() {
         `}
         aria-label="Main navigation"
       >
+        {/* Workspace Switcher (mobile only) */}
+        <div className="px-3 pt-4 lg:hidden">
+          <WorkspaceSwitcher />
+        </div>
+
         <nav className="mt-4 px-3 space-y-1 flex-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink key={item.href} item={item} pathname={pathname} onClick={handleLinkClick} />
