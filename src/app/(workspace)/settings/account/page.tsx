@@ -181,7 +181,7 @@ function AccountSettingsContent() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Account Settings
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -201,7 +201,7 @@ function AccountSettingsContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Account Settings
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -238,8 +238,8 @@ function AccountSettingsContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 bg-muted/50 rounded-lg p-4">
+                <div className="relative shrink-0">
                   {user?.image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- OAuth avatar URL is external; next/image requires remotePatterns config
                     <img
@@ -255,7 +255,7 @@ function AccountSettingsContent() {
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="sm:text-left text-center">
                   <p className="text-sm font-medium">
                     {user?.name || "No name"}
                   </p>
@@ -279,7 +279,7 @@ function AccountSettingsContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleProfileSave} className="space-y-4 max-w-md">
+              <form onSubmit={handleProfileSave} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   <Input

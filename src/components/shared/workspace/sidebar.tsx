@@ -40,7 +40,7 @@ const navItems = [
 ];
 
 const settingsItem = {
-  href: '/settings/workspace',
+  href: '/settings/account',
   label: 'Settings',
   icon: Settings,
   isActive: (p: string) => p.startsWith('/settings'),
