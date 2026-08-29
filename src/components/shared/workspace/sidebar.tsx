@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3 } from 'lucide-react';
+import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3, ChevronDown, User, Briefcase } from 'lucide-react';
 import { WorkspaceSwitcher } from '@/components/shared/workspace/workspace-switcher';
 
 const navItems = [
@@ -39,12 +39,10 @@ const navItems = [
   },
 ];
 
-const settingsItem = {
-  href: '/settings/account',
-  label: 'Settings',
-  icon: Settings,
-  isActive: (p: string) => p.startsWith('/settings'),
-};
+const settingsChildren = [
+  { href: '/settings/account', label: 'Account', icon: User },
+  { href: '/settings/workspace', label: 'Workspace', icon: Briefcase },
+];
 
 // Context for sharing sidebar state between TopBar and Sidebar
 const SidebarContext = createContext<{
@@ -96,6 +94,70 @@ function NavLink({
       <Icon className="mr-3 h-4 w-4" />
       {item.label}
     </Link>
+  );
+}
+
+function SettingsNavItem({
+  pathname,
+  onClick,
+}: {
+  pathname: string;
+  onClick: () => void;
+}) {
+  const isSettings = pathname.startsWith('/settings');
+  const [expanded, setExpanded] = useState(isSettings);
+
+  // Auto-expand when navigating to settings
+  if (isSettings && !expanded) {
+    setExpanded(true);
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`
+          flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors
+          ${
+            isSettings
+              ? 'bg-primary/10 text-primary'
+              : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
+          }
+        `}
+      >
+        <Settings className="mr-3 h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">Settings</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <div className="ml-4 mt-1 space-y-0.5 border-l border-muted pl-3">
+          {settingsChildren.map((child) => {
+            const active = pathname.startsWith(child.href);
+            const Icon = child.icon;
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                onClick={onClick}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors
+                  ${
+                    active
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-muted/50 hover:text-primary text-foreground/80'
+                  }
+                `}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {child.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -155,7 +217,7 @@ export default function Sidebar() {
 
           {/* Settings at bottom */}
           <div className="border-t border-muted mt-4 pt-4">
-            <NavLink item={settingsItem} pathname={pathname} onClick={handleLinkClick} />
+            <SettingsNavItem pathname={pathname} onClick={handleLinkClick} />
           </div>
         </nav>
       </aside>
