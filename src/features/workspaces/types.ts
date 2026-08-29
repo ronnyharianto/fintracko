@@ -42,6 +42,7 @@ export interface WorkspaceInvitationView {
 export interface OwnedWorkspace {
   id: string;
   name: string;
+  currency: string;
   createdAt: string;
   members: WorkspaceMemberView[];
   invitations: WorkspaceInvitationView[];

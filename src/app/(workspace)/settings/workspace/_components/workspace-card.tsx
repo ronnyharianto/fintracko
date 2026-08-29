@@ -1,25 +1,33 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Briefcase, Trash2, Edit2 } from 'lucide-react';
-import { CollaboratorList } from './collaborator-list';
-import { OwnedWorkspace } from '@/features/workspaces/types';
+} from "@/components/ui/card";
+import { Briefcase, Trash2, Edit2 } from "lucide-react";
+import { CollaboratorList } from "./collaborator-list";
+import { OwnedWorkspace } from "@/features/workspaces/types";
 
 interface WorkspaceCardProps {
   workspace: OwnedWorkspace;
   onEditClick: (workspace: OwnedWorkspace) => void;
   onDeleteClick: (workspaceId: string) => void;
   onInviteClick: (workspaceId: string) => void;
-  onRemoveMember: (workspaceId: string, memberId: string, memberName: string) => void;
-  onCancelInvitation: (workspaceId: string, invitationId: string, inviteeName: string) => void;
+  onRemoveMember: (
+    workspaceId: string,
+    memberId: string,
+    memberName: string,
+  ) => void;
+  onCancelInvitation: (
+    workspaceId: string,
+    invitationId: string,
+    inviteeName: string,
+  ) => void;
 }
 
 export function WorkspaceCard({
@@ -30,20 +38,23 @@ export function WorkspaceCard({
   onRemoveMember,
   onCancelInvitation,
 }: WorkspaceCardProps) {
+  const currencyLabel =
+    workspace.currency === "IDR"
+      ? "IDR - Indonesian Rupiah"
+      : "USD - US Dollar";
+
   return (
-    <Card className="flex flex-col justify-between">
+    <Card className="flex flex-col overflow-hidden">
       <CardHeader>
         <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-primary" />
-              {workspace.name}
+          <div className="min-w-0">
+            <CardTitle className="text-xl flex items-center gap-2 min-h-9">
+              <Briefcase className="h-5 w-5 text-primary shrink-0" />
+              <span className="truncate">{workspace.name}</span>
             </CardTitle>
-            <CardDescription className="mt-1">
-              Created on {new Date(workspace.createdAt).toLocaleDateString()}
-            </CardDescription>
+            <CardDescription className="mt-1">{currencyLabel}</CardDescription>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -65,34 +76,17 @@ export function WorkspaceCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-2 text-center bg-muted/30 p-3 rounded-lg text-sm">
-          <div>
-            <div className="font-bold text-foreground">
-              {workspace._count.accounts}
-            </div>
-            <div className="text-xs text-muted-foreground">Accounts</div>
-          </div>
-          <div>
-            <div className="font-bold text-foreground">
-              {workspace._count.transactions}
-            </div>
-            <div className="text-xs text-muted-foreground">Transactions</div>
-          </div>
-          <div>
-            <div className="font-bold text-foreground">
-              {workspace._count.budgets}
-            </div>
-            <div className="text-xs text-muted-foreground">Budgets</div>
-          </div>
-        </div>
-
+      <CardContent className="space-y-4 overflow-hidden">
         <CollaboratorList
           members={workspace.members}
           invitations={workspace.invitations}
           onInviteClick={() => onInviteClick(workspace.id)}
-          onRemoveMember={(memberId, memberName) => onRemoveMember(workspace.id, memberId, memberName)}
-          onCancelInvitation={(invitationId, inviteeName) => onCancelInvitation(workspace.id, invitationId, inviteeName)}
+          onRemoveMember={(memberId, memberName) =>
+            onRemoveMember(workspace.id, memberId, memberName)
+          }
+          onCancelInvitation={(invitationId, inviteeName) =>
+            onCancelInvitation(workspace.id, invitationId, inviteeName)
+          }
         />
       </CardContent>
     </Card>

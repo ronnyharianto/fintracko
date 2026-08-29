@@ -21,13 +21,13 @@ export function CollaboratorList({
   onCancelInvitation,
 }: CollaboratorListProps) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold flex items-center gap-1.5">
+    <div className="space-y-2 min-w-0">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className="text-sm font-semibold flex items-center gap-1.5 shrink-0">
           <Users className="h-4 w-4 text-muted-foreground" />
           Collaborators ({members.length})
         </span>
-        <Button variant="outline" size="sm" onClick={onInviteClick}>
+        <Button variant="outline" size="sm" onClick={onInviteClick} className="shrink-0">
           <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Invite
         </Button>
       </div>
@@ -36,11 +36,11 @@ export function CollaboratorList({
         {members.map((member) => (
           <div
             key={member.id}
-            className="flex items-center justify-between bg-background border border-muted/50 rounded-md px-3 py-1.5 text-sm"
+            className="flex items-center justify-between bg-background border border-muted/50 rounded-md px-3 py-1.5 text-sm min-w-0 overflow-hidden"
           >
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center gap-2 truncate min-w-0">
               <span className="font-medium truncate">{member.user.name}</span>
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate hidden sm:inline">
                 ({member.user.email})
               </span>
             </div>
@@ -71,11 +71,11 @@ export function CollaboratorList({
         {invitations.map((invitation) => (
           <div
             key={invitation.id}
-            className="flex items-center justify-between bg-background border border-dashed border-muted rounded-md px-3 py-1.5 text-sm opacity-70"
+            className="flex items-center justify-between bg-background border border-dashed border-muted rounded-md px-3 py-1.5 text-sm opacity-70 min-w-0 overflow-hidden"
           >
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center gap-2 truncate min-w-0">
               <span className="font-medium truncate">{invitation.invitee.name}</span>
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate hidden sm:inline">
                 ({invitation.invitee.email})
               </span>
             </div>
