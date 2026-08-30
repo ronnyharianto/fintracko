@@ -32,14 +32,15 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 - **Collaboration:** Users can invite other registered users via email to join a specific workspace. Invited users share real-time visibility and mutation capabilities within that workspace based on assignment.
 
 ### Phase 3.3: Accounts & Categories Configuration
-- **Financial Accounts:** Each workspace can configure multiple financial accounts (e.g., Cash, Bank, Digital Wallet). Each account requires a unique name and tracks its own balance.
+- **Financial Accounts:** Each workspace can configure multiple financial accounts. Each account requires a unique name within the workspace, an account type, and tracks its own balance.
+  - **Account Type:** Each account must have a type from a fixed set: `CHECKING`, `SAVINGS`, `CASH`, `CREDIT_CARD`, `DIGITAL_WALLET`, `INVESTMENT`. This field is set at creation and cannot be changed later. (MVP 2 will migrate this to a user-manageable account group table.)
   - **Initial Balance:** When creating an account, users can set an initial balance. And do not update this when Transaction created.
   - **Net Transaction Sum:** This field is used to track the net transaction sum of the account. It is updated when transaction is created, updated, or deleted. Use atomic update to ensure data consistency. **BEWARE OF RACE CONDITION**.
-  - **Final Balance Calculation:** The final balance of an account is calculated as: `initialBalance + netTransactionSum`.
+  - **Final Balance Calculation:** The final balance of an account is calculated as: `initialBalance + netTransactionSum`. The `netTransactionSum` starts at 0 when the account is created and is updated atomically when transactions are created, updated, or deleted (Phase 3.4). During Phase 3.3, the final balance equals the initial balance.
   - **Edit Rules:** When user edits account, they can only update it's name and initial balance. Other fields are not allowed to edit.
   - **Delete Rules:** User not allowed to delete account that already created, they can mark it as archived if it not used anymore.
-  - **Archive Rules:** For account not used anymore, they can mark it as archived data. The archived account will not be shown or include when summary all their accounts balance.
-  - **Unarchive Rules:** User can unarchiving for archived account
+  - **Archive Rules:** For account not used anymore, they can mark it as archived data. Archived accounts are displayed in a separate collapsed section on the accounts page (not hidden). They are excluded from the total balance summary. Archived accounts cannot be selected as source/destination when creating transactions.
+  - **Unarchive Rules:** User can unarchive an archived account from the archived section.
 - **Two-Level Categories:** Every transaction type must map to a sub-category system (e.g., Category: *Food* -> Sub-Category: *Restaurants*).
   - **Edit Rules:** When user edits category or sub category, they can only update it's name
   - **Delete Rules:** User not allowed to delete category or sub category that already created, they can mark it as archived if it not used anymore.
