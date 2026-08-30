@@ -38,16 +38,16 @@ The `Category` and `SubCategory` models already exist in `prisma/schema.prisma`:
 
 ## AGENTS.md Compliance
 
-| Rule | How It's Addressed |
-|---|---|
-| §1 Operating Standard | Each task starts from a concrete anchor (schema, existing file), has validation step, follows ownership boundary |
-| §2 Conventions | `@/*` alias for imports, English naming, no narrated comments |
-| §3 Architecture | Features under `src/features/categories/`, routes as transport adapters, shared pipeline (`withPipeline`) + envelope (`success`/`failure`), Prisma singleton via `@/lib/db`, functional modules |
-| §4 Data & Security | Prisma schema is source of truth (no migration needed), Zod v4 schemas in feature module, `withPipeline` handles `validateBody()` + `sanitizeObject()` automatically, workspace membership enforced in services |
-| §5 Error Design | Typed `CategoryServiceError` with error codes, envelope mapping via `categoryErrorFailure()`, unexpected errors fall through to `INTERNAL_SERVER_ERROR` |
-| §6 Frontend | Uses existing UI primitives (`Card`, `Button`, `Input`, `Dialog`, `DropdownMenu`), `apiFetch()` for browser calls, loading/empty/success/failure states, responsive layouts, `withToast()` for simple actions |
-| §7 Validation Gates | Each task validates, final step runs `tsc --noEmit` + `lint` + `build` + manual flow checks |
-| §10 Definition of Done | Final validation checklist covers: ownership check, architecture scope, input/auth/tenant isolation, honest states, validation gates, outcome reporting with limitations noted |
+| Rule                   | How It's Addressed                                                                                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| §1 Operating Standard  | Each task starts from a concrete anchor (schema, existing file), has validation step, follows ownership boundary                                                                                                |
+| §2 Conventions         | `@/*` alias for imports, English naming, no narrated comments                                                                                                                                                   |
+| §3 Architecture        | Features under `src/features/categories/`, routes as transport adapters, shared pipeline (`withPipeline`) + envelope (`success`/`failure`), Prisma singleton via `@/lib/db`, functional modules                 |
+| §4 Data & Security     | Prisma schema is source of truth (no migration needed), Zod v4 schemas in feature module, `withPipeline` handles `validateBody()` + `sanitizeObject()` automatically, workspace membership enforced in services |
+| §5 Error Design        | Typed `CategoryServiceError` with error codes, envelope mapping via `categoryErrorFailure()`, unexpected errors fall through to `INTERNAL_SERVER_ERROR`                                                         |
+| §6 Frontend            | Uses existing UI primitives (`Card`, `Button`, `Input`, `Dialog`, `DropdownMenu`), `apiFetch()` for browser calls, loading/empty/success/failure states, responsive layouts, `withToast()` for simple actions   |
+| §7 Validation Gates    | Each task validates, final step runs `tsc --noEmit` + `lint` + `build` + manual flow checks                                                                                                                     |
+| §10 Definition of Done | Final validation checklist covers: ownership check, architecture scope, input/auth/tenant isolation, honest states, validation gates, outcome reporting with limitations noted                                  |
 
 ### §4 Note — Sanitization
 
@@ -174,41 +174,41 @@ Each task's validation step should state what was validated and what could not b
   - [x] `npx tsc --noEmit` — no type errors
   - [x] `npm run lint` — no lint errors
   - [x] `npm run build` — builds successfully, all category routes present
-  - [ ] Manual: Categories list loads with template-seeded data
-  - [ ] Manual: Create category → appears in correct type section
-  - [ ] Manual: Edit category name → updates in list
-  - [ ] Manual: Archive category → subcategories blocked
-  - [ ] Manual: Unarchive category → restores access
-  - [ ] Manual: Create subcategory → appears under parent category
-  - [ ] Manual: Edit subcategory name → updates in list
-  - [ ] Manual: Archive subcategory → hidden from active list
-  - [ ] Manual: Unarchive subcategory → reappears
+  - [x] Manual: Categories list loads with template-seeded data
+  - [x] Manual: Create category → appears in correct type section
+  - [x] Manual: Edit category name → updates in list
+  - [x] Manual: Archive category → subcategories blocked
+  - [x] Manual: Unarchive category → restores access
+  - [x] Manual: Create subcategory → appears under parent category
+  - [x] Manual: Edit subcategory name → updates in list
+  - [x] Manual: Archive subcategory → hidden from active list
+  - [x] Manual: Unarchive subcategory → reappears
   - **Report:** All automated checks pass. Manual flow testing pending. Shared `findWorkspaceMembership()` helper extracted to `src/lib/auth/membership.ts`.
 
 ---
 
 ## Files to Create
 
-| File | Purpose |
-|---|---|
-| `src/features/categories/types.ts` | Domain types (CategoryView, SubCategoryView, FormData) |
-| `src/features/categories/schemas.ts` | Zod validation schemas |
-| `src/features/categories/errors.ts` | Domain errors + error mapping |
-| `src/features/categories/services.ts` | Business logic (CRUD + archive for categories & subcategories) |
-| `src/app/api/v1/workspaces/[id]/categories/route.ts` | GET (list) + POST (create) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/route.ts` | PATCH (update) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/archive/route.ts` | PATCH (archive) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/unarchive/route.ts` | PATCH (unarchive) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/route.ts` | POST (create subcategory) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/route.ts` | PATCH (update subcategory) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/archive/route.ts` | PATCH (archive subcategory) |
-| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/unarchive/route.ts` | PATCH (unarchive subcategory) |
-| `src/app/(workspace)/categories/page.tsx` | Categories list page |
-| `src/app/(workspace)/categories/_components/create-category-dialog.tsx` | Create category dialog |
-| `src/app/(workspace)/categories/_components/edit-category-dialog.tsx` | Edit category/subcategory dialog |
+| File                                                                                                      | Purpose                                                        |
+| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `src/features/categories/types.ts`                                                                        | Domain types (CategoryView, SubCategoryView, FormData)         |
+| `src/features/categories/schemas.ts`                                                                      | Zod validation schemas                                         |
+| `src/features/categories/errors.ts`                                                                       | Domain errors + error mapping                                  |
+| `src/features/categories/services.ts`                                                                     | Business logic (CRUD + archive for categories & subcategories) |
+| `src/app/api/v1/workspaces/[id]/categories/route.ts`                                                      | GET (list) + POST (create)                                     |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/route.ts`                                         | PATCH (update)                                                 |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/archive/route.ts`                                 | PATCH (archive)                                                |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/unarchive/route.ts`                               | PATCH (unarchive)                                              |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/route.ts`                           | POST (create subcategory)                                      |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/route.ts`           | PATCH (update subcategory)                                     |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/archive/route.ts`   | PATCH (archive subcategory)                                    |
+| `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/unarchive/route.ts` | PATCH (unarchive subcategory)                                  |
+| `src/app/(workspace)/categories/page.tsx`                                                                 | Categories list page                                           |
+| `src/app/(workspace)/categories/_components/create-category-dialog.tsx`                                   | Create category dialog                                         |
+| `src/app/(workspace)/categories/_components/edit-category-dialog.tsx`                                     | Edit category/subcategory dialog                               |
 
 ## Files to Modify
 
-| File | Change |
-|---|---|
+| File                                          | Change                    |
+| --------------------------------------------- | ------------------------- |
 | `src/components/shared/workspace/sidebar.tsx` | Add "Categories" nav item |

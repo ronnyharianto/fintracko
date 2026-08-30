@@ -41,7 +41,7 @@ const TYPE_CONFIG: Record<
   TRANSFER: { label: "Transfers", icon: "🔄", color: "text-blue-600" },
 };
 
-const TYPE_ORDER: TransactionType[] = ["INCOME", "EXPENSE", "TRANSFER"];
+const TYPE_ORDER: TransactionType[] = ["EXPENSE", "INCOME", "TRANSFER"];
 
 /**
  * Categories page — lists categories grouped by type with nested subcategories.
@@ -191,7 +191,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Archived Toggle */}
-      {!isLoading && categories.some((c) => c.isArchived) && (
+      {!isLoading && categories.some((c) => c.isArchived || c.subCategories.some((s) => s.isArchived)) && (
         <button
           onClick={() => setShowArchived(!showArchived)}
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -203,8 +203,8 @@ export default function CategoriesPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="space-y-4">
-          {Array.from({ length: 2 }).map((_, i) => (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-5 w-32" />
@@ -241,7 +241,7 @@ export default function CategoriesPage() {
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {cats.map((category) => (
                   <CategoryCard
                     key={category.id}
@@ -589,7 +589,7 @@ function SubCategoryRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+            className="h-6 w-6 shrink-0 md:opacity-0 md:group-hover:opacity-100"
           >
             <MoreHorizontal className="h-3 w-3" />
           </Button>

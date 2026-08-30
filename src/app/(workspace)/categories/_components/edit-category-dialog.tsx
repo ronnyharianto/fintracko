@@ -36,6 +36,7 @@ export function EditCategoryDialog({
   const [name, setName] = useState(target?.name ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Adjust state during render (React docs: you-might-not-need-an-effect)
   const [prevTarget, setPrevTarget] = useState(target);
@@ -59,8 +60,20 @@ export function EditCategoryDialog({
     e.preventDefault();
     if (!name.trim()) return;
 
+    // If name changed, show confirmation first
+    if (name.trim() !== target.name) {
+      setShowConfirm(true);
+      return;
+    }
+
+    // Name unchanged, save directly
+    await save();
+  };
+
+  const save = async () => {
     setIsSaving(true);
     setError(null);
+    setShowConfirm(false);
 
     try {
       await apiFetch(target.endpoint, {
@@ -81,7 +94,10 @@ export function EditCategoryDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => {
+      if (!o) setShowConfirm(false);
+      onOpenChange(o);
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -99,6 +115,10 @@ export function EditCategoryDialog({
               maxLength={100}
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            This will update all existing transactions.<br />
+            To keep the old name on past transactions, archive and create a new one instead.
+          </p>
           <DialogFooter>
             <Button
               type="button"
@@ -113,6 +133,29 @@ export function EditCategoryDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename {isCategory ? "Category" : "Subcategory"}?</DialogTitle>
+            <DialogDescription>
+              Renaming from <strong>{target.name}</strong> to <strong>{name.trim()}</strong> will
+              update the name on all existing transactions that use this
+              {isCategory ? " category" : " subcategory"}.<br /><br />
+              <strong>This action cannot be undone.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirm(false)}>
+              Go Back
+            </Button>
+            <Button onClick={() => void save()} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Confirm Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
