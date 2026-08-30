@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext, createContext } from 'react';
+import React, { useState, useEffect, useContext, createContext, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3, ChevronDown, User, Briefcase } from 'lucide-react';
@@ -106,11 +106,16 @@ function SettingsNavItem({
 }) {
   const isSettings = pathname.startsWith('/settings');
   const [expanded, setExpanded] = useState(isSettings);
+  const prevIsSettings = useRef(isSettings);
 
-  // Auto-expand when navigating to settings
-  if (isSettings && !expanded) {
-    setExpanded(true);
-  }
+  useEffect(() => {
+    if (isSettings && !prevIsSettings.current) {
+      setExpanded(true);
+    } else if (!isSettings && prevIsSettings.current) {
+      setExpanded(false);
+    }
+    prevIsSettings.current = isSettings;
+  }, [isSettings]);
 
   return (
     <div>
