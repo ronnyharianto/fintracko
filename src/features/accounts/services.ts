@@ -10,26 +10,19 @@
  */
 
 import { db } from "@/lib/db";
+import { findWorkspaceMembership } from "@/lib/auth/membership";
 import type { AccountType } from "../../../generated/prisma/enums";
 import type { CreateAccountInput, UpdateAccountInput } from "./schemas";
 import { AccountServiceError } from "./errors";
 
 /**
- * Verify the user is a member of the given workspace.
- * Returns the membership if found, otherwise throws FORBIDDEN.
+ * Verify the user is a member of the workspace, or throw FORBIDDEN.
  */
 async function requireMembership(userId: string, workspaceId: string) {
-  const membership = await db.workspaceMember.findUnique({
-    where: {
-      workspaceId_userId: { workspaceId, userId },
-    },
-    select: { id: true },
-  });
-
+  const membership = await findWorkspaceMembership(userId, workspaceId);
   if (!membership) {
     throw new AccountServiceError("FORBIDDEN", "You are not a member of this workspace");
   }
-
   return membership;
 }
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useContext, createContext, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings, Home, Banknote, CreditCard, PiggyBank, BarChart3, ChevronDown, User, Briefcase } from 'lucide-react';
+import { Settings, Home, Banknote, Tag, CreditCard, PiggyBank, BarChart3, ChevronDown, User, Briefcase } from 'lucide-react';
 import { WorkspaceSwitcher } from '@/components/shared/workspace/workspace-switcher';
 
 const navItems = [
@@ -18,6 +18,12 @@ const navItems = [
     label: 'Accounts',
     icon: Banknote,
     isActive: (p: string) => p === '/accounts',
+  },
+  {
+    href: '/categories',
+    label: 'Categories',
+    icon: Tag,
+    isActive: (p: string) => p === '/categories',
   },
   {
     href: '/transactions',

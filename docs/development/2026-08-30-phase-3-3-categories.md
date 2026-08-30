@@ -1,7 +1,7 @@
 # Implementation Plan: Phase 3.3 — Two-Level Categories
 
 **Date:** 2026-08-30
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete (pending manual testing)
 
 ---
 
@@ -65,161 +65,125 @@ Each task's validation step should state what was validated and what could not b
 
 ## Sub Tasks
 
-- [ ] 1. Feature Types (`src/features/categories/types.ts`)
-  - [ ] Define `CategoryView` interface: `{ id, name, type, isArchived, subCategories: SubCategoryView[], createdAt }`
-  - [ ] Define `SubCategoryView` interface: `{ id, name, isArchived, createdAt }`
-  - [ ] Define `CategoryFormData` type: `{ name: string, type: TransactionType }`
-  - [ ] Define `SubCategoryFormData` type: `{ name: string }`
-  - [ ] Define `CategoryListResponse` type: `{ categories: CategoryView[] }`
-  - **Validate:** `npx tsc --noEmit`
+- [x] 1. Feature Types (`src/features/categories/types.ts`)
+  - [x] Define `CategoryView` interface: `{ id, name, type, isArchived, subCategories: SubCategoryView[], createdAt }`
+  - [x] Define `SubCategoryView` interface: `{ id, name, isArchived, createdAt }`
+  - [x] Define `CategoryFormData` type: `{ name: string, type: TransactionType }`
+  - [x] Define `SubCategoryFormData` type: `{ name: string }`
+  - [x] Define `CategoryListResponse` type: `{ categories: CategoryView[] }`
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 2. Feature Schemas (`src/features/categories/schemas.ts`)
-  - [ ] `CategoryNameSchema` — z.string().min(1).max(100)
-  - [ ] `SubCategoryNameSchema` — z.string().min(1).max(100)
-  - [ ] `TransactionTypeEnum` — z.enum derived from Prisma-generated `TransactionType` (single source of truth)
-  - [ ] `CreateCategorySchema` — z.object({ name, type })
-  - [ ] `UpdateCategorySchema` — z.object({ name }) (type not editable)
-  - [ ] `CreateSubCategorySchema` — z.object({ name })
-  - [ ] `UpdateSubCategorySchema` — z.object({ name })
-  - [ ] Type inference exports for all schemas
-  - **Validate:** `npx tsc --noEmit`
+- [x] 2. Feature Schemas (`src/features/categories/schemas.ts`)
+  - [x] `CategoryNameSchema` — z.string().min(1).max(100)
+  - [x] `SubCategoryNameSchema` — z.string().min(1).max(100)
+  - [x] `TransactionTypeEnum` — z.enum derived from Prisma-generated `TransactionType` (single source of truth)
+  - [x] `CreateCategorySchema` — z.object({ name, type })
+  - [x] `UpdateCategorySchema` — z.object({ name }) (type not editable)
+  - [x] `CreateSubCategorySchema` — z.object({ name })
+  - [x] `UpdateSubCategorySchema` — z.object({ name })
+  - [x] Type inference exports for all schemas
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 3. Feature Errors (`src/features/categories/errors.ts`)
-  - [ ] `CategoryServiceErrorCode` union: `FORBIDDEN`, `CATEGORY_NOT_FOUND`, `SUBCATEGORY_NOT_FOUND`, `NAME_TAKEN`
-  - [ ] `CategoryServiceError` class extending Error with `code` field
-  - [ ] `categoryErrorFailure()` helper for mapping to envelope responses
-  - [ ] `handleCategoryErrors()` route handler wrapper (same pattern as `handleAccountErrors`)
-  - **Validate:** `npx tsc --noEmit`
+- [x] 3. Feature Errors (`src/features/categories/errors.ts`)
+  - [x] `CategoryServiceErrorCode` union: `FORBIDDEN`, `CATEGORY_NOT_FOUND`, `SUBCATEGORY_NOT_FOUND`, `NAME_TAKEN`
+  - [x] `CategoryServiceError` class extending Error with `code` field
+  - [x] `categoryErrorFailure()` helper for mapping to envelope responses
+  - [x] `handleCategoryErrors()` route handler wrapper (same pattern as `handleAccountErrors`)
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 4. Feature Service (`src/features/categories/services.ts`)
-  - [ ] `getCategories(userId, workspaceId)` — verify membership, return all categories with nested subcategories, ordered by type then name
-  - [ ] `createCategory(userId, workspaceId, data)` — verify membership, check unique name within workspace+type, create category
-  - [ ] `updateCategory(userId, categoryId, data)` — verify membership via category's workspace, check unique name if changed, update name only
-  - [ ] `archiveCategory(userId, categoryId)` — verify membership, set isArchived = true (subcategories blocked by parent)
-  - [ ] `unarchiveCategory(userId, categoryId)` — verify membership, set isArchived = false
-  - [ ] `createSubCategory(userId, categoryId, data)` — verify membership, check unique name within category, create subcategory
-  - [ ] `updateSubCategory(userId, subCategoryId, data)` — verify membership, check unique name if changed, update name only
-  - [ ] `archiveSubCategory(userId, subCategoryId)` — verify membership, set isArchived = true
-  - [ ] `unarchiveSubCategory(userId, subCategoryId)` — verify membership, set isArchived = false
-  - [ ] `requireMembership()` helper — same pattern as accounts (reuse or shared helper)
-  - **Validate:** `npx tsc --noEmit`
+- [x] 4. Feature Service (`src/features/categories/services.ts`)
+  - [x] `getCategories(userId, workspaceId)` — verify membership, return all categories with nested subcategories, ordered by type then name
+  - [x] `createCategory(userId, workspaceId, data)` — verify membership, check unique name within workspace+type, create category
+  - [x] `updateCategory(userId, categoryId, data)` — verify membership via category's workspace, check unique name if changed, update name only
+  - [x] `archiveCategory(userId, categoryId)` — verify membership, set isArchived = true (subcategories blocked by parent)
+  - [x] `unarchiveCategory(userId, categoryId)` — verify membership, set isArchived = false
+  - [x] `createSubCategory(userId, categoryId, data)` — verify membership, check unique name within category, create subcategory
+  - [x] `updateSubCategory(userId, subCategoryId, data)` — verify membership, check unique name if changed, update name only
+  - [x] `archiveSubCategory(userId, subCategoryId)` — verify membership, set isArchived = true
+  - [x] `unarchiveSubCategory(userId, subCategoryId)` — verify membership, set isArchived = false
+  - [x] Shared `findWorkspaceMembership()` helper extracted to `src/lib/auth/membership.ts`
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 5. API Routes — Categories CRUD
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/`
-  - [ ] `GET route.ts` — List categories with subcategories for workspace
-    - Pipeline: `withPipeline` + `requireOnboarding`
-    - Calls `getCategories(userId, workspaceId)`
-    - Returns `success({ categories })`
-  - [ ] `POST route.ts` — Create category
-    - Pipeline: `withPipeline` + `schema: CreateCategorySchema` + `requireOnboarding`
-    - Calls `createCategory(userId, workspaceId, data)`
-    - Returns `success({ category })`
-  - **Validate:** `npx tsc --noEmit`
+- [x] 5. API Routes — Categories CRUD
+  - [x] `GET route.ts` — List categories with subcategories
+  - [x] `POST route.ts` — Create category
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 6. API Routes — Category Actions
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/`
-  - [ ] `PATCH route.ts` — Update category name
-    - Pipeline: `withPipeline` + `schema: UpdateCategorySchema` + `requireOnboarding`
-    - Calls `updateCategory(userId, categoryId, data)`
-    - Returns `success({ category })`
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/archive/`
-  - [ ] `PATCH route.ts` — Archive category
-    - Pipeline: `withPipeline` + `requireOnboarding`
-    - Calls `archiveCategory(userId, categoryId)`
-    - Returns `success({ archived: true })`
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/unarchive/`
-  - [ ] `PATCH route.ts` — Unarchive category
-    - Pipeline: `withPipeline` + `requireOnboarding`
-    - Calls `unarchiveCategory(userId, categoryId)`
-    - Returns `success({ unarchived: true })`
-  - **Validate:** `npx tsc --noEmit`
+- [x] 6. API Routes — Category Actions
+  - [x] `PATCH route.ts` — Update category name
+  - [x] `archive/PATCH route.ts` — Archive category
+  - [x] `unarchive/PATCH route.ts` — Unarchive category
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 7. API Routes — SubCategories CRUD
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/`
-  - [ ] `POST route.ts` — Create subcategory
-    - Pipeline: `withPipeline` + `schema: CreateSubCategorySchema` + `requireOnboarding`
-    - Calls `createSubCategory(userId, categoryId, data)`
-    - Returns `success({ subCategory })`
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/`
-  - [ ] `PATCH route.ts` — Update subcategory name
-    - Pipeline: `withPipeline` + `schema: UpdateSubCategorySchema` + `requireOnboarding`
-    - Calls `updateSubCategory(userId, subCategoryId, data)`
-    - Returns `success({ subCategory })`
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/archive/`
-  - [ ] `PATCH route.ts` — Archive subcategory
-  - **Directory:** `src/app/api/v1/workspaces/[id]/categories/[categoryId]/subcategories/[subCategoryId]/unarchive/`
-  - [ ] `PATCH route.ts` — Unarchive subcategory
-  - **Validate:** `npx tsc --noEmit`
+- [x] 7. API Routes — SubCategories CRUD
+  - [x] `POST route.ts` — Create subcategory
+  - [x] `PATCH route.ts` — Update subcategory
+  - [x] `archive/PATCH route.ts` — Archive subcategory
+  - [x] `unarchive/PATCH route.ts` — Unarchive subcategory
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 8. Categories Page — Layout & State
-  - [ ] "use client" page component at `src/app/(workspace)/categories/page.tsx`
-  - [ ] Fetch categories from `/api/v1/workspaces/${workspaceId}/categories` on mount
-  - [ ] State: `categories: CategoryView[]`, `isLoading`, `error`
-  - [ ] Use `useWorkspace()` for activeWorkspaceId
-  - [ ] Group categories by type: INCOME, EXPENSE, TRANSFER
-  - [ ] Filter: show active only by default, toggle to include archived
-  - **Validate:** `npx tsc --noEmit`
+- [x] 8. Categories Page — Layout & State
+  - [x] "use client" page component at `src/app/(workspace)/categories/page.tsx`
+  - [x] Fetch categories from `/api/v1/workspaces/${workspaceId}/categories` on mount
+  - [x] State: `categories: CategoryView[]`, `isLoading`, `error`
+  - [x] Use `useWorkspace()` for activeWorkspaceId
+  - [x] Group categories by type: INCOME, EXPENSE, TRANSFER
+  - [x] Filter: show active only by default, toggle to include archived
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 9. Categories Page — Category List
-  - [ ] Page header: "Categories" title + "New Category" button
-  - [ ] Three sections by type: Income, Expenses, Transfers (each with icon/color)
-  - [ ] Each category card: name, subcategory count, dropdown menu (⋮)
-  - [ ] Dropdown actions: Edit, Archive/Unarchive
-  - [ ] Click to expand/collapse subcategories list
-  - [ ] Each subcategory row: name, dropdown menu (⋮)
-  - [ ] Subcategory dropdown: Edit, Archive/Unarchive
-  - [ ] "Add Subcategory" button inside each category
-  - [ ] Empty state: "No categories yet" (should not happen since templates seed them)
-  - [ ] Loading state: skeleton placeholders
-  - **Validate:** `npx tsc --noEmit`
+- [x] 9. Categories Page — Category List
+  - [x] Page header: "Categories" title + "New Category" button
+  - [x] Three sections by type: Income, Expenses, Transfers (each with icon/color)
+  - [x] Each category card: name, subcategory count, expand/collapse, dropdown menu (⋮)
+  - [x] Dropdown actions: Edit, Archive/Unarchive
+  - [x] Subcategory list with inline add, edit, archive/unarchive
+  - [x] Empty state: "No categories yet"
+  - [x] Loading state: skeleton placeholders
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 10. Create Category Dialog
-  - [ ] File: `src/app/(workspace)/categories/_components/create-category-dialog.tsx`
-  - [ ] Dialog with form: Name (Input), Type (Select: Income, Expense, Transfer)
-  - [ ] Validation: name required (1-100 chars), type required
-  - [ ] Submit: POST to `/api/v1/workspaces/${workspaceId}/categories`
-  - [ ] Success: refetch categories list + close dialog
-  - [ ] Error: inline error message
-  - [ ] Loading state on submit button
-  - **Validate:** `npx tsc --noEmit`
+- [x] 10. Create Category Dialog
+  - [x] Dialog with form: Name (Input), Type (Select: Income, Expense, Transfer)
+  - [x] Validation: name required (1-100 chars), type required
+  - [x] Submit: POST to `/api/v1/workspaces/${workspaceId}/categories`
+  - [x] Success: refetch categories list + close dialog
+  - [x] Error: inline error message
+  - [x] Loading state on submit button
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 11. Edit Category/SubCategory Dialog
-  - [ ] File: `src/app/(workspace)/categories/_components/edit-category-dialog.tsx`
-  - [ ] Reused for both category and subcategory (props: `type: "category" | "subcategory"`, `name`, `onSave`)
-  - [ ] Dialog with form: Name (Input only)
-  - [ ] Pre-fill with current name
-  - [ ] Submit: PATCH to appropriate endpoint
-  - [ ] Success: refetch categories list + close dialog (explicit try/catch — side effect of closing)
-  - **Validate:** `npx tsc --noEmit`
+- [x] 11. Edit Category/SubCategory Dialog
+  - [x] Reused for both category and subcategory (props: `type`, `id`, `name`, `endpoint`)
+  - [x] Dialog with form: Name (Input only)
+  - [x] Pre-fill with current name (adjust-state-during-render pattern)
+  - [x] Submit: PATCH to caller-constructed endpoint
+  - [x] Success: close dialog + refetch (explicit try/catch)
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 12. Create SubCategory Inline
-  - [ ] "Add Subcategory" button inside each category card
-  - [ ] Click reveals an inline input field (not a dialog) with save/cancel
-  - [ ] Submit: POST to `/api/v1/workspaces/${workspaceId}/categories/${categoryId}/subcategories`
-  - [ ] Success: refetch categories list
-  - [ ] Error: inline error message
-  - **Validate:** `npx tsc --noEmit`
+- [x] 12. Create SubCategory Inline
+  - [x] "Add Subcategory" button inside each category card
+  - [x] Click reveals inline input field with save/cancel
+  - [x] Submit: POST to `/api/v1/workspaces/${workspaceId}/categories/${categoryId}/subcategories`
+  - [x] Keyboard: Enter to save, Escape to cancel
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 13. Sidebar Navigation
-  - [ ] File: `src/components/shared/workspace/sidebar.tsx`
-  - [ ] Add "Categories" nav item with `href: '/categories'` and appropriate icon
-  - [ ] Add isActive logic: `(p) => p === '/categories'`
-  - **Validate:** `npx tsc --noEmit`
+- [x] 13. Sidebar Navigation
+  - [x] Added "Categories" nav item with `href: '/categories'` and Tag icon
+  - [x] isActive logic: `(p) => p === '/categories'`
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 14. Final Validation (§7 + §10)
-  - [ ] Run `npx tsc --noEmit` — no type errors
-  - [ ] Run `npm run lint` — no lint errors
-  - [ ] Run `npm run build` — builds successfully
+- [x] 14. Final Validation (§7 + §10)
+  - [x] `npx tsc --noEmit` — no type errors
+  - [x] `npm run lint` — no lint errors
+  - [x] `npm run build` — builds successfully, all category routes present
   - [ ] Manual: Categories list loads with template-seeded data
   - [ ] Manual: Create category → appears in correct type section
   - [ ] Manual: Edit category name → updates in list
-  - [ ] Manual: Archive category → moves to archived (subcategories blocked)
+  - [ ] Manual: Archive category → subcategories blocked
   - [ ] Manual: Unarchive category → restores access
   - [ ] Manual: Create subcategory → appears under parent category
   - [ ] Manual: Edit subcategory name → updates in list
   - [ ] Manual: Archive subcategory → hidden from active list
   - [ ] Manual: Unarchive subcategory → reappears
-  - [ ] Report: list all validated items and note any limitations
+  - **Report:** All automated checks pass. Manual flow testing pending. Shared `findWorkspaceMembership()` helper extracted to `src/lib/auth/membership.ts`.
 
 ---
 
