@@ -87,6 +87,18 @@ enum Gender {
   @@schema("ft_core")
 }
 
+/// Financial account type (MVP 1 fixed enum, MVP 2 migrates to account group table).
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  CREDIT_CARD
+  DIGITAL_WALLET
+  INVESTMENT
+
+  @@schema("ft_core")
+}
+
 // ----------------------------------------------------------------------------
 // 1. User — Identity root (Better Auth aligned)
 // ----------------------------------------------------------------------------
@@ -274,12 +286,13 @@ model WorkspaceInvitation {
 // `initialBalance` is only touched when the user edits account settings.
 
 model FinancialAccount {
-  id                 String    @id @default(uuid()) @db.Uuid
-  workspaceId        String    @db.Uuid
+  id                 String      @id @default(uuid()) @db.Uuid
+  workspaceId        String      @db.Uuid
   name               String
-  initialBalance     Decimal   @default(0) @db.Decimal(18, 4)
-  netTransactionSum  Decimal   @default(0) @db.Decimal(18, 4)
-  isArchived         Boolean   @default(false)
+  type               AccountType @default(CHECKING)
+  initialBalance     Decimal     @default(0) @db.Decimal(18, 4)
+  netTransactionSum  Decimal     @default(0) @db.Decimal(18, 4)
+  isArchived         Boolean     @default(false)
 
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt @default(now())
