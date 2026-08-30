@@ -66,12 +66,13 @@ Each task's validation step should state what was validated (e.g., "tsc clean") 
   - [x] Define `AccountListResponse` type: `{ accounts: AccountView[] }`
   - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 3. Feature Schemas (`src/features/accounts/schemas.ts`)
-  - [ ] `AccountNameSchema` — z.string().min(1).max(100)
-  - [ ] `AccountTypeSchema` — z.enum(["CHECKING", "SAVINGS", "CASH", "CREDIT_CARD", "DIGITAL_WALLET", "INVESTMENT"])
-  - [ ] `CreateAccountSchema` — z.object({ name, type, initialBalance: z.number() })
-  - [ ] `UpdateAccountSchema` — z.object({ name, initialBalance: z.number() }) (type not editable)
-  - **Validate:** `npx tsc --noEmit`
+- [x] 3. Feature Schemas (`src/features/accounts/schemas.ts`)
+  - [x] `AccountNameSchema` — z.string().min(1).max(100)
+  - [x] `AccountTypeEnum` — z.enum derived from Prisma-generated `AccountType` (single source of truth, no hardcoded values)
+  - [x] `CreateAccountSchema` — z.object({ name, type, initialBalance: z.number() })
+  - [x] `UpdateAccountSchema` — z.object({ name, initialBalance: z.number() }) (type not editable)
+  - [x] `CreateAccountInput`, `UpdateAccountInput` — type inference exports
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
 - [ ] 4. Feature Errors (`src/features/accounts/errors.ts`)
   - [ ] `AccountServiceErrorCode` union: `FORBIDDEN`, `ACCOUNT_NOT_FOUND`, `NAME_TAKEN`

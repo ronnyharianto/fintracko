@@ -6,13 +6,19 @@
  */
 
 import { z } from "zod";
+import { Gender } from "../../../generated/prisma/enums";
 
 /**
  * Supported currencies for the MVP.
  */
 export const CurrencyEnum = z.enum(["USD", "IDR"]);
 
-export const GenderEnum = z.enum(["MALE", "FEMALE", "OTHER"]);
+/**
+ * Gender enum derived from the Prisma-generated Gender enum.
+ */
+export const GenderEnum = z.enum(
+  Object.values(Gender) as [string, ...string[]],
+);
 
 /**
  * Onboarding completion request schema.

@@ -7,6 +7,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Gender } from "../../../generated/prisma/enums";
 import type { CompleteOnboardingInput, UpdateProfileInput } from "./schemas";
 
 /**
@@ -82,7 +83,7 @@ export async function updateProfile(userId: string, data: UpdateProfileInput) {
         company: data.company,
         bio: data.bio,
         dateOfBirth: data.dateOfBirth,
-        gender: data.gender,
+        gender: data.gender as Gender,
         currencyPreference: data.currencyPreference,
       },
       select: {
