@@ -51,20 +51,20 @@ Each task's validation step should state what was validated (e.g., "tsc clean") 
 
 ## Sub Tasks
 
-- [ ] 1. Prisma Schema — Add Account Type
+- [x] 1. Prisma Schema — Add Account Type
   - **File:** `prisma/schema.prisma`
-  - [ ] Add `AccountType` enum: `CHECKING`, `SAVINGS`, `CASH`, `CREDIT_CARD`, `DIGITAL_WALLET`, `INVESTMENT`
-  - [ ] Add `type` field to `FinancialAccount` model (required, `@default(CHECKING)`)
-  - [ ] Run `npx prisma migrate dev --name add-account-type`
-  - [ ] Run `npx prisma generate`
-  - **Validate:** `npx tsc --noEmit`
+  - [x] Add `AccountType` enum: `CHECKING`, `SAVINGS`, `CASH`, `CREDIT_CARD`, `DIGITAL_WALLET`, `INVESTMENT`
+  - [x] Add `type` field to `FinancialAccount` model (required, `@default(CHECKING)`)
+  - [x] Run `npx prisma migrate dev --name add-account-type` — migration `20260830022900_add_account_type` created and applied
+  - [x] Run `npx prisma generate` — Prisma Client generated
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
-- [ ] 2. Feature Types (`src/features/accounts/types.ts`)
-  - [ ] Export `AccountType` enum re-export from Prisma client
-  - [ ] Define `AccountView` interface: `{ id, name, type, initialBalance, netTransactionSum, isArchived, createdAt }`
-  - [ ] Define `AccountFormData` type: `{ name: string, type: AccountType, initialBalance: number }`
-  - [ ] Define `AccountListResponse` type: `{ accounts: AccountView[] }`
-  - **Validate:** `npx tsc --noEmit`
+- [x] 2. Feature Types (`src/features/accounts/types.ts`)
+  - [x] Export `AccountType` enum re-export from Prisma client
+  - [x] Define `AccountView` interface: `{ id, name, type, initialBalance, netTransactionSum, isArchived, createdAt }`
+  - [x] Define `AccountFormData` type: `{ name: string, type: AccountType, initialBalance: number }`
+  - [x] Define `AccountListResponse` type: `{ accounts: AccountView[] }`
+  - **Validate:** `npx tsc --noEmit` ✅ clean
 
 - [ ] 3. Feature Schemas (`src/features/accounts/schemas.ts`)
   - [ ] `AccountNameSchema` — z.string().min(1).max(100)
