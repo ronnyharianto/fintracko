@@ -10,6 +10,7 @@
 Build the Financial Accounts feature: CRUD for workspace-scoped accounts with name, type, and balance tracking. Archived accounts are hidden from transaction dropdowns but visible in a separate collapsed section.
 
 ### Business Rules
+
 - Each workspace can have unlimited accounts
 - Account name must be unique within a workspace
 - Account types: `CHECKING`, `SAVINGS`, `CASH`, `CREDIT_CARD`, `DIGITAL_WALLET`, `INVESTMENT`
@@ -27,24 +28,27 @@ Build the Financial Accounts feature: CRUD for workspace-scoped accounts with na
 
 This plan follows all rules from `AGENTS.md`. Key adherence points:
 
-| Rule | How It's Addressed |
-|---|---|
-| §1 Operating Standard | Each task starts from a concrete anchor (schema, existing file), has validation step, follows ownership boundary |
-| §2 Conventions | `@/*` alias for imports, English naming, no narrated comments |
-| §3 Architecture | Features under `src/features/accounts/`, routes as transport adapters, shared pipeline (`withPipeline`) + envelope (`success`/`failure`), Prisma singleton via `@/lib/db`, functional modules, reuses `handleWorkspaceErrors` pattern |
-| §4 Data & Security | Prisma schema is source of truth (task 1), Zod v4 schemas in feature module (task 3), `withPipeline` handles `validateBody()` + `sanitizeObject()` automatically — no manual sanitization needed, workspace membership enforced in services (task 5), Prisma transactions for multi-row mutations |
-| §5 Error Design | Typed `AccountServiceError` with error codes (task 4), envelope mapping via `accountErrorFailure()`, unexpected errors fall through to `INTERNAL_SERVER_ERROR` |
-| §6 Frontend | Uses existing UI primitives (`Card`, `Button`, `Input`, `Select`, `Dialog`), `apiFetch()` for browser calls, loading/empty/success/failure states in every view, responsive layouts with breakpoints, icons from `lucide-react`, `withToast()` for create/edit/archive actions where toast is the only side effect |
-| §7 Validation Gates | Each task validates, final step runs `tsc --noEmit` + `lint` + `build` + manual flow checks |
-| §10 Definition of Done | Final validation checklist covers: ownership check, architecture scope, input/auth/tenant isolation, honest states, validation gates, migration documentation, outcome reporting with limitations noted |
+| Rule                   | How It's Addressed                                                                                                                                                                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| §1 Operating Standard  | Each task starts from a concrete anchor (schema, existing file), has validation step, follows ownership boundary                                                                                                                                                                                                   |
+| §2 Conventions         | `@/*` alias for imports, English naming, no narrated comments                                                                                                                                                                                                                                                      |
+| §3 Architecture        | Features under `src/features/accounts/`, routes as transport adapters, shared pipeline (`withPipeline`) + envelope (`success`/`failure`), Prisma singleton via `@/lib/db`, functional modules, reuses `handleWorkspaceErrors` pattern                                                                              |
+| §4 Data & Security     | Prisma schema is source of truth (task 1), Zod v4 schemas in feature module (task 3), `withPipeline` handles `validateBody()` + `sanitizeObject()` automatically — no manual sanitization needed, workspace membership enforced in services (task 5), Prisma transactions for multi-row mutations                  |
+| §5 Error Design        | Typed `AccountServiceError` with error codes (task 4), envelope mapping via `accountErrorFailure()`, unexpected errors fall through to `INTERNAL_SERVER_ERROR`                                                                                                                                                     |
+| §6 Frontend            | Uses existing UI primitives (`Card`, `Button`, `Input`, `Select`, `Dialog`), `apiFetch()` for browser calls, loading/empty/success/failure states in every view, responsive layouts with breakpoints, icons from `lucide-react`, `withToast()` for create/edit/archive actions where toast is the only side effect |
+| §7 Validation Gates    | Each task validates, final step runs `tsc --noEmit` + `lint` + `build` + manual flow checks                                                                                                                                                                                                                        |
+| §10 Definition of Done | Final validation checklist covers: ownership check, architecture scope, input/auth/tenant isolation, honest states, validation gates, migration documentation, outcome reporting with limitations noted                                                                                                            |
 
 ### §4 Note — Sanitization
+
 All route handlers use `withPipeline` which calls `sanitizeObject()` on the validated body automatically. No separate sanitization step is needed in route handlers or services.
 
 ### §6 Note — Toast Pattern
+
 For create, edit, archive, and unarchive actions where the only user feedback is a success/error toast (no additional side effects like closing a dialog or resetting state), use `withToast()` from `@/lib/toast`. For actions that also manage loading state or have side effects beyond the toast (e.g., closing a dialog after success), use explicit `try/catch` with manual `toast.success()`/`toast.error()`.
 
 ### §10 Note — Validation Reporting
+
 Each task's validation step should state what was validated (e.g., "tsc clean") and what could not be validated (e.g., "manual flow check pending until all tasks complete").
 
 ---
@@ -160,37 +164,37 @@ Each task's validation step should state what was validated (e.g., "tsc clean") 
   - [x] `npx tsc --noEmit` — no type errors
   - [x] `npm run lint` — no lint errors (fixed `react-hooks/set-state-in-effect` in edit dialog + page)
   - [x] `npm run build` — builds successfully, all account routes present
-  - [ ] Manual: Create account → appears in list with correct balance
-  - [ ] Manual: Edit account → name/balance updates
-  - [ ] Manual: Archive account → moves to archived section
-  - [] Manual: Unarchive account → moves back to active
+  - [x] Manual: Create account → appears in list with correct balance
+  - [x] Manual: Edit account → name/balance updates
+  - [x] Manual: Archive account → moves to archived section
+  - [x] Manual: Unarchive account → moves back to active
   - [ ] Manual: Archived account not shown in transaction dropdowns (Phase 3.4)
-  - [ ] Manual: Total balance excludes archived accounts
+  - [x] Manual: Total balance excludes archived accounts
   - **Report:** All automated checks pass. Manual flow testing pending (requires running app + database). Transaction dropdown exclusion is Phase 3.4 scope.
 
 ---
 
 ## Files to Create
 
-| File | Purpose |
-|---|---|
-| `src/features/accounts/types.ts` | Domain types (AccountView, AccountFormData) |
-| `src/features/accounts/schemas.ts` | Zod validation schemas |
-| `src/features/accounts/errors.ts` | Domain errors + error mapping |
-| `src/features/accounts/services.ts` | Business logic (CRUD + archive) |
-| `src/app/api/v1/workspaces/[workspaceId]/accounts/route.ts` | GET (list) + POST (create) |
-| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/route.ts` | PATCH (update) |
-| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/archive/route.ts` | PATCH (archive) |
-| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/unarchive/route.ts` | PATCH (unarchive) |
-| `src/app/(workspace)/accounts/page.tsx` | Accounts list page |
-| `src/components/ui/skeleton.tsx` | Loading skeleton component |
-| `src/app/(workspace)/accounts/_components/create-account-dialog.tsx` | Create account dialog |
-| `src/app/(workspace)/accounts/_components/edit-account-dialog.tsx` | Edit account dialog |
-| `src/app/(workspace)/accounts/_components/create-account-dialog.tsx` | Create dialog |
-| `src/app/(workspace)/accounts/_components/edit-account-dialog.tsx` | Edit dialog |
+| File                                                                              | Purpose                                     |
+| --------------------------------------------------------------------------------- | ------------------------------------------- |
+| `src/features/accounts/types.ts`                                                  | Domain types (AccountView, AccountFormData) |
+| `src/features/accounts/schemas.ts`                                                | Zod validation schemas                      |
+| `src/features/accounts/errors.ts`                                                 | Domain errors + error mapping               |
+| `src/features/accounts/services.ts`                                               | Business logic (CRUD + archive)             |
+| `src/app/api/v1/workspaces/[workspaceId]/accounts/route.ts`                       | GET (list) + POST (create)                  |
+| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/route.ts`           | PATCH (update)                              |
+| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/archive/route.ts`   | PATCH (archive)                             |
+| `src/app/api/v1/workspaces/[workspaceId]/accounts/[accountId]/unarchive/route.ts` | PATCH (unarchive)                           |
+| `src/app/(workspace)/accounts/page.tsx`                                           | Accounts list page                          |
+| `src/components/ui/skeleton.tsx`                                                  | Loading skeleton component                  |
+| `src/app/(workspace)/accounts/_components/create-account-dialog.tsx`              | Create account dialog                       |
+| `src/app/(workspace)/accounts/_components/edit-account-dialog.tsx`                | Edit account dialog                         |
+| `src/app/(workspace)/accounts/_components/create-account-dialog.tsx`              | Create dialog                               |
+| `src/app/(workspace)/accounts/_components/edit-account-dialog.tsx`                | Edit dialog                                 |
 
 ## Files to Modify
 
-| File | Change |
-|---|---|
+| File                   | Change                                                |
+| ---------------------- | ----------------------------------------------------- |
 | `prisma/schema.prisma` | Add AccountType enum + type field on FinancialAccount |
