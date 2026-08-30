@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -138,13 +139,11 @@ export function EditAccountDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-account-balance">Initial Balance</Label>
-            <Input
+            <CurrencyInput
               id="edit-account-balance"
-              type="number"
-              step="0.01"
               placeholder="0.00"
               value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
+              onChange={setInitialBalance}
               required
             />
           </div>

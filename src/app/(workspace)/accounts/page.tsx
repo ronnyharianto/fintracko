@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { apiFetch, ApiClientError } from "@/lib/api/client";
-import type { AccountView } from "@/features/accounts/types";
+import type { AccountView, AccountType } from "@/features/accounts/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +33,7 @@ export default function AccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<AccountType | "ALL">("ALL");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountView | null>(null);
@@ -90,6 +91,11 @@ export default function AccountsPage() {
     [accounts],
   );
 
+  const filteredActiveAccounts = useMemo(
+    () => typeFilter === "ALL" ? activeAccounts : activeAccounts.filter((a) => a.type === typeFilter),
+    [activeAccounts, typeFilter],
+  );
+
   const archivedAccounts = useMemo(
     () => accounts.filter((a) => a.isArchived),
     [accounts],
@@ -130,29 +136,45 @@ export default function AccountsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Accounts
-        </h1>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Account
-        </Button>
-      </div>
-
-      {/* Total Balance Summary */}
-      {!isLoading && activeAccounts.length > 0 && (
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-sm text-muted-foreground">Total Balance</p>
-            <p className="text-2xl font-bold">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Accounts
+          </h1>
+          {!isLoading && activeAccounts.length > 0 && (
+            <p className="text-3xl font-bold tracking-tight sm:text-4xl">
               {totalBalance.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </p>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+        <div>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Account
+          </Button>
+        </div>
+      </div>
+
+      {/* Type Filter */}
+      {!isLoading && activeAccounts.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {(["ALL", "CHECKING", "SAVINGS", "CASH", "CREDIT_CARD", "DIGITAL_WALLET", "INVESTMENT"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                typeFilter === t
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {t === "ALL" ? "All" : t.replace(/_/g, " ")}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Loading State */}
@@ -188,10 +210,21 @@ export default function AccountsPage() {
       )}
 
       {/* Active Accounts Grid */}
-      {!isLoading && activeAccounts.length > 0 && (
+      {!isLoading && activeAccounts.length > 0 && filteredActiveAccounts.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {activeAccounts.map((account) => (          <AccountCard key={account.id} account={account} onAction={fetchAccounts} onEdit={(a) => { setEditingAccount(a); setIsEditOpen(true); }} />
+          {filteredActiveAccounts.map((account) => (          <AccountCard key={account.id} account={account} onAction={fetchAccounts} onEdit={(a) => { setEditingAccount(a); setIsEditOpen(true); }} />
           ))}
+        </div>
+      )}
+
+      {/* Filter Empty State */}
+      {!isLoading && activeAccounts.length > 0 && filteredActiveAccounts.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+          <Wallet className="mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="text-lg font-medium">No accounts found</p>
+          <p className="text-sm text-muted-foreground">
+            No accounts match the selected filter.
+          </p>
         </div>
       )}
 
