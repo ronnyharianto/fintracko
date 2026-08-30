@@ -1,13 +1,13 @@
 # Implementation Plan: Phase 3.4 — Transaction Management
 
 **Date:** 2026-08-30
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 ---
 
 ## Overview
 
-Build the Transaction Management feature: CRUD for workspace-scoped financial transactions with type classification (Income, Expense, Transfer), account association, category/subcategory selection, and atomic balance updates. Includes image attachment upload via Imgur API.
+Build the Transaction Management feature: CRUD for workspace-scoped financial transactions with type classification (Income, Expense, Transfer), account association, category/subcategory selection, and atomic balance updates. Includes image attachment upload via Imgur API, view modes (day/week/month) with date navigation, and responsive form layout.
 
 ### Business Rules
 
@@ -83,66 +83,66 @@ Each task's validation step should state what was validated and what could not b
 
 ## Sub Tasks
 
-- [ ] 1. Feature Types (`src/features/transactions/types.ts`)
-  - [ ] Define `TransactionView` interface: `{ id, type, amount, date, subCategoryId, sourceAccountId, destinationAccountId, description, payeePayer, tags, attachmentUrl, createdById, createdAt, updatedAt }`
-  - [ ] Define `TransactionFormData` type: `{ type, amount, date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? }`
-  - [ ] Define `TransactionListResponse` type: `{ transactions: TransactionView[], total: number }`
-  - [ ] Re-export `TransactionType` from Prisma
+- [x] 1. Feature Types (`src/features/transactions/types.ts`)
+  - [x] Define `TransactionView` interface: `{ id, type, amount, date, subCategoryId, sourceAccountId, destinationAccountId, description, payeePayer, tags, attachmentUrl, createdById, createdAt, updatedAt }`
+  - [x] Define `TransactionFormData` type: `{ type, amount, date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? }`
+  - [x] Define `TransactionListResponse` type: `{ transactions: TransactionView[], total: number }`
+  - [x] Re-export `TransactionType` from Prisma
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 2. Feature Schemas (`src/features/transactions/schemas.ts`)
-  - [ ] `CreateTransactionSchema` — z.object({ type, amount: z.number().nonzero(), date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? })
-  - [ ] `UpdateTransactionSchema` — same fields as create (all optional except those required by type)
-  - [ ] Custom Zod refinement for account rules: INCOME requires destinationAccountId, EXPENSE requires sourceAccountId, TRANSFER requires both
-  - [ ] Type inference exports
+- [x] 2. Feature Schemas (`src/features/transactions/schemas.ts`)
+  - [x] `CreateTransactionSchema` — z.object({ type, amount: z.number().nonzero(), date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? })
+  - [x] `UpdateTransactionSchema` — same fields as create (all optional except those required by type)
+  - [x] Custom Zod refinement for account rules: INCOME requires destinationAccountId, EXPENSE requires sourceAccountId, TRANSFER requires both
+  - [x] Type inference exports
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 3. Feature Errors (`src/features/transactions/errors.ts`)
-  - [ ] `TransactionServiceErrorCode` union: `FORBIDDEN`, `TRANSACTION_NOT_FOUND`, `INVALID_ACCOUNT`, `INVALID_CATEGORY`, `SOURCE_DESTINATION_SAME`
-  - [ ] `TransactionServiceError` class extending Error with `code` field
-  - [ ] `transactionErrorFailure()` helper for mapping to envelope responses
-  - [ ] `handleTransactionErrors()` route handler wrapper
+- [x] 3. Feature Errors (`src/features/transactions/errors.ts`)
+  - [x] `TransactionServiceErrorCode` union: `FORBIDDEN`, `TRANSACTION_NOT_FOUND`, `INVALID_ACCOUNT`, `INVALID_CATEGORY`, `SOURCE_DESTINATION_SAME`
+  - [x] `TransactionServiceError` class extending Error with `code` field
+  - [x] `transactionErrorFailure()` helper for mapping to envelope responses
+  - [x] `handleTransactionErrors()` route handler wrapper
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 4. Feature Service (`src/features/transactions/services.ts`)
-  - [ ] `getTransactions(userId, workspaceId, filters?)` — verify membership, return transactions with optional filters (date range, type, category, account), ordered by date desc
-  - [ ] `createTransaction(userId, workspaceId, data)` — verify membership, validate accounts exist and are not archived, validate subcategory exists and is not archived, create transaction + atomic balance update in `$transaction` block
-  - [ ] `updateTransaction(userId, transactionId, data)` — verify membership, validate accounts, reverse old balance effect + apply new balance effect in `$transaction` block
-  - [ ] `deleteTransaction(userId, transactionId)` — verify membership, reverse balance effect + delete in `$transaction` block
-  - [ ] `requireMembership()` — reuse `findWorkspaceMembership` from `@/lib/auth/membership`
+- [x] 4. Feature Service (`src/features/transactions/services.ts`)
+  - [x] `getTransactions(userId, workspaceId, filters?)` — verify membership, return transactions with optional filters (date range, type, category, account), ordered by date desc
+  - [x] `createTransaction(userId, workspaceId, data)` — verify membership, validate accounts exist and are not archived, validate subcategory exists and is not archived, create transaction + atomic balance update in `$transaction` block
+  - [x] `updateTransaction(userId, transactionId, data)` — verify membership, validate accounts, reverse old balance effect + apply new balance effect in `$transaction` block
+  - [x] `deleteTransaction(userId, transactionId)` — verify membership, reverse balance effect + delete in `$transaction` block
+  - [x] `requireMembership()` — reuse `findWorkspaceMembership` from `@/lib/auth/membership`
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 5. API Routes — Transactions CRUD
+- [x] 5. API Routes — Transactions CRUD
   - **Directory:** `src/app/api/v1/workspaces/[id]/transactions/`
-  - [ ] `GET route.ts` — List transactions with filters
+  - [x] `GET route.ts` — List transactions with filters
     - Pipeline: `withPipeline` + `requireOnboarding`
     - Query params: `type`, `categoryId`, `subCategoryId`, `accountId`, `from`, `to`, `page`, `limit`
     - Calls `getTransactions(userId, workspaceId, filters)`
     - Returns `success({ transactions, total })`
-  - [ ] `POST route.ts` — Create transaction
+  - [x] `POST route.ts` — Create transaction
     - Pipeline: `withPipeline` + `schema: CreateTransactionSchema` + `requireOnboarding`
     - Calls `createTransaction(userId, workspaceId, data)`
     - Returns `success({ transaction })`
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Route flow (auth, onboarding guard, balance updates) requires running app with database
 
-- [ ] 6. API Routes — Transaction Actions
+- [x] 6. API Routes — Transaction Actions
   - **Directory:** `src/app/api/v1/workspaces/[id]/transactions/[transactionId]/`
-  - [ ] `GET route.ts` — Get single transaction detail
-  - [ ] `PATCH route.ts` — Update transaction
+  - [x] `GET route.ts` — Get single transaction detail
+  - [x] `PATCH route.ts` — Update transaction
     - Pipeline: `withPipeline` + `schema: UpdateTransactionSchema` + `requireOnboarding`
     - Calls `updateTransaction(userId, transactionId, data)`
     - Returns `success({ transaction })`
-  - [ ] `DELETE route.ts` — Delete transaction
+  - [x] `DELETE route.ts` — Delete transaction
     - Pipeline: `withPipeline` + `requireOnboarding`
     - Calls `deleteTransaction(userId, transactionId)`
     - Returns `success({ deleted: true })`
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Route flow (auth, balance reversal) requires running app with database
 
-- [ ] 7. API Route — Image Upload
+- [x] 7. API Route — Image Upload
   - **Directory:** `src/app/api/v1/upload/`
-  - [ ] `POST route.ts` — Upload image to Imgur
+  - [x] `POST route.ts` — Upload image to Imgur
     - Pipeline: `withPipeline` + `requireOnboarding`
     - Accepts multipart form data (image file)
     - Validates file type (jpg, png, gif, webp) and max size (5MB)
@@ -152,29 +152,29 @@ Each task's validation step should state what was validated and what could not b
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Image upload end-to-end requires running app with Imgur API key configured
 
-- [ ] 8. Transactions Page — Layout & State
-  - [ ] "use client" page component at `src/app/(workspace)/transactions/page.tsx`
-  - [ ] Fetch transactions from `/api/v1/workspaces/${workspaceId}/transactions` on mount
-  - [ ] State: `transactions: TransactionView[]`, `isLoading`, `error`, `pagination`
-  - [ ] Use `useWorkspace()` for activeWorkspaceId
-  - [ ] Filter state: `type`, `dateRange`, `categoryId`, `accountId`
-  - [ ] Summary card: total income, total expense, net balance for current month
+- [x] 8. Transactions Page — Layout & State
+  - [x] "use client" page component at `src/app/(workspace)/transactions/page.tsx`
+  - [x] Fetch transactions from `/api/v1/workspaces/${workspaceId}/transactions` on mount
+  - [x] State: `transactions: TransactionView[]`, `isLoading`, `error`, `pagination`
+  - [x] Use `useWorkspace()` for activeWorkspaceId
+  - [x] Filter state: `type`, `dateRange`, `categoryId`, `accountId`
+  - [x] Summary card: total income, total expense, net balance for current month
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 9. Transactions Page — Transaction List
-  - [ ] Page header: "Transactions" title + "New Transaction" button
-  - [ ] Filter bar: type dropdown, date range picker, category filter, account filter
-  - [ ] Transaction list: grouped by date, each row shows type icon, description, category, amount (colored by type), account
-  - [ ] Each transaction row: dropdown menu (⋮) with Edit, Delete actions
-  - [ ] Empty state: "No transactions yet" + "Create Transaction" button
-  - [ ] Loading state: skeleton placeholders
-  - [ ] Pagination: load more / infinite scroll
+- [x] 9. Transactions Page — Transaction List
+  - [x] Page header: "Transactions" title + "New Transaction" button
+  - [x] Filter bar: type dropdown, date range picker, category filter, account filter
+  - [x] Transaction list: grouped by date, each row shows type icon, description, category, amount (colored by type), account
+  - [x] Each transaction row: dropdown menu (⋮) with Edit, Delete actions
+  - [x] Empty state: "No transactions yet" + "Create Transaction" button
+  - [x] Loading state: skeleton placeholders
+  - [x] Pagination: load more / infinite scroll
   - **Validate:** `npx tsc --noEmit`
 
-- [ ] 10. Create Transaction Dialog
-  - [ ] File: `src/app/(workspace)/transactions/_components/create-transaction-dialog.tsx`
-  - [ ] Step 1: Select type (Income, Expense, Transfer) — visual card selection
-  - [ ] Step 2: Form fields based on type:
+- [x] 10. Create Transaction Dialog
+  - [x] File: `src/app/(workspace)/transactions/_components/create-transaction-dialog.tsx`
+  - [x] Step 1: Select type (Income, Expense, Transfer) — visual card selection
+  - [x] Step 2: Form fields based on type:
     - Amount (`CurrencyInput`)
     - Date (date picker)
     - Category → SubCategory (cascading select, filtered by type)
@@ -184,40 +184,40 @@ Each task's validation step should state what was validated and what could not b
     - Payee/Payer (optional text)
     - Tags (optional, tag input)
     - Attachment (file picker → upload to Imgur)
-  - [ ] Validation: required fields per type, amount non-zero, accounts not archived
-  - [ ] Submit: POST to `/api/v1/workspaces/${workspaceId}/transactions`
-  - [ ] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
-  - [ ] Error: inline error message
-  - [ ] Loading state on submit button
+  - [x] Validation: required fields per type, amount non-zero, accounts not archived
+  - [x] Submit: POST to `/api/v1/workspaces/${workspaceId}/transactions`
+  - [x] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
+  - [x] Error: inline error message
+  - [x] Loading state on submit button
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Full form flow requires running app with accounts and categories populated
 
-- [ ] 11. Edit Transaction Dialog
-  - [ ] File: `src/app/(workspace)/transactions/_components/edit-transaction-dialog.tsx`
-  - [ ] Pre-fill form with current transaction data
-  - [ ] Same form as create but type is not editable
-  - [ ] Submit: PATCH to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
-  - [ ] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
+- [x] 11. Edit Transaction Dialog
+  - [x] File: `src/app/(workspace)/transactions/_components/edit-transaction-dialog.tsx`
+  - [x] Pre-fill form with current transaction data
+  - [x] Same form as create but type is not editable
+  - [x] Submit: PATCH to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
+  - [x] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Pre-fill + balance recalculation requires running app with existing transactions
 
-- [ ] 12. Delete Transaction Confirmation
-  - [ ] Reuse existing `ConfirmDialog` component
-  - [ ] Warning: "This will reverse the balance change on affected accounts"
-  - [ ] Confirm: DELETE to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
-  - [ ] Success: refetch transactions (withToast — toast only, no side effects beyond refetch)
+- [x] 12. Delete Transaction Confirmation
+  - [x] Reuse existing `ConfirmDialog` component
+  - [x] Warning: "This will reverse the balance change on affected accounts"
+  - [x] Confirm: DELETE to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
+  - [x] Success: refetch transactions (withToast — toast only, no side effects beyond refetch)
   - **Validate:** `npx tsc --noEmit`
   - **Cannot validate:** Balance reversal requires running app with existing transactions
 
-- [ ] 13. Sidebar Navigation
-  - [ ] "Transactions" nav item already exists with correct href `/transactions`
-  - [ ] Verify isActive logic matches `/transactions` route
+- [x] 13. Sidebar Navigation
+  - [x] "Transactions" nav item already exists with correct href `/transactions`
+  - [x] Verify isActive logic matches `/transactions` route
   - **Validate:** Already correct — no changes needed
 
-- [ ] 14. Final Validation (§7 + §10)
-  - [ ] Run `npx tsc --noEmit` — no type errors
-  - [ ] Run `npm run lint` — no lint errors
-  - [ ] Run `npm run build` — builds successfully
+- [x] 14. Final Validation (§7 + §10)
+  - [x] Run `npx tsc --noEmit` — no type errors
+  - [x] Run `npm run lint` — no lint errors
+  - [x] Run `npm run build` — builds successfully
   - [ ] Manual: Create income → appears in list, destination account balance updated
   - [ ] Manual: Create expense → appears in list, source account balance updated
   - [ ] Manual: Create transfer → appears in list, both account balances updated

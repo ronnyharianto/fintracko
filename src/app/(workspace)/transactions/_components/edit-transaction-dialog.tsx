@@ -1,0 +1,358 @@
+"use client";
+
+import React, { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { useWorkspace } from "@/components/shared/workspace/workspace-context";
+import type { TransactionView } from "@/features/transactions/types";
+import type { CategoryView } from "@/features/categories/types";
+import type { AccountView } from "@/features/accounts/types";
+import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/image-upload";
+
+interface EditTransactionDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  transaction: TransactionView | null;
+  onUpdated: () => void;
+}
+
+export function EditTransactionDialog({
+  open,
+  onOpenChange,
+  transaction,
+  onUpdated,
+}: EditTransactionDialogProps) {
+  const { activeWorkspaceId } = useWorkspace();
+
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [subCategoryId, setSubCategoryId] = useState("");
+  const [sourceAccountId, setSourceAccountId] = useState("");
+  const [destinationAccountId, setDestinationAccountId] = useState("");
+  const [description, setDescription] = useState("");
+  const [payeePayer, setPayeePayer] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [categories, setCategories] = useState<CategoryView[]>([]);
+  const [accounts, setAccounts] = useState<AccountView[]>([]);
+  const [prevTransaction, setPrevTransaction] = useState<TransactionView | null>(null);
+
+  // Fetch categories and accounts when dialog opens
+  useEffect(() => {
+    if (!open || !activeWorkspaceId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [catData, accData] = await Promise.all([
+          apiFetch<{ categories: CategoryView[] }>(
+            `/api/v1/workspaces/${activeWorkspaceId}/categories`,
+          ),
+          apiFetch<{ accounts: AccountView[] }>(
+            `/api/v1/workspaces/${activeWorkspaceId}/accounts`,
+          ),
+        ]);
+        if (!cancelled) {
+          setCategories((catData.categories || []).filter((c) => !c.isArchived));
+          setAccounts((accData.accounts || []).filter((a) => !a.isArchived));
+        }
+      } catch {
+        // Errors handled by form submission
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, activeWorkspaceId]);
+
+  // Pre-fill form when transaction changes (adjust state during render)
+  if (transaction !== prevTransaction && open) {
+    setPrevTransaction(transaction);
+    setAmount(transaction?.amount ?? "");
+    setDate(transaction?.date ?? "");
+    setSourceAccountId(transaction?.sourceAccountId ?? "");
+    setDestinationAccountId(transaction?.destinationAccountId ?? "");
+    setDescription(transaction?.description ?? "");
+    setPayeePayer(transaction?.payeePayer ?? "");
+    setAttachmentUrl(transaction?.attachmentUrl ?? null);
+    setError(null);
+
+    // Find parent category of the subcategory
+    if (transaction && activeWorkspaceId) {
+      void (async () => {
+        try {
+          const catData = await apiFetch<{ categories: CategoryView[] }>(
+            `/api/v1/workspaces/${activeWorkspaceId}/categories`,
+          );
+          const cats = (catData.categories || []).filter((c) => !c.isArchived);
+          setCategories(cats);
+
+          for (const cat of cats) {
+            const sub = cat.subCategories.find((s) => s.id === transaction.subCategoryId);
+            if (sub) {
+              setCategoryId(cat.id);
+              setSubCategoryId(sub.id);
+              break;
+            }
+          }
+        } catch {
+          // Silently handle
+        }
+      })();
+    }
+  }
+
+  // Filter categories by transaction type
+  const filteredCategories = categories.filter((c) => c.type === transaction?.type);
+
+  // Get subcategories for selected category
+  const selectedCategory = filteredCategories.find((c) => c.id === categoryId);
+  const subCategories = selectedCategory?.subCategories.filter((s) => !s.isArchived) ?? [];
+
+  const resetForm = useCallback(() => {
+    setAmount("");
+    setDate("");
+    setCategoryId("");
+    setSubCategoryId("");
+    setSourceAccountId("");
+    setDestinationAccountId("");
+    setDescription("");
+    setPayeePayer("");
+    setAttachmentUrl(null);
+    setError(null);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeWorkspaceId || !transaction || !amount) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await apiFetch(
+        `/api/v1/workspaces/${activeWorkspaceId}/transactions/${transaction.id}`,
+        {
+          method: "PATCH",
+          body: {
+            amount: parseFloat(amount) || 0,
+            date: date || undefined,
+            subCategoryId: subCategoryId || undefined,
+            sourceAccountId: sourceAccountId || undefined,
+            destinationAccountId: destinationAccountId || undefined,
+            description: description || undefined,
+            payeePayer: payeePayer || undefined,
+            attachmentUrl: attachmentUrl || undefined,
+          },
+        },
+      );
+      toast.success("Transaction updated");
+      resetForm();
+      onOpenChange(false);
+      onUpdated();
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError ? err.message : "Failed to update transaction.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const showSource = transaction?.type === "EXPENSE" || transaction?.type === "TRANSFER";
+  const showDestination = transaction?.type === "INCOME" || transaction?.type === "TRANSFER";
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) resetForm();
+        onOpenChange(o);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Transaction</DialogTitle>
+          <DialogDescription>
+            Update the transaction details. The transaction type cannot be changed.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* Type (read-only) */}
+          <div className="space-y-2">
+            <Label>Transaction Type</Label>
+            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+              {transaction?.type === "EXPENSE" ? "Money Out" : transaction?.type === "INCOME" ? "Money In" : "Transfer"}
+            </div>
+          </div>
+
+          {/* Amount & Date */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-txn-amount">Amount</Label>
+              <CurrencyInput
+                id="edit-txn-amount"
+                placeholder="0.00"
+                value={amount}
+                onChange={setAmount}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-txn-date">Date</Label>
+              <Input
+                id="edit-txn-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Category → SubCategory */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="mb-0 w-full text-[16px]">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Subcategory</Label>
+              <Select
+                value={subCategoryId}
+                onValueChange={setSubCategoryId}
+                disabled={!categoryId}
+              >
+                <SelectTrigger className="mb-0 w-full text-[16px]">
+                  <SelectValue placeholder="Select subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subCategories.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Accounts */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {showSource && (
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                  <SelectTrigger className="mb-0 w-full text-[16px]">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {showDestination && (
+              <div className="space-y-2">
+                <Label>Destination</Label>
+                <Select value={destinationAccountId} onValueChange={setDestinationAccountId}>
+                  <SelectTrigger className="mb-0 w-full text-[16px]">
+                    <SelectValue placeholder="Select destination" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Payee / Payer & Description */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="edit-txn-payee">Payee / Payer (optional)</Label>
+              <Input
+                id="edit-txn-payee"
+                placeholder="Who was involved?"
+                value={payeePayer}
+                onChange={(e) => setPayeePayer(e.target.value)}
+                maxLength={100}
+              />
+            </div>
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="edit-txn-description">Description (optional)</Label>
+              <Input
+                id="edit-txn-description"
+                placeholder="Any additional notes?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Attachment (optional)</Label>
+            <ImageUpload value={attachmentUrl} onChange={setAttachmentUrl} />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
