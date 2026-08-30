@@ -55,12 +55,12 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
   - Transaction Type
   - Category & Sub-category
     - Must be selected from the available categories and sub-categories in the workspace
-    - Categories and Sub-category must be detach from it's master data, so when user delete or update a category or sub-category, the transactions that use it will not be affected
+    - Transactions reference categories and sub-categories via foreign key (`subCategoryId`). They do not store category/sub-category names. When a category or sub-category is renamed, all existing transactions automatically reflect the new name since they reference the record, not a stored string.
   - Account Association:
     - *Income:* Requires `Destination Account`.
     - *Expense:* Requires `Source Account`.
     - *Transfer:* Requires both `Source Account` and `Destination Account`.
-  - Amount (Positive numerical value)
+  - Amount (Any non-zero numerical value, positive or negative — supports investment tracking and refunds)
 - **Optional/Detailed Fields:**
   - Description/Notes (Text)
   - Payee/Payer (Text, third-party entity name)

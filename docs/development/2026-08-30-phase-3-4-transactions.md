@@ -17,9 +17,8 @@ Build the Transaction Management feature: CRUD for workspace-scoped financial tr
   - INCOME → `destinationAccountId` required
   - EXPENSE → `sourceAccountId` required
   - TRANSFER → both `sourceAccountId` and `destinationAccountId` required
-- Amount must be a positive number
-- `subCategoryId` references the subcategory directly — transactions are detached from category/subcategory names
-- When a category or subcategory is renamed, existing transactions are unaffected
+- Amount can be any non-zero number (positive or negative) to support investment tracking and refunds
+- `subCategoryId` references the SubCategory record directly via foreign key. Transactions do not store category/subcategory names. When a category or subcategory is renamed, all existing transactions automatically reflect the new name since they reference the record, not a stored string.
 - When a category is archived, its subcategories become inaccessible for new transactions, but existing transactions remain valid
 - When an account is archived, it cannot be used for new transactions, but existing transactions remain valid
 - **Atomic balance updates:** `netTransactionSum` on source/destination accounts must be updated atomically inside a Prisma `$transaction` block on every create/update/delete
@@ -67,7 +66,14 @@ Every transaction create/update/delete MUST update `netTransactionSum` on the af
 
 ### §6 Note — Toast Pattern
 
-For create, update, and delete actions where the only user feedback is a success/error toast (no additional side effects like closing a dialog or resetting state), use `withToast()` from `@/lib/toast`. For actions that also manage loading state or have side effects beyond the toast (e.g., closing a dialog after success), use explicit `try/catch` with manual `toast.success()`/`toast.error()`.
+- **Use `withToast()`** when: the only feedback is a success/error toast with no additional side effects (e.g., delete confirmation that just refetches the list).
+- **Use explicit `try/catch`** when: the action also manages loading state, closes a dialog, resets a form, or has other side effects beyond the toast (e.g., create/edit dialogs that close + refetch on success).
+
+Examples in this feature:
+- Delete transaction → `withToast()` (toast + refetch only)
+- Create transaction → explicit `try/catch` (close dialog + refetch + reset form)
+- Edit transaction → explicit `try/catch` (close dialog + refetch)
+- Upload image → explicit `try/catch` (returns URL, has loading state)
 
 ### §10 Note — Validation Reporting
 
@@ -85,7 +91,7 @@ Each task's validation step should state what was validated and what could not b
   - **Validate:** `npx tsc --noEmit`
 
 - [ ] 2. Feature Schemas (`src/features/transactions/schemas.ts`)
-  - [ ] `CreateTransactionSchema` — z.object({ type, amount: z.number().positive(), date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? })
+  - [ ] `CreateTransactionSchema` — z.object({ type, amount: z.number().nonzero(), date, subCategoryId, sourceAccountId?, destinationAccountId?, description?, payeePayer?, tags?, attachmentUrl? })
   - [ ] `UpdateTransactionSchema` — same fields as create (all optional except those required by type)
   - [ ] Custom Zod refinement for account rules: INCOME requires destinationAccountId, EXPENSE requires sourceAccountId, TRANSFER requires both
   - [ ] Type inference exports
@@ -118,6 +124,7 @@ Each task's validation step should state what was validated and what could not b
     - Calls `createTransaction(userId, workspaceId, data)`
     - Returns `success({ transaction })`
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Route flow (auth, onboarding guard, balance updates) requires running app with database
 
 - [ ] 6. API Routes — Transaction Actions
   - **Directory:** `src/app/api/v1/workspaces/[id]/transactions/[transactionId]/`
@@ -131,6 +138,7 @@ Each task's validation step should state what was validated and what could not b
     - Calls `deleteTransaction(userId, transactionId)`
     - Returns `success({ deleted: true })`
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Route flow (auth, balance reversal) requires running app with database
 
 - [ ] 7. API Route — Image Upload
   - **Directory:** `src/app/api/v1/upload/`
@@ -138,10 +146,11 @@ Each task's validation step should state what was validated and what could not b
     - Pipeline: `withPipeline` + `requireOnboarding`
     - Accepts multipart form data (image file)
     - Validates file type (jpg, png, gif, webp) and max size (5MB)
-    - Uploads to Imgur API using server-side API key
+    - Reads Imgur API key from environment variable via existing environment helpers (never hardcode, never expose to client)
+    - Uploads to Imgur API server-side
     - Returns `success({ url })` with the public Imgur URL
-  - **Note:** Imgur API key stored in environment variable, never exposed to client
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Image upload end-to-end requires running app with Imgur API key configured
 
 - [ ] 8. Transactions Page — Layout & State
   - [ ] "use client" page component at `src/app/(workspace)/transactions/page.tsx`
@@ -175,27 +184,30 @@ Each task's validation step should state what was validated and what could not b
     - Payee/Payer (optional text)
     - Tags (optional, tag input)
     - Attachment (file picker → upload to Imgur)
-  - [ ] Validation: required fields per type, amount positive, accounts not archived
+  - [ ] Validation: required fields per type, amount non-zero, accounts not archived
   - [ ] Submit: POST to `/api/v1/workspaces/${workspaceId}/transactions`
-  - [ ] Success: refetch transactions + close dialog
+  - [ ] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
   - [ ] Error: inline error message
   - [ ] Loading state on submit button
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Full form flow requires running app with accounts and categories populated
 
 - [ ] 11. Edit Transaction Dialog
   - [ ] File: `src/app/(workspace)/transactions/_components/edit-transaction-dialog.tsx`
   - [ ] Pre-fill form with current transaction data
   - [ ] Same form as create but type is not editable
   - [ ] Submit: PATCH to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
-  - [ ] Success: refetch transactions + close dialog (explicit try/catch — side effect of closing)
+  - [ ] Success: refetch transactions + close dialog (explicit try/catch — has side effects: close dialog + refetch)
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Pre-fill + balance recalculation requires running app with existing transactions
 
 - [ ] 12. Delete Transaction Confirmation
   - [ ] Reuse existing `ConfirmDialog` component
   - [ ] Warning: "This will reverse the balance change on affected accounts"
   - [ ] Confirm: DELETE to `/api/v1/workspaces/${workspaceId}/transactions/${transactionId}`
-  - [ ] Success: refetch transactions
+  - [ ] Success: refetch transactions (withToast — toast only, no side effects beyond refetch)
   - **Validate:** `npx tsc --noEmit`
+  - **Cannot validate:** Balance reversal requires running app with existing transactions
 
 - [ ] 13. Sidebar Navigation
   - [ ] "Transactions" nav item already exists with correct href `/transactions`
