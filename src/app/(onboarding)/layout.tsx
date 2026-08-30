@@ -24,7 +24,7 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-start bg-background px-4 py-12 overflow-y-auto">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-2"
