@@ -20,11 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Shield, Key, Save, Loader2 } from "lucide-react";
+import { User, Shield, Key, Save, Loader2, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
 import { useSession } from "@/components/shared/auth/session-provider";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { authClient } from "@/lib/auth-client";
 
 /**
  * Valid account-settings tabs, mirroring the TabsTrigger values below.
@@ -102,6 +104,7 @@ function AccountSettingsContent() {
     currencyPreference: "USD",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const [previousUserId, setPreviousUserId] = useState<string | null>(null);
   if (user && user.id !== previousUserId) {
@@ -454,14 +457,34 @@ function AccountSettingsContent() {
                     This action cannot be undone.
                   </p>
                 </div>
-                <Button variant="destructive" disabled>
-                  Delete Account (MVP 2)
+                <Button variant="destructive" onClick={() => setIsDeleteOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Account
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </TabsContent>        </Tabs>
+
+      <ConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onConfirm={async () => {
+          await apiFetch("/api/v1/account", { method: "DELETE" });
+          await authClient.signOut();
+        }}
+        onSuccess={() => {
+          window.location.href = "/";
+        }}
+        title="Delete Account"
+        description={
+          <>Are you sure you want to permanently delete your account? This will destroy all data in workspaces you own. This action is irreversible.</>
+        }
+        icon={Trash2}
+        confirmLabel="Yes, Delete Account"
+        loadingLabel="Deleting..."
+        successMessage="Account deleted."
+        errorMessage="Failed to delete account."
+      />
     </div>
   );
 }
