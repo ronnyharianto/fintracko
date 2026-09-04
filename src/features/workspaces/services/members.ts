@@ -51,7 +51,11 @@ export async function inviteCollaborator(
       },
     },
   });
-  if (existingInvitation && existingInvitation.status === "PENDING") {
+  if (
+    existingInvitation &&
+    existingInvitation.status === "PENDING" &&
+    existingInvitation.expiresAt > new Date()
+  ) {
     throw new WorkspaceServiceError("INVITATION_EXISTS");
   }
 
@@ -113,6 +117,19 @@ export async function acceptInvitation(
   }
 
   return await db.$transaction(async (tx) => {
+    const claimed = await tx.workspaceInvitation.updateMany({
+      where: {
+        id: invitationId,
+        inviteeId: userId,
+        status: "PENDING",
+        expiresAt: { gt: new Date() },
+      },
+      data: { status: "ACCEPTED" },
+    });
+    if (claimed.count !== 1) {
+      throw new WorkspaceServiceError("INVITATION_NOT_FOUND");
+    }
+
     const member = await tx.workspaceMember.create({
       data: {
         workspaceId: invitation.workspaceId,
@@ -129,11 +146,6 @@ export async function acceptInvitation(
           },
         },
       },
-    });
-
-    await tx.workspaceInvitation.update({
-      where: { id: invitationId },
-      data: { status: "ACCEPTED" },
     });
 
     return member;

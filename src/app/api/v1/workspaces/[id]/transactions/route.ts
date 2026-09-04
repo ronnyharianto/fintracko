@@ -5,11 +5,11 @@
 
 import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
-import { success } from "@/lib/api/envelope";
+import { success, failure } from "@/lib/api/envelope";
 import { getTransactions, createTransaction } from "@/features/transactions/services";
 import { handleTransactionErrors } from "@/features/transactions/errors";
-import { CreateTransactionSchema } from "@/features/transactions/schemas";
-import { TransactionType } from "../../../../../../../generated/prisma/enums";
+import { CreateTransactionSchema, TransactionQuerySchema } from "@/features/transactions/schemas";
+import type { TransactionType } from "../../../../../../../generated/prisma/enums";
 
 export async function GET(
   request: NextRequest,
@@ -30,22 +30,20 @@ export async function GET(
         const { id: workspaceId } = await params;
         const { searchParams } = new URL(request.url);
 
-        const type = searchParams.get("type") as TransactionType | null;
-        const subCategoryId = searchParams.get("subCategoryId");
-        const accountId = searchParams.get("accountId");
-        const from = searchParams.get("from");
-        const to = searchParams.get("to");
-        const page = searchParams.get("page");
-        const limit = searchParams.get("limit");
+        const parsedQuery = TransactionQuerySchema.safeParse(Object.fromEntries(searchParams));
+        if (!parsedQuery.success) {
+          return failure("VALIDATION_ERROR", "Invalid transaction filters.");
+        }
+        const { type, subCategoryId, accountId, from, to, page, limit } = parsedQuery.data;
 
         const result = await getTransactions(userId, workspaceId, {
-          type: type && Object.values(TransactionType).includes(type) ? type : undefined,
-          subCategoryId: subCategoryId ?? undefined,
-          accountId: accountId ?? undefined,
-          from: from ?? undefined,
-          to: to ?? undefined,
-          page: page ? parseInt(page, 10) : undefined,
-          limit: limit ? parseInt(limit, 10) : undefined,
+          type: type as TransactionType | undefined,
+          subCategoryId,
+          accountId,
+          from,
+          to,
+          page,
+          limit,
         });
 
         return success(result);

@@ -76,6 +76,9 @@ and evidence from validation.
   `workspaceId` and authenticated `userId`. Owner-only operations must also
   enforce `role: "OWNER"`. Treat every resource identifier as attacker-
   controlled; prevent IDOR by construction.
+- For nested workspace routes, every parent path identifier must be consumed
+  by the authorization and database predicate. A leaf-ID-only lookup is not
+  sufficient, even when the leaf service independently checks membership.
 - Mutations affecting multiple rows or models must use a Prisma transaction.
   Keep related writes atomic, especially onboarding, workspace creation, and
   financial balance updates.
@@ -150,6 +153,11 @@ Additional requirements:
   error behavior when the change affects a user-facing workflow.
 - Do not weaken lint rules, TypeScript settings, validation, or security
   checks just to make a change pass.
+- Security-sensitive scoped routes must have a focused regression test for
+  cross-workspace access and mismatched nested path identifiers.
+- Financial mutation tests must cover exact decimal arithmetic, account
+  direction invariants, balance reversal on update/delete, and archived
+  category/account rejection.
 - If a command cannot run because of missing environment variables, services,
   or tools, report the exact blocker and run every independent check that is
   still available.

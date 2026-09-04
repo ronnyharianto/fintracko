@@ -89,3 +89,16 @@ export const UpdateTransactionSchema = z
 /** Type inference from schemas. */
 export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof UpdateTransactionSchema>;
+
+/** Query parameters for paginated transaction listing. */
+export const TransactionQuerySchema = z.object({
+  type: TransactionTypeEnum.optional(),
+  subCategoryId: z.uuid().optional(),
+  accountId: z.uuid().optional(),
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type TransactionQueryInput = z.infer<typeof TransactionQuerySchema>;

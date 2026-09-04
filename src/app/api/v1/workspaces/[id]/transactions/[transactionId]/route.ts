@@ -7,10 +7,9 @@
 import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
 import { success } from "@/lib/api/envelope";
-import { updateTransaction, deleteTransaction } from "@/features/transactions/services";
+import { getTransaction, updateTransaction, deleteTransaction } from "@/features/transactions/services";
 import { handleTransactionErrors } from "@/features/transactions/errors";
 import { UpdateTransactionSchema } from "@/features/transactions/schemas";
-import { db } from "@/lib/db";
 
 const errorMappings = {
   FORBIDDEN: {
@@ -45,31 +44,9 @@ export async function GET(
     handleTransactionErrors(
       errorMappings,
       "Failed to load transaction. Please try again.",
-      async () => {
-        const { transactionId } = await params;
-
-        const transaction = await db.financialTransaction.findUnique({
-          where: { id: transactionId },
-          select: {
-            id: true,
-            type: true,
-            amount: true,
-            date: true,
-            subCategoryId: true,
-            subCategory: { select: { name: true, category: { select: { name: true } } } },
-            sourceAccountId: true,
-            sourceAccount: { select: { name: true } },
-            destinationAccountId: true,
-            destinationAccount: { select: { name: true } },
-            description: true,
-            payeePayer: true,
-            tags: true,
-            attachmentUrl: true,
-            createdById: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
+      async ({ userId }) => {
+        const { id: workspaceId, transactionId } = await params;
+        const transaction = await getTransaction(userId, workspaceId, transactionId);
 
         if (!transaction) {
           return success({ transaction: null });
@@ -113,8 +90,8 @@ export async function PATCH(
       errorMappings,
       "Failed to update transaction. Please try again.",
       async ({ userId }, data) => {
-        const { transactionId } = await params;
-        const result = await updateTransaction(userId, transactionId, data);
+        const { id: workspaceId, transactionId } = await params;
+        const result = await updateTransaction(userId, workspaceId, transactionId, data);
         return success({ transaction: result });
       },
     ),
@@ -132,8 +109,8 @@ export async function DELETE(
       errorMappings,
       "Failed to delete transaction. Please try again.",
       async ({ userId }) => {
-        const { transactionId } = await params;
-        const result = await deleteTransaction(userId, transactionId);
+        const { id: workspaceId, transactionId } = await params;
+        const result = await deleteTransaction(userId, workspaceId, transactionId);
         return success(result);
       },
     ),

@@ -144,6 +144,26 @@ export async function getTransactions(
   };
 }
 
+/** Retrieves one transaction after enforcing both workspace and membership scope. */
+export async function getTransaction(
+  userId: string,
+  workspaceId: string,
+  transactionId: string,
+) {
+  await requireMembership(userId, workspaceId);
+  return db.financialTransaction.findFirst({
+    where: { id: transactionId, workspaceId },
+    select: {
+      id: true, type: true, amount: true, date: true, subCategoryId: true,
+      subCategory: { select: { name: true, category: { select: { name: true } } } },
+      sourceAccountId: true, sourceAccount: { select: { name: true } },
+      destinationAccountId: true, destinationAccount: { select: { name: true } },
+      description: true, payeePayer: true, tags: true, attachmentUrl: true,
+      createdById: true, createdAt: true, updatedAt: true,
+    },
+  });
+}
+
 /**
  * Creates a new transaction and atomically updates account balances.
  */
@@ -157,13 +177,13 @@ export async function createTransaction(
   // Validate subcategory exists, is not archived, and belongs to workspace
   const subCategory = await db.subCategory.findUnique({
     where: { id: data.subCategoryId },
-    select: { id: true, workspaceId: true, isArchived: true },
+    select: { id: true, workspaceId: true, isArchived: true, category: { select: { isArchived: true } } },
   });
 
   if (!subCategory || subCategory.workspaceId !== workspaceId) {
     throw new TransactionServiceError("INVALID_CATEGORY", "Subcategory not found");
   }
-  if (subCategory.isArchived) {
+  if (subCategory.isArchived || subCategory.category.isArchived) {
     throw new TransactionServiceError("INVALID_CATEGORY", "Cannot use an archived subcategory");
   }
 
@@ -248,11 +268,12 @@ export async function createTransaction(
  */
 export async function updateTransaction(
   userId: string,
+  workspaceId: string,
   transactionId: string,
   data: UpdateTransactionInput,
 ) {
-  const existing = await db.financialTransaction.findUnique({
-    where: { id: transactionId },
+  const existing = await db.financialTransaction.findFirst({
+    where: { id: transactionId, workspaceId },
     select: {
       id: true,
       workspaceId: true,
@@ -267,7 +288,7 @@ export async function updateTransaction(
     throw new TransactionServiceError("TRANSACTION_NOT_FOUND", "Transaction not found");
   }
 
-  await requireMembership(userId, existing.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   // Merge: use new values or fall back to existing
   const newType = existing.type; // type is not editable
@@ -305,12 +326,12 @@ export async function updateTransaction(
   if (data.subCategoryId) {
     const subCategory = await db.subCategory.findUnique({
       where: { id: data.subCategoryId },
-      select: { id: true, workspaceId: true, isArchived: true },
+      select: { id: true, workspaceId: true, isArchived: true, category: { select: { isArchived: true } } },
     });
     if (!subCategory || subCategory.workspaceId !== existing.workspaceId) {
       throw new TransactionServiceError("INVALID_CATEGORY", "Subcategory not found");
     }
-    if (subCategory.isArchived) {
+    if (subCategory.isArchived || subCategory.category.isArchived) {
       throw new TransactionServiceError("INVALID_CATEGORY", "Cannot use an archived subcategory");
     }
   }
@@ -376,9 +397,13 @@ export async function updateTransaction(
 /**
  * Deletes a transaction and atomically reverses its balance effect.
  */
-export async function deleteTransaction(userId: string, transactionId: string) {
-  const existing = await db.financialTransaction.findUnique({
-    where: { id: transactionId },
+export async function deleteTransaction(
+  userId: string,
+  workspaceId: string,
+  transactionId: string,
+) {
+  const existing = await db.financialTransaction.findFirst({
+    where: { id: transactionId, workspaceId },
     select: {
       id: true,
       workspaceId: true,
@@ -393,7 +418,7 @@ export async function deleteTransaction(userId: string, transactionId: string) {
     throw new TransactionServiceError("TRANSACTION_NOT_FOUND", "Transaction not found");
   }
 
-  await requireMembership(userId, existing.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   const [sourceDelta, destDelta] = balanceEffect(existing.type, Number(existing.amount));
 
