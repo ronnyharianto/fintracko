@@ -102,7 +102,9 @@ export async function getTransactions(
         amount: true,
         date: true,
         subCategoryId: true,
-        subCategory: { select: { name: true, category: { select: { name: true } } } },
+        subCategory: {
+          select: { name: true, categoryId: true, category: { select: { name: true } } },
+        },
         sourceAccountId: true,
         sourceAccount: { select: { name: true } },
         destinationAccountId: true,
@@ -127,6 +129,7 @@ export async function getTransactions(
       date: t.date.toISOString().split("T")[0],
       subCategoryId: t.subCategoryId,
       subCategoryName: t.subCategory.name,
+      categoryId: t.subCategory.categoryId,
       categoryName: t.subCategory.category.name,
       sourceAccountId: t.sourceAccountId,
       sourceAccountName: t.sourceAccount?.name ?? null,

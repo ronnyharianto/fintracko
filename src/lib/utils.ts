@@ -40,3 +40,37 @@ export function getInitials(name?: string | null): string {
     .slice(0, 2)
     .toUpperCase();
 }
+
+/**
+ * Format a numeric amount as a 2-decimal locale string.
+ *
+ * @example
+ *   formatCurrency(1234.5)  // "1,234.50"
+ */
+export function formatCurrency(value: number): string {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Group items by a string key, preserving first-seen key order.
+ *
+ * @example
+ *   groupBy([{ d: "2026-01-02" }, { d: "2026-01-01" }], (t) => t.d)
+ *   // Map { "2026-01-02" => [...], "2026-01-01" => [...] }
+ */
+export function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const groupKey = key(item);
+    const list = groups.get(groupKey);
+    if (list) {
+      list.push(item);
+    } else {
+      groups.set(groupKey, [item]);
+    }
+  }
+  return groups;
+}

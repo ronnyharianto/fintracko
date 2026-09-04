@@ -57,9 +57,33 @@ export function EditTransactionDialog({
 
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
-  const [prevTransaction, setPrevTransaction] = useState<TransactionView | null>(null);
+  const [prevOpen, setPrevOpen] = useState(false);
 
-  // Fetch categories and accounts when dialog opens
+  // Pre-fill the form whenever the dialog opens (adjust state during render).
+  // Keyed on the open transition rather than the transaction object so that
+  // re-opening the same transaction (e.g. after cancel) still repopulates it.
+  // Category/subcategory come straight from the transaction row so they are
+  // set synchronously, like the other fields.
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    if (transaction) {
+      setAmount(transaction.amount ?? "");
+      setDate(transaction.date ?? "");
+      setCategoryId(transaction.categoryId);
+      setSubCategoryId(transaction.subCategoryId);
+      setSourceAccountId(transaction.sourceAccountId ?? "");
+      setDestinationAccountId(transaction.destinationAccountId ?? "");
+      setDescription(transaction.description ?? "");
+      setPayeePayer(transaction.payeePayer ?? "");
+      setAttachmentUrl(transaction.attachmentUrl ?? null);
+      setError(null);
+    }
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  // Fetch categories and accounts when the dialog opens so the dropdowns have
+  // options to change to.
   useEffect(() => {
     if (!open || !activeWorkspaceId) return;
 
@@ -75,7 +99,7 @@ export function EditTransactionDialog({
           ),
         ]);
         if (!cancelled) {
-          setCategories((catData.categories || []).filter((c) => !c.isArchived));
+          setCategories(catData.categories || []);
           setAccounts((accData.accounts || []).filter((a) => !a.isArchived));
         }
       } catch {
@@ -87,49 +111,40 @@ export function EditTransactionDialog({
     };
   }, [open, activeWorkspaceId]);
 
-  // Pre-fill form when transaction changes (adjust state during render)
-  if (transaction !== prevTransaction && open) {
-    setPrevTransaction(transaction);
-    setAmount(transaction?.amount ?? "");
-    setDate(transaction?.date ?? "");
-    setSourceAccountId(transaction?.sourceAccountId ?? "");
-    setDestinationAccountId(transaction?.destinationAccountId ?? "");
-    setDescription(transaction?.description ?? "");
-    setPayeePayer(transaction?.payeePayer ?? "");
-    setAttachmentUrl(transaction?.attachmentUrl ?? null);
-    setError(null);
+  // Categories of the transaction type; keep the current selection visible
+  // even when it is archived so the Select has a matching item for its value.
+  const fetchedCategories = categories.filter(
+    (c) => c.type === transaction?.type && (!c.isArchived || c.id === categoryId),
+  );
 
-    // Find parent category of the subcategory
-    if (transaction && activeWorkspaceId) {
-      void (async () => {
-        try {
-          const catData = await apiFetch<{ categories: CategoryView[] }>(
-            `/api/v1/workspaces/${activeWorkspaceId}/categories`,
-          );
-          const cats = (catData.categories || []).filter((c) => !c.isArchived);
-          setCategories(cats);
-
-          for (const cat of cats) {
-            const sub = cat.subCategories.find((s) => s.id === transaction.subCategoryId);
-            if (sub) {
-              setCategoryId(cat.id);
-              setSubCategoryId(sub.id);
-              break;
-            }
-          }
-        } catch {
-          // Silently handle
-        }
-      })();
-    }
-  }
-
-  // Filter categories by transaction type
-  const filteredCategories = categories.filter((c) => c.type === transaction?.type);
+  // If the transaction's own category is missing from the fetched options
+  // (e.g. deleted data), add a synthetic entry so the selection still shows.
+  const filteredCategories =
+    !transaction || fetchedCategories.some((c) => c.id === transaction.categoryId)
+      ? fetchedCategories
+      : [
+          ...fetchedCategories,
+          {
+            id: transaction.categoryId,
+            name: transaction.categoryName,
+            type: transaction.type,
+            isArchived: false,
+            createdAt: "",
+            subCategories: [
+              {
+                id: transaction.subCategoryId,
+                name: transaction.subCategoryName,
+                isArchived: false,
+                createdAt: "",
+              },
+            ],
+          },
+        ];
 
   // Get subcategories for selected category
   const selectedCategory = filteredCategories.find((c) => c.id === categoryId);
-  const subCategories = selectedCategory?.subCategories.filter((s) => !s.isArchived) ?? [];
+  const subCategories =
+    selectedCategory?.subCategories.filter((s) => !s.isArchived || s.id === subCategoryId) ?? [];
 
   const resetForm = useCallback(() => {
     setAmount("");
@@ -239,7 +254,13 @@ export function EditTransactionDialog({
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select
+                value={categoryId}
+                onValueChange={(v) => {
+                  setCategoryId(v);
+                  setSubCategoryId("");
+                }}
+              >
                 <SelectTrigger className="mb-0 w-full text-[16px]">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>

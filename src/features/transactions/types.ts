@@ -16,6 +16,8 @@ export interface TransactionView {
   date: string;
   subCategoryId: string;
   subCategoryName: string;
+  /** Parent category of the subcategory. */
+  categoryId: string;
   categoryName: string;
   sourceAccountId: string | null;
   sourceAccountName: string | null;
