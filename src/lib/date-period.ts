@@ -43,7 +43,8 @@ export function getDateRange(mode: ViewMode, refDate: Date): { from: string; to:
     const day = start.getDay();
     const diff = day === 0 ? 6 : day - 1; // Monday = 0
     start.setDate(start.getDate() - diff);
-    end.setDate(start.getDate() + 6);
+    end.setTime(start.getTime());
+    end.setDate(end.getDate() + 6);
   } else {
     // Month: first day to last day
     start.setDate(1);
