@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,6 +35,7 @@ export function TransactionRow({ transaction: txn, onEdit, onDelete }: Transacti
   const Icon = TYPE_ICON[txn.type];
   const colorClass = TYPE_COLORS[txn.type];
   const amount = parseFloat(txn.amount) || 0;
+  const [isHovering, setIsHovering] = useState(false);
 
   const accountName =
     txn.type === "TRANSFER"
@@ -53,23 +55,23 @@ export function TransactionRow({ transaction: txn, onEdit, onDelete }: Transacti
             {formatShortDate(txn.date)}
             {accountName ? ` - ${accountName}` : ""}
           </p>
-          <DropdownMenu>
+          <DropdownMenu open={isHovering} onOpenChange={setIsHovering}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0 text-muted-foreground"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
                 aria-label="More actions"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(txn)}>
+            <DropdownMenuContent align="end" side="right" sideOffset={8}>
+              <DropdownMenuItem onClick={() => { setIsHovering(false); onEdit(txn); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(txn)}>
+              <DropdownMenuItem onClick={() => { setIsHovering(false); onDelete(txn); }}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -87,6 +89,7 @@ export function TransactionRow({ transaction: txn, onEdit, onDelete }: Transacti
           <p className="truncate text-xs text-muted-foreground">{txn.description}</p>
         )}
       </div>
+      <div className="absolute right-0 top-0 w-2 h-6 bg-transparent group-hover:w-12 transition-all duration-100" />
     </div>
   );
 }

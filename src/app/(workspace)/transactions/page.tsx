@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
-import type { TransactionView, TransactionType } from "@/features/transactions/types";
+import type {
+  TransactionView,
+  TransactionType,
+} from "@/features/transactions/types";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import {
   formatPeriodLabel,
@@ -15,6 +18,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import {
   Plus,
   ArrowRightLeft,
@@ -29,6 +33,12 @@ import { EditTransactionDialog } from "./_components/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "./_components/delete-transaction-dialog";
 import { TransactionRow } from "./_components/transaction-row";
 import { TransactionFilters } from "./_components/transaction-filters";
+import { TransactionSearch } from "./_components/transaction-search";
+import {
+  TransactionSort,
+  type SortField,
+  type SortDirection,
+} from "./_components/transaction-sort";
 
 // ---------------------------------------------------------------------------
 // Page component
@@ -44,15 +54,24 @@ export default function TransactionsPage() {
   // Filters
   const [typeFilter, setTypeFilter] = useState<TransactionType | "ALL">("ALL");
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Sort
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   // Summary visibility
   const [isSummaryVisible, setIsSummaryVisible] = useState(true);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<TransactionView | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<TransactionView | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [deletingTransaction, setDeletingTransaction] = useState<TransactionView | null>(null);
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<TransactionView | null>(null);
 
   const {
     data: transactions,
@@ -70,21 +89,54 @@ export default function TransactionsPage() {
   });
 
   // Compute date range for current view
-  const dateRange = useMemo(() => getDateRange(viewMode, refDate), [viewMode, refDate]);
+  const dateRange = useMemo(
+    () => getDateRange(viewMode, refDate),
+    [viewMode, refDate],
+  );
 
   // Filter transactions by date range and type
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    let result = transactions.filter((t) => {
       const inRange = t.date >= dateRange.from && t.date <= dateRange.to;
       const matchesType = typeFilter === "ALL" || t.type === typeFilter;
       return inRange && matchesType;
     });
-  }, [transactions, dateRange, typeFilter]);
 
-  const sortedTransactions = useMemo(
-    () => [...filteredTransactions].sort((a, b) => b.date.localeCompare(a.date)),
-    [filteredTransactions],
-  );
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.subCategoryName.toLowerCase().includes(query) ||
+          t.description?.toLowerCase().includes(query) ||
+          t.payeePayer?.toLowerCase().includes(query) ||
+          t.categoryName.toLowerCase().includes(query),
+      );
+    }
+
+    return result;
+  }, [transactions, dateRange, typeFilter, searchQuery]);
+
+  // Sort transactions
+  const sortedTransactions = useMemo(() => {
+    const sorted = [...filteredTransactions];
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "date":
+          comparison = a.date.localeCompare(b.date);
+          break;
+        case "amount":
+          comparison = parseFloat(a.amount) - parseFloat(b.amount);
+          break;
+        case "category":
+          comparison = a.categoryName.localeCompare(b.categoryName);
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [filteredTransactions, sortField, sortDirection]);
 
   // Summary for the filtered period
   const summary = useMemo(() => {
@@ -104,7 +156,9 @@ export default function TransactionsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Select a workspace to view transactions.</p>
+        <p className="text-muted-foreground">
+          Select a workspace to view transactions.
+        </p>
       </div>
     );
   }
@@ -113,7 +167,11 @@ export default function TransactionsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-destructive">{error}</p>
-        <Button variant="outline" className="mt-4" onClick={() => void refetch()}>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => void refetch()}
+        >
           Retry
         </Button>
       </div>
@@ -124,8 +182,14 @@ export default function TransactionsPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Transactions</h1>
-        <Button size="icon" onClick={() => setIsCreateOpen(true)} aria-label="New Transaction">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          Transactions
+        </h1>
+        <Button
+          size="icon"
+          onClick={() => setIsCreateOpen(true)}
+          aria-label="New Transaction"
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -187,6 +251,23 @@ export default function TransactionsPage() {
         </div>
       )}
 
+      {/* Search and Sort */}
+      {!isLoading && transactions.length > 0 && (
+        <div className="flex gap-2 items-center">
+          <div className="flex-1 min-w-0">
+            <TransactionSearch value={searchQuery} onChange={setSearchQuery} />
+          </div>
+          <TransactionSort
+            field={sortField}
+            direction={sortDirection}
+            onChange={(field, direction) => {
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+          />
+        </div>
+      )}
+
       {/* Type Filter */}
       {!isLoading && transactions.length > 0 && (
         <TransactionFilters value={typeFilter} onChange={setTypeFilter} />
@@ -196,7 +277,9 @@ export default function TransactionsPage() {
       {!isLoading && filteredTransactions.length > 0 && (
         <Card className="gap-0 py-2">
           <div className="flex items-center justify-between px-4 sm:px-6">
-            <span className="text-sm font-medium text-muted-foreground">Summary</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Summary
+            </span>
             <Button
               variant="ghost"
               size="icon"
@@ -277,38 +360,52 @@ export default function TransactionsPage() {
       )}
 
       {/* Empty State — no transactions in this period */}
-      {!isLoading && transactions.length > 0 && filteredTransactions.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-          <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-center text-lg font-medium">No transactions in this period</p>
-          <p className="text-center text-sm text-muted-foreground">
-            Try a different date range or create a new transaction.
-          </p>
-        </div>
-      )}
+      {!isLoading &&
+        transactions.length > 0 &&
+        filteredTransactions.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+            <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="text-center text-lg font-medium">
+              No transactions in this period
+            </p>
+            <p className="text-center text-sm text-muted-foreground">
+              Try a different date range or create a new transaction.
+            </p>
+          </div>
+        )}
 
       {/* Transaction List */}
       {!isLoading && sortedTransactions.length > 0 && (
-        <div className="space-y-2">
-          {sortedTransactions.map((txn) => (
-            <Card key={txn.id} className="py-0">
-              <CardContent className="px-4 sm:px-6">
-                <TransactionRow
-                  transaction={txn}
-                  onEdit={(t) => {
-                    setEditingTransaction(t);
-                    // Opening a dialog from a dropdown item can leave body pointer-events
-                    // stuck (Radix issue #3317); defer so the menu cleanup runs first.
-                    window.setTimeout(() => setIsEditOpen(true), 0);
-                  }}
-                  onDelete={(t) => {
-                    setDeletingTransaction(t);
-                    window.setTimeout(() => setIsDeleteOpen(true), 0);
-                  }}
-                />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex flex-col gap-4 min-h-0 flex-1">
+          {/* Separator */}
+          <Separator className="my-1" />
+
+          {/* Scrollable transaction list */}
+          <Card className="flex-1 overflow-hidden p-2">
+            <div className="max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2 py-2">
+                {sortedTransactions.map((txn) => (
+                  <Card key={txn.id} className="py-0">
+                    <CardContent className="px-4 sm:px-6">
+                      <TransactionRow
+                        transaction={txn}
+                        onEdit={(t) => {
+                          setEditingTransaction(t);
+                          // Opening a dialog from a dropdown item can leave body pointer-events
+                          // stuck (Radix issue #3317); defer so the menu cleanup runs first.
+                          window.setTimeout(() => setIsEditOpen(true), 0);
+                        }}
+                        onDelete={(t) => {
+                          setDeletingTransaction(t);
+                          window.setTimeout(() => setIsDeleteOpen(true), 0);
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
