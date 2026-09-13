@@ -13,13 +13,16 @@ export function parseDate(dateStr: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** Format a YYYY-MM-DD string as a short date (e.g. "Sep 1, 2026"). */
-export function formatShortDate(dateStr: string): string {
-  const date = parseDate(dateStr);
-  return date.toLocaleDateString("en-US", {
+/**
+ * Format a YYYY-MM-DD string as month and day only (e.g. "Sep 1").
+ *
+ * Use inside a period-scoped list, where the surrounding period label already
+ * carries the year; the year would otherwise consume scarce row width.
+ */
+export function formatMonthDay(dateStr: string): string {
+  return parseDate(dateStr).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
 }
 

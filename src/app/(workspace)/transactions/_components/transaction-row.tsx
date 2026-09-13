@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +19,7 @@ import type {
   TransactionView,
   TransactionType,
 } from "@/features/transactions/types";
-import { formatShortDate } from "@/lib/date-period";
+import { formatMonthDay } from "@/lib/date-period";
 import { formatCurrency } from "@/lib/utils";
 
 const TYPE_COLORS: Record<TransactionType, string> = {
@@ -33,6 +32,12 @@ const TYPE_ICON: Record<TransactionType, typeof TrendingUp> = {
   INCOME: TrendingUp,
   EXPENSE: TrendingDown,
   TRANSFER: ArrowRightLeft,
+};
+
+const AMOUNT_SIGN: Record<TransactionType, string> = {
+  INCOME: "+",
+  EXPENSE: "-",
+  TRANSFER: "",
 };
 
 interface TransactionRowProps {
@@ -49,7 +54,6 @@ export function TransactionRow({
   const Icon = TYPE_ICON[txn.type];
   const colorClass = TYPE_COLORS[txn.type];
   const amount = parseFloat(txn.amount) || 0;
-  const [isHovering, setIsHovering] = useState(false);
 
   const accountName =
     txn.type === "TRANSFER"
@@ -60,72 +64,64 @@ export function TransactionRow({
         ? txn.destinationAccountName
         : txn.sourceAccountName;
 
+  const detail = txn.payeePayer ?? txn.description;
+
   return (
-    <div className="group flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 py-2.5">
       <div
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted ${colorClass}`}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-4 w-4" aria-hidden />
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-xs text-muted-foreground">
-            {formatShortDate(txn.date)}
+
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="truncate text-sm font-medium">{txn.subCategoryName}</p>
+        {accountName && (
+          <p className="truncate text-xs leading-6 text-muted-foreground">
+            {accountName}
           </p>
-          <DropdownMenu open={isHovering} onOpenChange={setIsHovering}>
+        )}
+        {detail && (
+          <p className="truncate text-xs text-muted-foreground">{detail}</p>
+        )}
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-0.5">
+        <span className={`text-sm font-semibold tabular-nums ${colorClass}`}>
+          {AMOUNT_SIGN[txn.type]}
+          {formatCurrency(Math.abs(amount))}
+        </span>
+        <div className="flex h-6 items-center gap-1">
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {formatMonthDay(txn.date)}
+          </span>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-transparent hover:text-foreground justify-end"
-                aria-label="More actions"
+                className="h-6 w-6 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                aria-label={`Actions for ${txn.subCategoryName}`}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right" sideOffset={8}>
-              <DropdownMenuItem
-                onClick={() => {
-                  setIsHovering(false);
-                  onEdit(txn);
-                }}
-              >
+            <DropdownMenuContent align="end" sideOffset={4}>
+              <DropdownMenuItem onClick={() => onEdit(txn)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setIsHovering(false);
-                  onDelete(txn);
-                }}
-              >
+              <DropdownMenuItem onClick={() => onDelete(txn)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-xs text-muted-foreground">
-            {accountName ? `${accountName}` : ""}
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium">{txn.subCategoryName}</p>
-          <p
-            className={`shrink-0 text-sm font-semibold tabular-nums ${colorClass}`}
-          >
-            {txn.type === "EXPENSE" ? "-" : txn.type === "INCOME" ? "+" : ""}
-            {formatCurrency(Math.abs(amount))}
-          </p>
-        </div>
-        {txn.description && (
-          <p className="truncate text-xs text-muted-foreground">
-            {txn.description}
-          </p>
+        {detail && (
+          <p className="truncate text-xs text-muted-foreground">&nbsp;</p>
         )}
       </div>
-      <div className="absolute right-0 top-0 w-2 h-6 bg-transparent group-hover:w-12 transition-all duration-100" />
     </div>
   );
 }
