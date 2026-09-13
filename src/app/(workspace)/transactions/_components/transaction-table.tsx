@@ -61,8 +61,8 @@ const HEAD_CELL =
 
 const CELL = "border-b border-border/60 px-3 py-2";
 
-const LG_ONLY = "hidden lg:table-cell";
 const XL_ONLY = "hidden xl:table-cell";
+const TWO_XL_ONLY = "hidden 2xl:table-cell";
 
 /**
  * Single source of truth for column order, width, and breakpoint visibility.
@@ -70,6 +70,19 @@ const XL_ONLY = "hidden xl:table-cell";
  * placeholder can never drift out of alignment with the data it replaces.
  * Widths live on the header cell only: with table-fixed, the first row of the
  * table defines the columns.
+ *
+ * Every column carries an explicit width, so trailing space is distributed
+ * across all of them rather than pooling in one ballooning column.
+ *
+ * Amount is sized for the storage ceiling rather than typical data:
+ * FinancialTransaction.amount is DECIMAL(18, 4), so the integer part reaches 14
+ * digits and the widest renderable value is "99,999,999,999,999.99" - about
+ * 160px of glyphs at text-sm in Geist, plus px-3 padding, hence w-48. Amounts
+ * are nowrap and cannot shrink, so the width has to be reserved up front.
+ *
+ * Reserving it is what pushes Category to xl and Payee to 2xl. The shell gives
+ * the list `viewport - 48` below lg and `viewport - 304` at lg and up, so lg
+ * bottoms out at 720px and the md column set already spends 656px of it.
  */
 const COLUMNS: ColumnSpec[] = [
   {
@@ -81,20 +94,20 @@ const COLUMNS: ColumnSpec[] = [
   { header: "Date", cell: "w-20", placeholder: "h-3 w-10" },
   {
     header: "Category",
-    cell: `w-40 ${LG_ONLY}`,
+    cell: `w-40 ${XL_ONLY}`,
     placeholder: "h-3 w-2/3",
   },
-  { header: "Subcategory", cell: "w-40", placeholder: "h-4 w-3/5" },
-  { header: "Account", cell: "w-56", placeholder: "h-3 w-2/3" },
+  { header: "Subcategory", cell: "w-36", placeholder: "h-4 w-28" },
+  { header: "Account", cell: "w-40", placeholder: "h-3 w-2/3" },
   {
     header: "Payee / Description",
-    cell: `w-48 ${XL_ONLY}`,
+    cell: `w-48 ${TWO_XL_ONLY}`,
     placeholder: "h-3 w-3/4",
   },
   {
     header: "Amount",
-    cell: "text-right",
-    placeholder: "ml-auto h-4 w-16",
+    cell: "w-48 text-right",
+    placeholder: "ml-auto h-4 w-28",
   },
   { header: "Actions", srOnly: true, cell: "w-10", placeholder: "h-6 w-6" },
 ];
@@ -199,7 +212,7 @@ function TransactionTableRow({
       >
         {formatMonthDay(txn.date)}
       </td>
-      <td className={`${CELL} ${LG_ONLY}`}>
+      <td className={`${CELL} ${XL_ONLY}`}>
         <p className="truncate text-xs text-muted-foreground">
           {txn.categoryName}
         </p>
@@ -210,7 +223,7 @@ function TransactionTableRow({
       <td className={CELL}>
         <p className="truncate text-xs text-muted-foreground">{accountName}</p>
       </td>
-      <td className={`${CELL} ${XL_ONLY}`}>
+      <td className={`${CELL} ${TWO_XL_ONLY}`}>
         <p className="truncate text-xs text-muted-foreground">{detail}</p>
       </td>
       <td
