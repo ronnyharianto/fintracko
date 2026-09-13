@@ -39,6 +39,7 @@ import {
   type SortField,
   type SortDirection,
 } from "./_components/transaction-sort";
+import { EmptyStateIllustration } from "./_components/empty-state-illustrations";
 
 // ---------------------------------------------------------------------------
 // Page component
@@ -347,7 +348,7 @@ export default function TransactionsPage() {
       {/* Empty State — no transactions at all */}
       {!isLoading && transactions.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-          <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground" />
+          <EmptyStateIllustration icon="no-transactions" className="mb-4" />
           <p className="text-center text-lg font-medium">No transactions yet</p>
           <p className="mb-4 text-center text-sm text-muted-foreground">
             Create a transaction to start tracking your finances.
@@ -364,7 +365,7 @@ export default function TransactionsPage() {
         transactions.length > 0 &&
         filteredTransactions.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-            <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground" />
+            <EmptyStateIllustration icon="no-period" className="mb-4" />
             <p className="text-center text-lg font-medium">
               No transactions in this period
             </p>
@@ -382,11 +383,11 @@ export default function TransactionsPage() {
 
           {/* Scrollable transaction list */}
           <Card className="flex-1 overflow-hidden p-2">
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] px-2 overflow-y-auto">
               <div className="space-y-2 py-2">
                 {sortedTransactions.map((txn) => (
                   <Card key={txn.id} className="py-0">
-                    <CardContent className="px-4 sm:px-6">
+                    <CardContent className="px-2 sm:px-6">
                       <TransactionRow
                         transaction={txn}
                         onEdit={(t) => {

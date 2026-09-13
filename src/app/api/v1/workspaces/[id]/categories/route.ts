@@ -6,10 +6,7 @@
 import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
 import { success } from "@/lib/api/envelope";
-import {
-  getCategories,
-  createCategory,
-} from "@/features/categories/services";
+import { getCategories, createCategory } from "@/features/categories/services";
 import { handleCategoryErrors } from "@/features/categories/errors";
 import { CreateCategorySchema } from "@/features/categories/schemas";
 
