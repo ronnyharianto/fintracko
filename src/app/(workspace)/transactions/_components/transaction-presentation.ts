@@ -1,9 +1,10 @@
 /**
- * Shared presentation helpers for transaction list rows.
+ * Shared presentation helpers for the transaction list.
  *
  * The mobile card row and the tablet/desktop table row both read the type
  * color, the signed amount, and the account/detail labels from here, so the
- * two layouts cannot drift apart.
+ * two layouts cannot drift apart. The list sections built here shape both
+ * layouts the same way, grouped by day or flat.
  */
 
 import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
@@ -11,7 +12,8 @@ import type {
   TransactionView,
   TransactionType,
 } from "@/features/transactions/types";
-import { formatCurrency } from "@/lib/utils";
+import { sumTransactions } from "@/features/transactions/summary";
+import { formatCurrency, groupBy } from "@/lib/utils";
 
 export const TYPE_TEXT_COLOR: Record<TransactionType, string> = {
   INCOME: "text-emerald-600",
@@ -60,4 +62,51 @@ export function getAccountLabel(txn: TransactionView): string | null {
 /** The one extra line a row can show: the payee when set, otherwise the description. */
 export function getDetailText(txn: TransactionView): string | null {
   return txn.payeePayer ?? txn.description;
+}
+
+/**
+ * A run of rows rendered under one heading: a single day when grouped, or the
+ * whole list when grouping is off.
+ */
+export interface TransactionListSection {
+  /** Day the section covers, or null when the list is rendered flat. */
+  date: string | null;
+  transactions: TransactionView[];
+  /** Day net, or the list net for the flat section. */
+  net: number;
+}
+
+/**
+ * Shape the sorted list into the sections the list renders.
+ *
+ * When grouped, sections are ordered by date independently of how rows are
+ * ordered inside them. That keeps grouping coherent under an amount or
+ * category sort: the days stay in date order while the rows keep whichever
+ * sort the user picked. Day order follows the sort direction so an ascending
+ * sort reads oldest day first.
+ */
+export function buildListSections(
+  transactions: TransactionView[],
+  { grouped, direction }: { grouped: boolean; direction: "asc" | "desc" },
+): TransactionListSection[] {
+  if (!grouped) {
+    return [
+      {
+        date: null,
+        transactions,
+        net: sumTransactions(transactions).net,
+      },
+    ];
+  }
+
+  const days = [...groupBy(transactions, (txn) => txn.date)];
+  days.sort(([a], [b]) =>
+    direction === "asc" ? a.localeCompare(b) : b.localeCompare(a),
+  );
+
+  return days.map(([date, dayTransactions]) => ({
+    date,
+    transactions: dayTransactions,
+    net: sumTransactions(dayTransactions).net,
+  }));
 }

@@ -20,12 +20,15 @@ import {
 
 interface TransactionRowProps {
   transaction: TransactionView;
+  /** False when a day heading above the card already states the date. */
+  showDate?: boolean;
   onEdit: (t: TransactionView) => void;
   onDelete: (t: TransactionView) => void;
 }
 
 export function TransactionRow({
   transaction: txn,
+  showDate = true,
   onEdit,
   onDelete,
 }: TransactionRowProps) {
@@ -59,9 +62,11 @@ export function TransactionRow({
           {formatSignedAmount(txn)}
         </span>
         <div className="flex h-6 items-center gap-1">
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {formatMonthDay(txn.date)}
-          </span>
+          {showDate && (
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {formatMonthDay(txn.date)}
+            </span>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

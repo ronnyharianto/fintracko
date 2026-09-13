@@ -26,6 +26,20 @@ export function formatMonthDay(dateStr: string): string {
   });
 }
 
+/**
+ * Format a YYYY-MM-DD string as a day section heading (e.g. "Sat, Sep 1").
+ *
+ * The weekday helps place a date at a glance, and the year is left out because
+ * the surrounding period label already carries it.
+ */
+export function formatDayHeading(dateStr: string): string {
+  return parseDate(dateStr).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** Format a Date to YYYY-MM-DD. */
 export function toISODate(date: Date): string {
   const y = date.getFullYear();

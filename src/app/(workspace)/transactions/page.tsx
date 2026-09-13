@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type {
   TransactionView,
   TransactionType,
 } from "@/features/transactions/types";
+import { sumTransactions } from "@/features/transactions/summary";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import {
+  formatDayHeading,
   formatPeriodLabel,
   getDateRange,
   isSamePeriod,
@@ -38,12 +40,25 @@ import {
 } from "./_components/transaction-table";
 import { TransactionFilters } from "./_components/transaction-filters";
 import { TransactionSearch } from "./_components/transaction-search";
+import { TransactionGrouping } from "./_components/transaction-grouping";
+import { buildListSections } from "./_components/transaction-presentation";
 import {
   TransactionSort,
   type SortField,
   type SortDirection,
 } from "./_components/transaction-sort";
 import { EmptyStateIllustration } from "./_components/empty-state-illustrations";
+
+// ---------------------------------------------------------------------------
+// Day grouping preference
+// ---------------------------------------------------------------------------
+
+/**
+ * Persisted so the list keeps the shape the user last chose, alongside the
+ * other stored client preferences (`theme`, `fintracko_active_workspace_id`).
+ */
+const DAY_GROUPING_STORAGE_KEY = "fintracko_transactions_group_by_day";
+const DAY_GROUPING_DEFAULT = true;
 
 // ---------------------------------------------------------------------------
 // Page component
@@ -65,6 +80,23 @@ export default function TransactionsPage() {
   // Sort
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Day grouping. Restored after mount rather than in the initial state:
+  // localStorage is unavailable during the server render, so reading it there
+  // would make the first client render disagree with the server's HTML.
+  const [groupByDay, setGroupByDay] = useState(DAY_GROUPING_DEFAULT);
+
+  useLayoutEffect(() => {
+    try {
+      const stored = localStorage.getItem(DAY_GROUPING_STORAGE_KEY);
+      if (stored === "true" || stored === "false") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setGroupByDay(stored === "true");
+      }
+    } catch {
+      // localStorage may be unavailable (private mode); keep the default.
+    }
+  }, []);
 
   // Summary visibility
   const [isSummaryVisible, setIsSummaryVisible] = useState(true);
@@ -143,17 +175,23 @@ export default function TransactionsPage() {
     return sorted;
   }, [filteredTransactions, sortField, sortDirection]);
 
-  // Summary for the filtered period
-  const summary = useMemo(() => {
-    let totalIncome = 0;
-    let totalExpense = 0;
-    for (const t of filteredTransactions) {
-      const amount = parseFloat(t.amount) || 0;
-      if (t.type === "INCOME") totalIncome += amount;
-      if (t.type === "EXPENSE") totalExpense += amount;
-    }
-    return { totalIncome, totalExpense, net: totalIncome - totalExpense };
-  }, [filteredTransactions]);
+  // Summary for the filtered period. Uses the same arithmetic as the day
+  // section totals so the two can never disagree.
+  const summary = useMemo(
+    () => sumTransactions(filteredTransactions),
+    [filteredTransactions],
+  );
+
+  // List sections: one per day when grouping is on, otherwise a single flat
+  // section, so both layouts render through one path.
+  const listSections = useMemo(
+    () =>
+      buildListSections(sortedTransactions, {
+        grouped: groupByDay,
+        direction: sortDirection,
+      }),
+    [sortedTransactions, groupByDay, sortDirection],
+  );
 
   const isToday = isSamePeriod(viewMode, refDate, new Date());
 
@@ -193,6 +231,15 @@ export default function TransactionsPage() {
   const handleDelete = (t: TransactionView) => {
     setDeletingTransaction(t);
     window.setTimeout(() => setIsDeleteOpen(true), 0);
+  };
+
+  const handleGroupingChange = (grouped: boolean) => {
+    setGroupByDay(grouped);
+    try {
+      localStorage.setItem(DAY_GROUPING_STORAGE_KEY, String(grouped));
+    } catch {
+      // localStorage may be unavailable (private mode); ignore gracefully.
+    }
   };
 
   return (
@@ -241,7 +288,7 @@ export default function TransactionsPage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="min-w-0 flex-1 text-center text-sm font-medium sm:min-w-[180px] sm:flex-none">
+            <span className="min-w-0 flex-1 text-center text-sm font-medium sm:min-w-45 sm:flex-none">
               {formatPeriodLabel(viewMode, refDate)}
             </span>
             <Button
@@ -281,6 +328,10 @@ export default function TransactionsPage() {
               setSortField(field);
               setSortDirection(direction);
             }}
+          />
+          <TransactionGrouping
+            grouped={groupByDay}
+            onChange={handleGroupingChange}
           />
         </div>
       )}
@@ -364,7 +415,10 @@ export default function TransactionsPage() {
             </div>
 
             {/* Tablet and desktop: ledger placeholders */}
-            <TransactionTableSkeleton className="hidden md:block" />
+            <TransactionTableSkeleton
+              className="hidden md:block"
+              grouped={groupByDay}
+            />
           </div>
         </Card>
       )}
@@ -408,25 +462,40 @@ export default function TransactionsPage() {
           {/* Scrollable transaction list */}
           <Card className="flex-1 overflow-hidden p-2 md:p-0">
             <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
-              {/* Mobile: one card per transaction */}
+              {/* Mobile: one card per transaction, under a day heading when grouped */}
               <div className="space-y-2 py-2 md:hidden">
-                {sortedTransactions.map((txn) => (
-                  <Card key={txn.id} className="py-0">
-                    <CardContent className="px-2 sm:px-6">
-                      <TransactionRow
-                        transaction={txn}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    </CardContent>
-                  </Card>
+                {listSections.map((section) => (
+                  <div key={section.date ?? "flat"} className="space-y-2">
+                    {section.date && (
+                      // Pinned like the table's day headings so the current day
+                      // stays visible; opaque so cards cannot show through it.
+                      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card px-1 py-2 text-xs font-medium text-muted-foreground">
+                        <span>{formatDayHeading(section.date)}</span>
+                        <span className="tabular-nums">
+                          {formatCurrency(section.net)}
+                        </span>
+                      </div>
+                    )}
+                    {section.transactions.map((txn) => (
+                      <Card key={txn.id} className="py-0">
+                        <CardContent className="px-2 sm:px-6">
+                          <TransactionRow
+                            transaction={txn}
+                            showDate={!section.date}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ))}
               </div>
 
               {/* Tablet and desktop: one ledger row per transaction */}
               <TransactionTable
                 className="hidden md:block"
-                transactions={sortedTransactions}
+                sections={listSections}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
