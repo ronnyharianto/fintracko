@@ -7,38 +7,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  TrendingUp,
-  TrendingDown,
-  ArrowRightLeft,
-} from "lucide-react";
-import type {
-  TransactionView,
-  TransactionType,
-} from "@/features/transactions/types";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import type { TransactionView } from "@/features/transactions/types";
 import { formatMonthDay } from "@/lib/date-period";
-import { formatCurrency } from "@/lib/utils";
-
-const TYPE_COLORS: Record<TransactionType, string> = {
-  INCOME: "text-emerald-600",
-  EXPENSE: "text-red-600",
-  TRANSFER: "text-blue-600",
-};
-
-const TYPE_ICON: Record<TransactionType, typeof TrendingUp> = {
-  INCOME: TrendingUp,
-  EXPENSE: TrendingDown,
-  TRANSFER: ArrowRightLeft,
-};
-
-const AMOUNT_SIGN: Record<TransactionType, string> = {
-  INCOME: "+",
-  EXPENSE: "-",
-  TRANSFER: "",
-};
+import {
+  TYPE_ICON,
+  TYPE_TEXT_COLOR,
+  formatSignedAmount,
+  getAccountLabel,
+  getDetailText,
+} from "./transaction-presentation";
 
 interface TransactionRowProps {
   transaction: TransactionView;
@@ -52,19 +30,9 @@ export function TransactionRow({
   onDelete,
 }: TransactionRowProps) {
   const Icon = TYPE_ICON[txn.type];
-  const colorClass = TYPE_COLORS[txn.type];
-  const amount = parseFloat(txn.amount) || 0;
-
-  const accountName =
-    txn.type === "TRANSFER"
-      ? [txn.sourceAccountName, txn.destinationAccountName]
-          .filter(Boolean)
-          .join(" → ")
-      : txn.type === "INCOME"
-        ? txn.destinationAccountName
-        : txn.sourceAccountName;
-
-  const detail = txn.payeePayer ?? txn.description;
+  const colorClass = TYPE_TEXT_COLOR[txn.type];
+  const accountName = getAccountLabel(txn);
+  const detail = getDetailText(txn);
 
   return (
     <div className="flex items-center gap-3 py-2.5">
@@ -88,8 +56,7 @@ export function TransactionRow({
 
       <div className="flex shrink-0 flex-col items-end gap-0.5">
         <span className={`text-sm font-semibold tabular-nums ${colorClass}`}>
-          {AMOUNT_SIGN[txn.type]}
-          {formatCurrency(Math.abs(amount))}
+          {formatSignedAmount(txn)}
         </span>
         <div className="flex h-6 items-center gap-1">
           <span className="text-xs tabular-nums text-muted-foreground">

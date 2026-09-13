@@ -32,6 +32,10 @@ import { CreateTransactionDialog } from "./_components/create-transaction-dialog
 import { EditTransactionDialog } from "./_components/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "./_components/delete-transaction-dialog";
 import { TransactionRow } from "./_components/transaction-row";
+import {
+  TransactionTable,
+  TransactionTableSkeleton,
+} from "./_components/transaction-table";
 import { TransactionFilters } from "./_components/transaction-filters";
 import { TransactionSearch } from "./_components/transaction-search";
 import {
@@ -178,6 +182,18 @@ export default function TransactionsPage() {
       </div>
     );
   }
+
+  const handleEdit = (t: TransactionView) => {
+    setEditingTransaction(t);
+    // Opening a dialog from a dropdown item can leave body pointer-events stuck
+    // (Radix issue #3317); defer so the menu cleanup runs before the dialog opens.
+    window.setTimeout(() => setIsEditOpen(true), 0);
+  };
+
+  const handleDelete = (t: TransactionView) => {
+    setDeletingTransaction(t);
+    window.setTimeout(() => setIsDeleteOpen(true), 0);
+  };
 
   return (
     <div className="space-y-4">
@@ -329,20 +345,28 @@ export default function TransactionsPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-4 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {Array.from({ length: 2 }).map((_, j) => (
-                  <Skeleton key={j} className="h-12 w-full" />
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="flex-1 overflow-hidden p-2 md:p-0">
+          <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
+            {/* Mobile: card placeholders */}
+            <div className="space-y-4 py-2 md:hidden">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-4 w-32" />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {Array.from({ length: 2 }).map((_, j) => (
+                      <Skeleton key={j} className="h-12 w-full" />
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Tablet and desktop: ledger placeholders */}
+            <TransactionTableSkeleton className="hidden md:block" />
+          </div>
+        </Card>
       )}
 
       {/* Empty State — no transactions at all */}
@@ -382,29 +406,30 @@ export default function TransactionsPage() {
           <Separator className="my-1" />
 
           {/* Scrollable transaction list */}
-          <Card className="flex-1 overflow-hidden p-2">
-            <div className="max-h-[60vh] px-2 overflow-y-auto">
-              <div className="space-y-2 py-2">
+          <Card className="flex-1 overflow-hidden p-2 md:p-0">
+            <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
+              {/* Mobile: one card per transaction */}
+              <div className="space-y-2 py-2 md:hidden">
                 {sortedTransactions.map((txn) => (
                   <Card key={txn.id} className="py-0">
                     <CardContent className="px-2 sm:px-6">
                       <TransactionRow
                         transaction={txn}
-                        onEdit={(t) => {
-                          setEditingTransaction(t);
-                          // Opening a dialog from a dropdown item can leave body pointer-events
-                          // stuck (Radix issue #3317); defer so the menu cleanup runs first.
-                          window.setTimeout(() => setIsEditOpen(true), 0);
-                        }}
-                        onDelete={(t) => {
-                          setDeletingTransaction(t);
-                          window.setTimeout(() => setIsDeleteOpen(true), 0);
-                        }}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
                       />
                     </CardContent>
                   </Card>
                 ))}
               </div>
+
+              {/* Tablet and desktop: one ledger row per transaction */}
+              <TransactionTable
+                className="hidden md:block"
+                transactions={sortedTransactions}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             </div>
           </Card>
         </div>
