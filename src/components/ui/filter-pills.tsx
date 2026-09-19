@@ -31,7 +31,10 @@ export function FilterPills<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={cn("flex gap-2 overflow-x-auto pb-1", className)}
+      className={cn(
+        "flex gap-2 overflow-x-auto scrollbar-none pb-1",
+        className,
+      )}
     >
       {options.map((option) => {
         const isActive = value === option.value;
