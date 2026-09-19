@@ -25,6 +25,8 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { TransactionType } from "@/features/transactions/types";
 import type { CategoryView } from "@/features/categories/types";
 import type { AccountView } from "@/features/accounts/types";
+import { useBudgetForDate } from "@/features/budgets/hooks/use-budget-for-date";
+import { BudgetSnapshot } from "./budget-snapshot";
 import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 
@@ -91,6 +93,14 @@ export function CreateTransactionDialog({
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [prevOpen, setPrevOpen] = useState(false);
+
+  // Budget snapshot: only expense transactions are measured against budgets.
+  const isBudgetRelevant = type === "EXPENSE";
+  const { budget, isLoading: isBudgetLoading } = useBudgetForDate({
+    workspaceId: activeWorkspaceId,
+    subCategoryId: isBudgetRelevant ? subCategoryId : null,
+    date: isBudgetRelevant ? date : null,
+  });
 
   // Prefill the form on each open (adjust state during render, like the edit
   // dialog) so a scoped view (e.g. an account page) starts from its account.
@@ -325,6 +335,15 @@ export function CreateTransactionDialog({
               </Select>
             </div>
           </div>
+
+          {/* Budget snapshot (expense + budgeted subcategory + date) */}
+          {isBudgetRelevant && budget && (
+            <BudgetSnapshot
+              budget={budget}
+              isLoading={isBudgetLoading}
+              amount={amount}
+            />
+          )}
 
           {/* Accounts */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -25,6 +25,8 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { TransactionView } from "@/features/transactions/types";
 import type { CategoryView } from "@/features/categories/types";
 import type { AccountView } from "@/features/accounts/types";
+import { useBudgetForDate } from "@/features/budgets/hooks/use-budget-for-date";
+import { BudgetSnapshot } from "./budget-snapshot";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
 
@@ -58,6 +60,21 @@ export function EditTransactionDialog({
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [prevOpen, setPrevOpen] = useState(false);
+
+  // Budget snapshot: only expense transactions are measured against budgets.
+  // Editing within the same period must not double count, so the transaction's
+  // stored amount is excluded from the budget's reported spend (see snapshot).
+  const isBudgetRelevant = transaction?.type === "EXPENSE";
+  const { budget, isLoading: isBudgetLoading } = useBudgetForDate({
+    workspaceId: activeWorkspaceId,
+    subCategoryId: isBudgetRelevant ? subCategoryId : null,
+    date: isBudgetRelevant ? date : null,
+  });
+  const isSamePeriodAsTransaction =
+    budget !== null &&
+    transaction !== null &&
+    budget.periodStart <= transaction.date &&
+    transaction.date <= budget.periodEnd;
 
   // Pre-fill the form whenever the dialog opens (adjust state during render).
   // Keyed on the open transition rather than the transaction object so that
@@ -293,6 +310,18 @@ export function EditTransactionDialog({
               </Select>
             </div>
           </div>
+
+          {/* Budget snapshot (expense + budgeted subcategory + date) */}
+          {isBudgetRelevant && budget && (
+            <BudgetSnapshot
+              budget={budget}
+              isLoading={isBudgetLoading}
+              amount={amount}
+              excludeAmount={
+                isSamePeriodAsTransaction ? (transaction?.amount ?? "0") : "0"
+              }
+            />
+          )}
 
           {/* Accounts */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
