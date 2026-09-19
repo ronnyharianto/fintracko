@@ -189,7 +189,8 @@ status         = ACTIVE | UPCOMING | ENDED   (today vs [startDate, endDate])
   - **Validate:** `npx tsc --noEmit`
 
 - [x] 10. Budget Card & Filters (`_components/budget-card.tsx`, `_components/budget-filters.tsx`)
-  - [x] Card: subcategory → parent category, interval badge, `spent / amount`, progress bar (visually capped at 100%), and a footer pairing utilization % with a compact period token ("Jun 2026" / "2026"). The status badge was removed once period navigation made it redundant.
+  - [x] Card: subcategory → parent category, interval badge, `spent / limit`, progress bar (visually capped at 100%), and a footer pairing utilization % with a compact period token ("Jun 2026" / "2026"). The status badge was removed once period navigation made it redundant.
+  - [x] The bar and footer are pinned to the card's bottom (`mt-auto` in an equal-height grid row), so every card in a group lines up even though only multi-period budgets carry the per-period rate line.
   - [x] Dropdown (⋮) with Edit and Delete actions
   - [x] Filter: interval (All/Monthly/Yearly). The status filter was removed in the view refactor below.
   - **Validate:** `npx tsc --noEmit`
@@ -256,9 +257,12 @@ under `fintracko_budgets_group_by_category` (grouped when `localStorage` is unav
 used percentage, and a roll-up bar. It is lighter than a card so it does not compete.
 - [x] Section headers are collapsible and **start collapsed**, so the page opens as a
 scannable set of category totals; the opened set lives in component state for the session.
-- [x] Budgets within a section are ordered by utilization descending (most-used first).
+- [x] Budgets within a section are ordered alphabetically by subcategory name, with the start
+date breaking ties between periods of one subcategory.
 - [x] Sections are ordered alphabetically by category name, so the structure is predictable
 regardless of the incoming budget order.
+- [x] The flat (ungrouped) grid uses the same alphabetical order, so grouping and flattening
+never disagree about the sequence.
 - [x] Turning grouping off restores the original flat responsive grid.
 
 ### Search and Card Cleanup

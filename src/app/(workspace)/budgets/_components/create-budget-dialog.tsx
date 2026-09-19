@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -22,11 +22,29 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch, ApiClientError } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
+import { formatCurrency } from "@/lib/utils";
+import { parseDate } from "@/lib/date-period";
+import { resolvePeriods } from "@/features/budgets/utilization";
 import type { BudgetInterval } from "@/features/budgets/types";
 import type { CategoryView } from "@/features/categories/types";
 import { fetchExpenseCategories } from "./expense-categories";
-import { defaultPeriodValue, deriveBounds } from "./budget-period";
+import {
+  defaultPeriodValue,
+  deriveBounds,
+  formatPeriodRange,
+} from "./budget-period";
 import { YearPicker } from "./year-picker";
+
+/**
+ * `SINGLE` covers one period, `UNTIL` covers a chosen end period, and `ONGOING`
+ * leaves the end date open (the recurring default).
+ */
+type RepeatMode = "SINGLE" | "UNTIL" | "ONGOING";
+
+const PERIOD_NOUN: Record<BudgetInterval, string> = {
+  MONTHLY: "month",
+  YEARLY: "year",
+};
 
 const INTERVAL_OPTIONS: { value: BudgetInterval; label: string }[] = [
   { value: "MONTHLY", label: "Monthly" },
@@ -37,22 +55,31 @@ interface CreateBudgetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
+  /** Start of the period being reviewed; new budgets default to it. */
+  initialStartDate?: string;
 }
 
 export function CreateBudgetDialog({
   open,
   onOpenChange,
   onCreated,
+  initialStartDate,
 }: CreateBudgetDialogProps) {
   const { activeWorkspaceId } = useWorkspace();
+
+  const anchorDate = initialStartDate ? parseDate(initialStartDate) : undefined;
 
   const [interval, setInterval] = useState<BudgetInterval>("MONTHLY");
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
   const [amount, setAmount] = useState("");
-  const [periodValue, setPeriodValue] = useState(() =>
-    defaultPeriodValue("MONTHLY"),
+  const [startPeriodValue, setStartPeriodValue] = useState(() =>
+    defaultPeriodValue("MONTHLY", anchorDate),
   );
+  const [endPeriodValue, setEndPeriodValue] = useState(() =>
+    defaultPeriodValue("MONTHLY", anchorDate),
+  );
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("ONGOING");
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -82,30 +109,63 @@ export function CreateBudgetDialog({
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const subCategories = selectedCategory?.subCategories ?? [];
 
-  const bounds = deriveBounds(interval, periodValue);
+  const noun = PERIOD_NOUN[interval];
+  const startBounds = deriveBounds(interval, startPeriodValue);
+  const endBounds = deriveBounds(interval, endPeriodValue);
+
+  const rangeEndDate =
+    repeatMode === "ONGOING"
+      ? null
+      : repeatMode === "SINGLE"
+        ? (startBounds?.endDate ?? null)
+        : (endBounds?.endDate ?? null);
+
+  const periodCount = useMemo(() => {
+    if (!startBounds || !rangeEndDate) return null;
+    return (
+      resolvePeriods(
+        interval,
+        startBounds.startDate,
+        rangeEndDate,
+        startBounds.startDate,
+        rangeEndDate,
+      )?.count ?? null
+    );
+  }, [interval, startBounds, rangeEndDate]);
+
   const canSubmit =
     Boolean(activeWorkspaceId) &&
     Boolean(subCategoryId) &&
     Number(amount) > 0 &&
-    bounds !== null;
+    startBounds !== null &&
+    (repeatMode !== "UNTIL" || endBounds !== null);
 
   const resetForm = () => {
     setInterval("MONTHLY");
     setCategoryId("");
     setSubCategoryId("");
     setAmount("");
-    setPeriodValue(defaultPeriodValue("MONTHLY"));
+    setStartPeriodValue(defaultPeriodValue("MONTHLY", anchorDate));
+    setEndPeriodValue(defaultPeriodValue("MONTHLY", anchorDate));
+    setRepeatMode("ONGOING");
     setError(null);
   };
 
   const handleIntervalChange = (next: BudgetInterval) => {
     setInterval(next);
-    setPeriodValue(defaultPeriodValue(next));
+    setStartPeriodValue(defaultPeriodValue(next, anchorDate));
+    setEndPeriodValue(defaultPeriodValue(next, anchorDate));
+  };
+
+  const handleStartPeriodChange = (next: string) => {
+    setStartPeriodValue(next);
+    // Keep the end period at or after the start so the range stays ordered.
+    if (endPeriodValue < next) setEndPeriodValue(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspaceId || !bounds || !canSubmit) return;
+    if (!activeWorkspaceId || !startBounds || !canSubmit) return;
 
     setIsCreating(true);
     setError(null);
@@ -117,8 +177,8 @@ export function CreateBudgetDialog({
           subCategoryId,
           amount: Number(amount),
           interval,
-          startDate: bounds.startDate,
-          endDate: bounds.endDate,
+          startDate: startBounds.startDate,
+          ...(rangeEndDate ? { endDate: rangeEndDate } : {}),
         },
       });
       resetForm();
@@ -134,6 +194,13 @@ export function CreateBudgetDialog({
       setIsCreating(false);
     }
   };
+
+  const amountLabel = Number(amount) > 0 ? formatCurrency(Number(amount)) : null;
+  const rangeStartDate = startBounds?.startDate ?? null;
+  const startLabel =
+    startBounds && rangeStartDate
+      ? formatPeriodRange(interval, rangeStartDate, startBounds.endDate)
+      : null;
 
   return (
     <Dialog
@@ -238,26 +305,93 @@ export function CreateBudgetDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="budget-period">
-                {interval === "MONTHLY" ? "Month" : "Year"}
+              <Label htmlFor="budget-start">
+                {interval === "MONTHLY" ? "Start month" : "Start year"}
               </Label>
               {interval === "MONTHLY" ? (
                 <Input
-                  id="budget-period"
+                  id="budget-start"
                   type="month"
-                  value={periodValue}
-                  onChange={(e) => setPeriodValue(e.target.value)}
+                  value={startPeriodValue}
+                  onChange={(e) => handleStartPeriodChange(e.target.value)}
                   required
                 />
               ) : (
                 <YearPicker
-                  id="budget-period"
-                  value={periodValue}
-                  onChange={setPeriodValue}
+                  id="budget-start"
+                  value={startPeriodValue}
+                  onChange={handleStartPeriodChange}
                 />
               )}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="budget-repeat">Repeats</Label>
+              <Select
+                value={repeatMode}
+                onValueChange={(value) => setRepeatMode(value as RepeatMode)}
+              >
+                <SelectTrigger id="budget-repeat" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SINGLE">This {noun} only</SelectItem>
+                  <SelectItem value="UNTIL">Repeats until...</SelectItem>
+                  <SelectItem value="ONGOING">
+                    Repeats, no end date
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {repeatMode === "UNTIL" && (
+              <div className="space-y-2">
+                <Label htmlFor="budget-end">
+                  End {interval === "MONTHLY" ? "month" : "year"}
+                </Label>
+                {interval === "MONTHLY" ? (
+                  <Input
+                    id="budget-end"
+                    type="month"
+                    min={startPeriodValue}
+                    value={endPeriodValue}
+                    onChange={(e) => setEndPeriodValue(e.target.value)}
+                    required
+                  />
+                ) : (
+                  <YearPicker
+                    id="budget-end"
+                    value={endPeriodValue}
+                    onChange={setEndPeriodValue}
+                    minYear={Number(startPeriodValue)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {amountLabel && startLabel && (
+            <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              {repeatMode === "ONGOING" ? (
+                <>
+                  {amountLabel} per {noun} starting {startLabel}, with no end
+                  date.
+                </>
+              ) : (
+                <>
+                  {amountLabel} per {noun}
+                  {periodCount && periodCount > 1
+                    ? ` for ${periodCount} ${noun}s`
+                    : ""}
+                  {rangeEndDate && rangeStartDate
+                    ? ` (${formatPeriodRange(interval, rangeStartDate, rangeEndDate)})`
+                    : ""}
+                  .
+                </>
+              )}
+            </p>
+          )}
 
           <DialogFooter>
             <Button

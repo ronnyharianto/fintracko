@@ -15,6 +15,8 @@ interface YearPickerProps {
   id?: string;
   value: string;
   onChange: (value: string) => void;
+  /** Earliest selectable year, for pickers bounded by another selection. */
+  minYear?: number;
 }
 
 /**
@@ -23,13 +25,15 @@ interface YearPickerProps {
  * current selection is always included, even when it falls outside the default
  * window, so editing an older budget keeps its year selectable.
  */
-export function YearPicker({ id, value, onChange }: YearPickerProps) {
+export function YearPicker({ id, value, onChange, minYear }: YearPickerProps) {
   const currentYear = new Date().getFullYear();
   const selectedYear = Number(value);
   const hasSelection = Number.isInteger(selectedYear) && selectedYear > 0;
 
   const first = Math.min(
-    currentYear - YEARS_BACK,
+    minYear === undefined
+      ? currentYear - YEARS_BACK
+      : Math.max(currentYear - YEARS_BACK, minYear),
     hasSelection ? selectedYear : currentYear,
   );
   const last = Math.max(

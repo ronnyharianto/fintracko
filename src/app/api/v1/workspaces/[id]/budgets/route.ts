@@ -41,9 +41,11 @@ export async function GET(
           return failure("VALIDATION_ERROR", "Invalid budget filters.");
         }
 
-        const { interval, status } = parsedQuery.data;
+        const { interval, status, from, to } = parsedQuery.data;
 
         const result = await getBudgets(userId, workspaceId, {
+          from,
+          to,
           interval: interval as BudgetInterval | undefined,
           status: status as BudgetStatus | undefined,
         });

@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { parseDate } from "@/lib/date-period";
+import { formatPeriodRange } from "./budget-period";
 
 const INTERVAL_LABEL: Record<BudgetInterval, string> = {
   MONTHLY: "Monthly",
@@ -24,24 +24,13 @@ const INTERVAL_VARIANT: Record<BudgetInterval, BadgeVariant> = {
   YEARLY: "warning",
 };
 
+const PERIOD_NOUN: Record<BudgetInterval, string> = {
+  MONTHLY: "month",
+  YEARLY: "year",
+};
+
 /** Minimum bar width so a small nonzero usage still reads as a sliver. */
 const MIN_VISIBLE_BAR_PERCENT = 3;
-
-/**
- * Compact period token: "Jun 2026" for a monthly budget, "2026" for yearly.
- * The month stays visible so monthly budgets remain distinguishable when
- * several of a subcategory are shown together.
- */
-function formatCompactPeriod(
-  interval: BudgetInterval,
-  startDate: string,
-): string {
-  const start = parseDate(startDate);
-  if (interval === "YEARLY") {
-    return String(start.getFullYear());
-  }
-  return start.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-}
 
 interface BudgetCardProps {
   budget: BudgetView;
@@ -52,6 +41,10 @@ interface BudgetCardProps {
 export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
   const spent = Number(budget.spent);
   const amount = Number(budget.amount);
+  // `limit` is what the viewed period actually measures against: the per-period
+  // amount multiplied by the periods the view resolved to.
+  const limit = Number(budget.limit);
+  const isMultiPeriod = budget.periods > 1;
   const isOver = budget.utilization > 100;
   const clampedPercent = Math.min(Math.max(budget.utilization, 0), 100);
   const hasUsage = spent > 0;
@@ -73,10 +66,14 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
             {budget.categoryName}
           </p>
           <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate text-base font-semibold leading-none">
+            <h3 className="min-w-0 truncate text-base font-semibold leading-none">
               {budget.subCategoryName}
             </h3>
-            <Badge size="sm" variant={INTERVAL_VARIANT[budget.interval]}>
+            <Badge
+              size="sm"
+              className="shrink-0"
+              variant={INTERVAL_VARIANT[budget.interval]}
+            >
               {INTERVAL_LABEL[budget.interval]}
             </Badge>
           </div>
@@ -105,48 +102,67 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
         </DropdownMenu>
       </div>
 
-      <div className="space-y-3 px-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 tabular-nums">
-          <span
-            className={cn(
-              "text-2xl font-semibold leading-none",
-              isOver && "text-red-600",
-            )}
-          >
-            {formatCurrency(spent)}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            of {formatCurrency(amount)}
-          </span>
+      {/* The bar and the figures under it are pinned to the bottom so every card
+          in a row lines up, even though only multi-period budgets carry a
+          per-period rate line above them. */}
+      <div className="flex flex-1 flex-col gap-3 px-6">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 tabular-nums">
+            <span
+              className={cn(
+                "text-2xl font-semibold leading-none",
+                isOver && "text-red-600",
+              )}
+            >
+              {formatCurrency(spent)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              of {formatCurrency(limit)}
+            </span>
+          </div>
+          {isMultiPeriod && (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {formatCurrency(amount)} per {PERIOD_NOUN[budget.interval]} across{" "}
+              {budget.periods} {PERIOD_NOUN[budget.interval]}s
+            </p>
+          )}
         </div>
 
-        <div
-          className="h-2 w-full overflow-hidden rounded-full bg-muted"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(clampedPercent)}
-          aria-label={`${budget.subCategoryName} utilization`}
-        >
+        <div className="mt-auto space-y-3">
           <div
-            className={cn("h-full rounded-full transition-all", barColor)}
-            style={{ width: `${barPercent}%` }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={cn(
-              "text-xs font-medium tabular-nums",
-              isOver ? "text-red-600" : "text-muted-foreground",
-            )}
+            className="h-2 w-full overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(clampedPercent)}
+            aria-label={`${budget.subCategoryName} utilization`}
           >
-            {budget.utilization.toFixed(1)}% used
-          </span>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-            {formatCompactPeriod(budget.interval, budget.startDate)}
-          </span>
+            <div
+              className={cn("h-full rounded-full transition-all", barColor)}
+              style={{ width: `${barPercent}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={cn(
+                "text-xs font-medium tabular-nums",
+                isOver ? "text-red-600" : "text-muted-foreground",
+              )}
+            >
+              {budget.utilization.toFixed(1)}% used
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              {/* The resolved periods, not the row range: an open-ended budget
+                  shows only the periods the current view actually measures. */}
+              {formatPeriodRange(
+                budget.interval,
+                budget.periodStart,
+                budget.periodEnd,
+              )}
+            </span>
+          </div>
         </div>
       </div>
     </Card>

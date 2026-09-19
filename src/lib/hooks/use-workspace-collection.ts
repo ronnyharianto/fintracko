@@ -17,14 +17,22 @@ export interface UseWorkspaceCollectionOptions<T, R> {
   workspaceId: string | null | undefined;
   /** Builds the API path for the given workspace id. */
   getPath: (workspaceId: string) => string;
+  /**
+   * Query string appended to the path (without a leading `?`). Include it when
+   * `getPath` alone cannot express the request, such as a collection scoped to
+   * a date window: changing it re-runs the fetch.
+   */
+  query?: string;
   /** Extracts the item list from the response envelope data. */
   select: (data: R) => T[];
   /** Fallback message when the error is not an ApiClientError. */
   fallbackMessage: string;
 }
 
-export interface UseWorkspaceCollectionResult<T> {
+export interface UseWorkspaceCollectionResult<T, R> {
   data: T[];
+  /** Last raw payload (the envelope's `data`), for fields `select` drops. */
+  response: R | null;
   isLoading: boolean;
   error: string | null;
   /** Manually re-fetch the collection. */
@@ -34,10 +42,12 @@ export interface UseWorkspaceCollectionResult<T> {
 export function useWorkspaceCollection<T, R = unknown>({
   workspaceId,
   getPath,
+  query,
   select,
   fallbackMessage,
-}: UseWorkspaceCollectionOptions<T, R>): UseWorkspaceCollectionResult<T> {
+}: UseWorkspaceCollectionOptions<T, R>): UseWorkspaceCollectionResult<T, R> {
   const [data, setData] = useState<T[]>([]);
+  const [response, setResponse] = useState<R | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,11 +63,15 @@ export function useWorkspaceCollection<T, R = unknown>({
     fallbackRef.current = fallbackMessage;
   });
 
-  const fetchData = useCallback(async (): Promise<T[]> => {
-    if (!workspaceId) return [];
-    const response = await apiFetch<R>(getPathRef.current(workspaceId));
-    return selectRef.current(response);
-  }, [workspaceId]);
+  const fetchData = useCallback(async (): Promise<{
+    items: T[];
+    payload: R | null;
+  }> => {
+    if (!workspaceId) return { items: [], payload: null };
+    const path = getPathRef.current(workspaceId);
+    const payload = await apiFetch<R>(query ? `${path}?${query}` : path);
+    return { items: selectRef.current(payload), payload };
+  }, [workspaceId, query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,8 +81,11 @@ export function useWorkspaceCollection<T, R = unknown>({
       setIsLoading(true);
       setError(null);
       try {
-        const list = await fetchData();
-        if (!cancelled) setData(list);
+        const result = await fetchData();
+        if (!cancelled) {
+          setData(result.items);
+          setResponse(result.payload);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -90,8 +107,9 @@ export function useWorkspaceCollection<T, R = unknown>({
     setIsLoading(true);
     setError(null);
     try {
-      const list = await fetchData();
-      setData(list);
+      const result = await fetchData();
+      setData(result.items);
+      setResponse(result.payload);
     } catch (err) {
       setError(
         err instanceof ApiClientError ? err.message : fallbackRef.current,
@@ -101,5 +119,5 @@ export function useWorkspaceCollection<T, R = unknown>({
     }
   }, [workspaceId, fetchData]);
 
-  return { data, isLoading, error, refetch };
+  return { data, response, isLoading, error, refetch };
 }

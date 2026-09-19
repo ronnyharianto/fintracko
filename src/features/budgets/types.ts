@@ -11,7 +11,13 @@ export type { BudgetInterval };
 /** Lifecycle position of a budget relative to today. */
 export type BudgetStatus = "ACTIVE" | "UPCOMING" | "ENDED";
 
-/** Budget view returned by GET /api/v1/workspaces/[workspaceId]/budgets. */
+/**
+ * Budget view returned by GET /api/v1/workspaces/[workspaceId]/budgets.
+ *
+ * A budget is a range of aligned periods, so `amount` is the per-period limit
+ * while `limit` is what the current view is actually measured against
+ * (`amount x periods`).
+ */
 export interface BudgetView {
   id: string;
   subCategoryId: string;
@@ -19,14 +25,26 @@ export interface BudgetView {
   /** Parent category of the subcategory. */
   categoryId: string;
   categoryName: string;
-  /** Configured spending limit, as a decimal string. */
+  /** Configured limit for a single period, as a decimal string. */
   amount: string;
+  /** Aligned periods the current view covers. */
+  periods: number;
+  /** `amount x periods`, as a decimal string. */
+  limit: string;
   interval: BudgetInterval;
-  /** Inclusive period start, `YYYY-MM-DD`. */
+  /** First day of the budget's range, `YYYY-MM-DD`. */
   startDate: string;
-  /** Inclusive period end, `YYYY-MM-DD`. */
+  /** Last day of the budget's range, `YYYY-MM-DD`; `9999-12-31` when open-ended. */
   endDate: string;
-  /** Net expense total within the period, as a decimal string. */
+  /**
+   * First day of the resolved periods for the current view, `YYYY-MM-DD`. This
+   * is the row range clipped to the view, so it is always finite even for an
+   * open-ended budget.
+   */
+  periodStart: string;
+  /** Last day of the resolved periods for the current view, `YYYY-MM-DD`. */
+  periodEnd: string;
+  /** Net expense total across the resolved periods, as a decimal string. */
   spent: string;
   /** Percentage of the limit used (may exceed 100). Presentation only. */
   utilization: number;
@@ -47,5 +65,8 @@ export interface BudgetFormData {
 /** Response shape from the budgets list endpoint. */
 export interface BudgetListResponse {
   budgets: BudgetView[];
+  /** Budgets returned for the requested window. */
   total: number;
+  /** Every budget in the workspace, regardless of the window. */
+  totalInWorkspace: number;
 }

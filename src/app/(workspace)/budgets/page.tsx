@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
-import { periodsOverlap } from "@/features/budgets/utilization";
 import type {
   BudgetListResponse,
   BudgetView,
@@ -35,7 +34,10 @@ import { CreateBudgetDialog } from "./_components/create-budget-dialog";
 import { EditBudgetDialog } from "./_components/edit-budget-dialog";
 import { BudgetGrouping } from "./_components/budget-grouping";
 import { BudgetSection } from "./_components/budget-section";
-import { buildCategorySections } from "./_components/budget-sections";
+import {
+  buildCategorySections,
+  sortBudgets,
+} from "./_components/budget-sections";
 import { DeleteBudgetDialog } from "./_components/delete-budget-dialog";
 
 const VIEW_MODES: { value: BudgetViewMode; label: string }[] = [
@@ -86,53 +88,54 @@ export default function BudgetsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingBudget, setDeletingBudget] = useState<BudgetView | null>(null);
 
+  // The server resolves the viewed window: it decides which budgets are in
+  // play and, for each, which periods the limit and spend measure against.
+  const range = useMemo(
+    () => getViewRange(viewMode, refDate),
+    [viewMode, refDate],
+  );
+  const query = useMemo(
+    () => new URLSearchParams({ from: range.from, to: range.to }).toString(),
+    [range],
+  );
+
   const {
     data: budgets,
+    response,
     isLoading,
     error,
     refetch,
   } = useWorkspaceCollection<BudgetView, BudgetListResponse>({
     workspaceId: activeWorkspaceId,
     getPath: (id) => `/api/v1/workspaces/${id}/budgets`,
+    query,
     select: (data) => data.budgets ?? [],
     fallbackMessage: "Failed to load budgets. Please try again.",
   });
 
-  const range = useMemo(() => getViewRange(viewMode, refDate), [viewMode, refDate]);
-
-  // Budgets whose period touches the selected month or year.
-  const periodBudgets = useMemo(
-    () =>
-      budgets.filter((budget) =>
-        periodsOverlap(
-          budget.startDate,
-          budget.endDate,
-          range.from,
-          range.to,
-        ),
-      ),
-    [budgets, range],
-  );
+  // Whether the workspace has any budget at all, so an empty month keeps the
+  // period navigation instead of stranding the user.
+  const hasAnyBudget = (response?.totalInWorkspace ?? 0) > 0;
 
   const visibleBudgets = useMemo(() => {
     const byInterval =
       intervalFilter === "ALL"
-        ? periodBudgets
-        : periodBudgets.filter((budget) => budget.interval === intervalFilter);
+        ? budgets
+        : budgets.filter((budget) => budget.interval === intervalFilter);
 
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return byInterval;
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return byInterval;
 
     return byInterval.filter(
       (budget) =>
-        budget.subCategoryName.toLowerCase().includes(query) ||
-        budget.categoryName.toLowerCase().includes(query),
+        budget.subCategoryName.toLowerCase().includes(term) ||
+        budget.categoryName.toLowerCase().includes(term),
     );
-  }, [periodBudgets, intervalFilter, searchQuery]);
+  }, [budgets, intervalFilter, searchQuery]);
 
   const summary = useMemo(() => {
     const totalBudgeted = visibleBudgets.reduce(
-      (sum, budget) => sum + Number(budget.amount),
+      (sum, budget) => sum + Number(budget.limit),
       0,
     );
     const totalSpent = visibleBudgets.reduce(
@@ -146,6 +149,13 @@ export default function BudgetsPage() {
       utilization: totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0,
     };
   }, [visibleBudgets]);
+
+  // Alphabetical in both layouts; the sections sort their own cards the same
+  // way, so grouping and flattening never disagree about order.
+  const orderedBudgets = useMemo(
+    () => sortBudgets(visibleBudgets),
+    [visibleBudgets],
+  );
 
   const sections = useMemo(
     () => buildCategorySections(visibleBudgets),
@@ -229,7 +239,7 @@ export default function BudgetsPage() {
         </Button>
       </div>
 
-      {!isLoading && budgets.length > 0 && (
+      {!isLoading && hasAnyBudget && (
         <>
           {/* View mode + period navigation */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -269,7 +279,6 @@ export default function BudgetsPage() {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setRefDate((d) => navigateView(viewMode, d, 1))}
-                disabled={isCurrent}
                 aria-label={`Next ${viewMode}`}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -366,7 +375,7 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      {!isLoading && budgets.length === 0 && (
+      {!isLoading && !hasAnyBudget && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <PiggyBank className="mb-4 h-12 w-12 text-muted-foreground" />
           <p className="text-center text-lg font-medium">No budgets yet</p>
@@ -380,7 +389,7 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      {!isLoading && budgets.length > 0 && periodBudgets.length === 0 && (
+      {!isLoading && hasAnyBudget && budgets.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <CalendarDays className="mb-4 h-10 w-10 text-muted-foreground" />
           <p className="text-center text-lg font-medium">
@@ -392,9 +401,7 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      {!isLoading &&
-        periodBudgets.length > 0 &&
-        visibleBudgets.length === 0 && (
+      {!isLoading && budgets.length > 0 && visibleBudgets.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
             {searchQuery.trim() ? (
               <>
@@ -435,7 +442,7 @@ export default function BudgetsPage() {
 
       {!isLoading && visibleBudgets.length > 0 && !groupByCategory && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleBudgets.map((budget) => (
+          {orderedBudgets.map((budget) => (
             <BudgetCard
               key={budget.id}
               budget={budget}
@@ -450,6 +457,7 @@ export default function BudgetsPage() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         onCreated={() => void refetch()}
+        initialStartDate={range.from}
       />
       <EditBudgetDialog
         open={isEditOpen}
