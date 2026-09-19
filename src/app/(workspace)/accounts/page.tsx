@@ -1,10 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * Accounts page — lists active and archived financial accounts for the active
+ * workspace.
+ *
+ * Cards link to the account detail view, which renders the shared
+ * `TransactionListView` scoped to that account.
+ */
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import type { AccountView, AccountType } from "@/features/accounts/types";
-import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import {
+  ACCOUNT_TYPE_LABELS,
+  ACCOUNT_TYPE_VARIANT,
+  getAccountFinalBalance,
+} from "@/components/shared/accounts/account-presentation";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,27 +38,18 @@ import {
   FilterPills,
   type FilterPillOption,
 } from "@/components/ui/filter-pills";
-import { Plus, Wallet, MoreHorizontal, Archive, ArchiveRestore, Pencil } from "lucide-react";
-import { CreateAccountDialog } from "./_components/create-account-dialog";
-import { EditAccountDialog } from "./_components/edit-account-dialog";
-
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  CHECKING: "Checking",
-  SAVINGS: "Savings",
-  CASH: "Cash",
-  CREDIT_CARD: "Credit Card",
-  DIGITAL_WALLET: "Digital Wallet",
-  INVESTMENT: "Investment",
-};
-
-const ACCOUNT_TYPE_VARIANT: Record<AccountType, BadgeVariant> = {
-  CHECKING: "info",
-  SAVINGS: "success",
-  CASH: "warning",
-  CREDIT_CARD: "danger",
-  DIGITAL_WALLET: "accent",
-  INVESTMENT: "primary",
-};
+import {
+  Plus,
+  Wallet,
+  MoreHorizontal,
+  Archive,
+  ArchiveRestore,
+  Pencil,
+  CreditCard,
+} from "lucide-react";
+import { CreateAccountDialog } from "@/components/shared/accounts/create-account-dialog";
+import { EditAccountDialog } from "@/components/shared/accounts/edit-account-dialog";
+import { withToast } from "@/lib/toast";
 
 const ACCOUNT_TYPE_FILTER_OPTIONS: readonly FilterPillOption<
   AccountType | "ALL"
@@ -55,69 +61,27 @@ const ACCOUNT_TYPE_FILTER_OPTIONS: readonly FilterPillOption<
   })),
 ];
 
-/**
- * Accounts page — lists active and archived financial accounts
- * for the active workspace.
- */
 export default function AccountsPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const router = useRouter();
 
-  const [accounts, setAccounts] = useState<AccountView[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [typeFilter, setTypeFilter] = useState<AccountType | "ALL">("ALL");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountView | null>(null);
 
-  const fetchAccounts = useCallback(async () => {
-    if (!activeWorkspaceId) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await apiFetch<{ accounts: AccountView[] }>(
-        `/api/v1/workspaces/${activeWorkspaceId}/accounts`,
-      );
-      setAccounts(data.accounts || []);
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to load accounts. Please try again.";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeWorkspaceId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      if (!activeWorkspaceId || cancelled) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await apiFetch<{ accounts: AccountView[] }>(
-          `/api/v1/workspaces/${activeWorkspaceId}/accounts`,
-        );
-        if (!cancelled) setAccounts(data.accounts || []);
-      } catch (err) {
-        if (!cancelled) {
-          const message =
-            err instanceof ApiClientError
-              ? err.message
-              : "Failed to load accounts. Please try again.";
-          setError(message);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [activeWorkspaceId]);
+  const {
+    data: accounts,
+    isLoading,
+    error,
+    refetch,
+  } = useWorkspaceCollection<AccountView, { accounts: AccountView[] }>({
+    workspaceId: activeWorkspaceId,
+    getPath: (id) => `/api/v1/workspaces/${id}/accounts`,
+    select: (data) => data.accounts ?? [],
+    fallbackMessage: "Failed to load accounts. Please try again.",
+  });
 
   const activeAccounts = useMemo(
     () => accounts.filter((a) => !a.isArchived),
@@ -125,7 +89,10 @@ export default function AccountsPage() {
   );
 
   const filteredActiveAccounts = useMemo(
-    () => typeFilter === "ALL" ? activeAccounts : activeAccounts.filter((a) => a.type === typeFilter),
+    () =>
+      typeFilter === "ALL"
+        ? activeAccounts
+        : activeAccounts.filter((a) => a.type === typeFilter),
     [activeAccounts, typeFilter],
   );
 
@@ -135,12 +102,7 @@ export default function AccountsPage() {
   );
 
   const totalBalance = useMemo(
-    () =>
-      activeAccounts.reduce((sum, a) => {
-        const initial = parseFloat(a.initialBalance) || 0;
-        const net = parseFloat(a.netTransactionSum) || 0;
-        return sum + initial + net;
-      }, 0),
+    () => activeAccounts.reduce((sum, a) => sum + getAccountFinalBalance(a), 0),
     [activeAccounts],
   );
 
@@ -159,7 +121,11 @@ export default function AccountsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-destructive">{error}</p>
-        <Button variant="outline" className="mt-4" onClick={() => void fetchAccounts()}>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => void refetch()}
+        >
           Retry
         </Button>
       </div>
@@ -234,23 +200,37 @@ export default function AccountsPage() {
       )}
 
       {/* Active Accounts Grid */}
-      {!isLoading && activeAccounts.length > 0 && filteredActiveAccounts.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredActiveAccounts.map((account) => (          <AccountCard key={account.id} account={account} onAction={fetchAccounts} onEdit={(a) => { setEditingAccount(a); setIsEditOpen(true); }} />
-          ))}
-        </div>
-      )}
+      {!isLoading &&
+        activeAccounts.length > 0 &&
+        filteredActiveAccounts.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredActiveAccounts.map((account) => (
+              <AccountCard
+                key={account.id}
+                account={account}
+                onAction={refetch}
+                onEdit={(a) => {
+                  setEditingAccount(a);
+                  setIsEditOpen(true);
+                }}
+                onOpenDetail={(a) => router.push(`/accounts/${a.id}`)}
+              />
+            ))}
+          </div>
+        )}
 
       {/* Filter Empty State */}
-      {!isLoading && activeAccounts.length > 0 && filteredActiveAccounts.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-          <Wallet className="mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg font-medium">No accounts found</p>
-          <p className="text-sm text-muted-foreground">
-            No accounts match the selected filter.
-          </p>
-        </div>
-      )}
+      {!isLoading &&
+        activeAccounts.length > 0 &&
+        filteredActiveAccounts.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+            <Wallet className="mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="text-lg font-medium">No accounts found</p>
+            <p className="text-sm text-muted-foreground">
+              No accounts match the selected filter.
+            </p>
+          </div>
+        )}
 
       {/* Archived Section */}
       {!isLoading && archivedAccounts.length > 0 && (
@@ -270,8 +250,12 @@ export default function AccountsPage() {
                 <AccountCard
                   key={account.id}
                   account={account}
-                  onAction={fetchAccounts}
-                  onEdit={(a) => { setEditingAccount(a); setIsEditOpen(true); }}
+                  onAction={refetch}
+                  onEdit={(a) => {
+                    setEditingAccount(a);
+                    setIsEditOpen(true);
+                  }}
+                  onOpenDetail={(a) => router.push(`/accounts/${a.id}`)}
                 />
               ))}
             </div>
@@ -281,13 +265,13 @@ export default function AccountsPage() {
       <CreateAccountDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onCreated={() => void fetchAccounts()}
+        onCreated={() => void refetch()}
       />
       <EditAccountDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         account={editingAccount}
-        onUpdated={() => void fetchAccounts()}
+        onUpdated={() => void refetch()}
       />
     </div>
   );
@@ -301,46 +285,62 @@ function AccountCard({
   account,
   onAction,
   onEdit,
+  onOpenDetail,
 }: {
   account: AccountView;
   onAction: () => Promise<void>;
   onEdit: (account: AccountView) => void;
+  onOpenDetail: (account: AccountView) => void;
 }) {
   const { activeWorkspaceId } = useWorkspace();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const finalBalance =
-    (parseFloat(account.initialBalance) || 0) +
-    (parseFloat(account.netTransactionSum) || 0);
+  const finalBalance = getAccountFinalBalance(account);
 
   const handleArchive = async () => {
     setIsDropdownOpen(false);
-    try {
-      await apiFetch(
-        `/api/v1/workspaces/${activeWorkspaceId}/accounts/${account.id}/archive`,
-        { method: "PATCH" },
-      );
-      await onAction();
-    } catch {
-      // Error handled by toast in caller
-    }
+    await withToast(
+      () =>
+        apiFetch(
+          `/api/v1/workspaces/${activeWorkspaceId}/accounts/${account.id}/archive`,
+          { method: "PATCH" },
+        ).then(() => onAction()),
+      "Account archived",
+      "Failed to archive account",
+    );
   };
 
   const handleUnarchive = async () => {
     setIsDropdownOpen(false);
-    try {
-      await apiFetch(
-        `/api/v1/workspaces/${activeWorkspaceId}/accounts/${account.id}/unarchive`,
-        { method: "PATCH" },
-      );
-      await onAction();
-    } catch {
-      // Error handled by toast in caller
+    await withToast(
+      () =>
+        apiFetch(
+          `/api/v1/workspaces/${activeWorkspaceId}/accounts/${account.id}/unarchive`,
+          { method: "PATCH" },
+        ).then(() => onAction()),
+      "Account unarchived",
+      "Failed to unarchive account",
+    );
+  };
+
+  // The card opens the account detail view. Dropdown actions stop propagation
+  // so clicking them does not also navigate.
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpenDetail(account);
     }
   };
 
   return (
-    <Card>
+    <Card
+      role="link"
+      tabIndex={0}
+      aria-label={`View transactions for ${account.name}`}
+      className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={() => onOpenDetail(account)}
+      onKeyDown={handleCardKeyDown}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div className="min-w-0">
           <CardTitle className="truncate text-base">{account.name}</CardTitle>
@@ -350,31 +350,47 @@ function AccountCard({
             </Badge>
           </div>
         </div>
-        <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Actions</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => { setIsDropdownOpen(false); onEdit(account); }}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            {account.isArchived ? (
-              <DropdownMenuItem onClick={() => void handleUnarchive()}>
-                <ArchiveRestore className="mr-2 h-4 w-4" />
-                Unarchive
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  onOpenDetail(account);
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                View transactions
               </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={() => void handleArchive()}>
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  onEdit(account);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {account.isArchived ? (
+                <DropdownMenuItem onClick={() => void handleUnarchive()}>
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  Unarchive
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => void handleArchive()}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       {!account.isArchived && (
         <CardContent>

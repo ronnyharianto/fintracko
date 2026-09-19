@@ -58,12 +58,18 @@ interface CreateTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
+  /**
+   * Account preselected when creating from a specific account's view: the
+   * source for money out / transfers, the destination for money in.
+   */
+  defaultAccountId?: string;
 }
 
 export function CreateTransactionDialog({
   open,
   onOpenChange,
   onCreated,
+  defaultAccountId,
 }: CreateTransactionDialogProps) {
   const { activeWorkspaceId } = useWorkspace();
 
@@ -84,6 +90,40 @@ export function CreateTransactionDialog({
 
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
+  const [prevOpen, setPrevOpen] = useState(false);
+
+  // Prefill the form on each open (adjust state during render, like the edit
+  // dialog) so a scoped view (e.g. an account page) starts from its account.
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    if (defaultAccountId) {
+      applyDefaultAccount("EXPENSE");
+    }
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  function applyDefaultAccount(nextType: TransactionType) {
+    if (!defaultAccountId) return;
+    if (nextType === "INCOME") {
+      setDestinationAccountId(defaultAccountId);
+      setSourceAccountId("");
+    } else {
+      setSourceAccountId(defaultAccountId);
+      setDestinationAccountId("");
+    }
+  }
+
+  const handleTypeChange = (nextType: TransactionType) => {
+    setType(nextType);
+    setCategoryId("");
+    setSubCategoryId("");
+    // The account selects swap between source and destination per type, so
+    // clear both to avoid submitting an account field the new type ignores.
+    setSourceAccountId("");
+    setDestinationAccountId("");
+    applyDefaultAccount(nextType);
+  };
 
   // Fetch categories and accounts when dialog opens
   useEffect(() => {
@@ -203,11 +243,7 @@ export function CreateTransactionDialog({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => {
-                      setType(opt.value);
-                      setCategoryId("");
-                      setSubCategoryId("");
-                    }}
+                    onClick={() => handleTypeChange(opt.value)}
                     className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-xs font-medium transition-colors ${
                       type === opt.value
                         ? opt.color

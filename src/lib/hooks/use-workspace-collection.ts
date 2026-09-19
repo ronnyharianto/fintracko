@@ -35,6 +35,11 @@ export interface UseWorkspaceCollectionResult<T, R> {
   response: R | null;
   isLoading: boolean;
   error: string | null;
+  /**
+   * Machine-readable code of the last `ApiClientError` (e.g. `NOT_FOUND`),
+   * for callers that branch on the failure kind rather than the message.
+   */
+  errorCode: string | null;
   /** Manually re-fetch the collection. */
   refetch: () => Promise<void>;
 }
@@ -50,6 +55,7 @@ export function useWorkspaceCollection<T, R = unknown>({
   const [response, setResponse] = useState<R | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   // Callers pass inline callbacks; sync them into refs so the fetch effect
   // only re-runs when the workspace actually changes.
@@ -62,6 +68,13 @@ export function useWorkspaceCollection<T, R = unknown>({
     selectRef.current = select;
     fallbackRef.current = fallbackMessage;
   });
+
+  const applyError = useCallback((err: unknown) => {
+    setError(
+      err instanceof ApiClientError ? err.message : fallbackRef.current,
+    );
+    setErrorCode(err instanceof ApiClientError ? err.code : null);
+  }, []);
 
   const fetchData = useCallback(async (): Promise<{
     items: T[];
@@ -80,6 +93,7 @@ export function useWorkspaceCollection<T, R = unknown>({
     void (async () => {
       setIsLoading(true);
       setError(null);
+      setErrorCode(null);
       try {
         const result = await fetchData();
         if (!cancelled) {
@@ -87,11 +101,7 @@ export function useWorkspaceCollection<T, R = unknown>({
           setResponse(result.payload);
         }
       } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof ApiClientError ? err.message : fallbackRef.current,
-          );
-        }
+        if (!cancelled) applyError(err);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -100,24 +110,23 @@ export function useWorkspaceCollection<T, R = unknown>({
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, fetchData]);
+  }, [workspaceId, fetchData, applyError]);
 
   const refetch = useCallback(async () => {
     if (!workspaceId) return;
     setIsLoading(true);
     setError(null);
+    setErrorCode(null);
     try {
       const result = await fetchData();
       setData(result.items);
       setResponse(result.payload);
     } catch (err) {
-      setError(
-        err instanceof ApiClientError ? err.message : fallbackRef.current,
-      );
+      applyError(err);
     } finally {
       setIsLoading(false);
     }
-  }, [workspaceId, fetchData]);
+  }, [workspaceId, fetchData, applyError]);
 
-  return { data, response, isLoading, error, refetch };
+  return { data, response, isLoading, error, errorCode, refetch };
 }

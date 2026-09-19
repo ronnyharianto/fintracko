@@ -48,6 +48,38 @@ export async function getAccounts(userId: string, workspaceId: string) {
 }
 
 /**
+ * Retrieves one account. Both path identifiers are enforced: the workspace id
+ * must match the account's own workspace, so an account can never be read
+ * through another workspace's route (§4 — nested-path authorization).
+ */
+export async function getAccount(
+  userId: string,
+  workspaceId: string,
+  accountId: string,
+) {
+  await requireMembership(userId, workspaceId);
+
+  const account = await db.financialAccount.findFirst({
+    where: { id: accountId, workspaceId },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      initialBalance: true,
+      netTransactionSum: true,
+      isArchived: true,
+      createdAt: true,
+    },
+  });
+
+  if (!account) {
+    throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
+  }
+
+  return account;
+}
+
+/**
  * Creates a new account in the workspace.
  * Validates membership and unique name within the workspace.
  */
