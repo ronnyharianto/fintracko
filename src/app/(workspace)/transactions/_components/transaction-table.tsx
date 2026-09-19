@@ -92,7 +92,6 @@ const DAY_HEADER_CELL =
   "sticky z-10 border-b border-border bg-muted px-3 py-1.5 text-left text-xs font-medium text-muted-foreground";
 
 const XL_ONLY = "hidden xl:table-cell";
-const TWO_XL_ONLY = "hidden 2xl:table-cell";
 
 /**
  * Single source of truth for column order, width, and breakpoint visibility.
@@ -126,28 +125,33 @@ const COLUMNS: ColumnSpec[] = [
   {
     key: "category",
     header: "Category",
-    cell: `w-40 ${XL_ONLY}`,
+    cell: `w-36 ${XL_ONLY}`,
     placeholder: "h-3 w-2/3",
   },
-  { key: "subcategory", header: "Subcategory", cell: "w-36", placeholder: "h-4 w-28" },
-  { key: "account", header: "Account", cell: "w-40", placeholder: "h-3 w-2/3" },
+  {
+    key: "subcategory",
+    header: "Subcategory",
+    cell: "w-36",
+    placeholder: "h-4 w-28",
+  },
+  { key: "account", header: "Account", cell: "w-60", placeholder: "h-3 w-2/3" },
   {
     key: "payee",
     header: "Payee / Description",
-    cell: `w-48 ${TWO_XL_ONLY}`,
+    cell: `w-40 ${XL_ONLY}`,
     placeholder: "h-3 w-3/4",
   },
   {
     key: "amount",
     header: "Amount",
-    cell: "w-48 text-right",
+    cell: "w-40 text-right",
     placeholder: "ml-auto h-4 w-28",
   },
   {
     key: "actions",
     header: "Actions",
     srOnly: true,
-    cell: "w-10",
+    cell: "",
     placeholder: "h-6 w-6",
   },
 ];
@@ -330,7 +334,7 @@ function TransactionTableRow({
       <td className={CELL}>
         <p className="truncate text-xs text-muted-foreground">{accountName}</p>
       </td>
-      <td className={`${CELL} ${TWO_XL_ONLY}`}>
+      <td className={`${CELL} ${XL_ONLY}`}>
         <p className="truncate text-xs text-muted-foreground">{detail}</p>
       </td>
       <td
