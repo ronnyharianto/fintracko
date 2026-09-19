@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { apiFetch, ApiClientError } from "@/lib/api/client";
 import type { AccountView, AccountType } from "@/features/accounts/types";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +19,41 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  FilterPills,
+  type FilterPillOption,
+} from "@/components/ui/filter-pills";
 import { Plus, Wallet, MoreHorizontal, Archive, ArchiveRestore, Pencil } from "lucide-react";
 import { CreateAccountDialog } from "./_components/create-account-dialog";
 import { EditAccountDialog } from "./_components/edit-account-dialog";
+
+const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  CHECKING: "Checking",
+  SAVINGS: "Savings",
+  CASH: "Cash",
+  CREDIT_CARD: "Credit Card",
+  DIGITAL_WALLET: "Digital Wallet",
+  INVESTMENT: "Investment",
+};
+
+const ACCOUNT_TYPE_VARIANT: Record<AccountType, BadgeVariant> = {
+  CHECKING: "info",
+  SAVINGS: "success",
+  CASH: "warning",
+  CREDIT_CARD: "danger",
+  DIGITAL_WALLET: "accent",
+  INVESTMENT: "primary",
+};
+
+const ACCOUNT_TYPE_FILTER_OPTIONS: readonly FilterPillOption<
+  AccountType | "ALL"
+>[] = [
+  { value: "ALL", label: "All" },
+  ...(Object.keys(ACCOUNT_TYPE_LABELS) as AccountType[]).map((type) => ({
+    value: type,
+    label: ACCOUNT_TYPE_LABELS[type],
+  })),
+];
 
 /**
  * Accounts page — lists active and archived financial accounts
@@ -160,21 +193,12 @@ export default function AccountsPage() {
 
       {/* Type Filter */}
       {!isLoading && activeAccounts.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {(["ALL", "CHECKING", "SAVINGS", "CASH", "CREDIT_CARD", "DIGITAL_WALLET", "INVESTMENT"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                typeFilter === t
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {t === "ALL" ? "All" : t.replace(/_/g, " ")}
-            </button>
-          ))}
-        </div>
+        <FilterPills
+          options={ACCOUNT_TYPE_FILTER_OPTIONS}
+          value={typeFilter}
+          onChange={setTypeFilter}
+          ariaLabel="Filter by account type"
+        />
       )}
 
       {/* Loading State */}
@@ -273,15 +297,6 @@ export default function AccountsPage() {
 // Account Card
 // ---------------------------------------------------------------------------
 
-const TYPE_BADGE_COLORS: Record<string, string> = {
-  CHECKING: "bg-blue-100 text-blue-800",
-  SAVINGS: "bg-green-100 text-green-800",
-  CASH: "bg-yellow-100 text-yellow-800",
-  CREDIT_CARD: "bg-red-100 text-red-800",
-  DIGITAL_WALLET: "bg-purple-100 text-purple-800",
-  INVESTMENT: "bg-orange-100 text-orange-800",
-};
-
 function AccountCard({
   account,
   onAction,
@@ -329,13 +344,11 @@ function AccountCard({
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div className="min-w-0">
           <CardTitle className="truncate text-base">{account.name}</CardTitle>
-          <span
-            className={`mt-1 inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
-              TYPE_BADGE_COLORS[account.type] ?? "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {account.type.replace(/_/g, " ")}
-          </span>
+          <div className="mt-1">
+            <Badge variant={ACCOUNT_TYPE_VARIANT[account.type] ?? "default"}>
+              {ACCOUNT_TYPE_LABELS[account.type] ?? account.type}
+            </Badge>
+          </div>
         </div>
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
