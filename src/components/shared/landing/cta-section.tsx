@@ -25,7 +25,7 @@ export function CtaSection({ className }: { className?: string }) {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/85">
               Join thousands of users who trust Fintracko to keep their personal
-              and business finances organized — completely free.
+              and business finances organized — sign up in seconds.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link

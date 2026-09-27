@@ -4,19 +4,23 @@ import type { Metadata } from "next";
  * SEO metadata for the Privacy Policy page.
  */
 export const metadata: Metadata = {
-  title: "Privacy Policy — Fintracko",
+  title: "Privacy Policy",
   description:
     "Fintracko Privacy Policy: learn how we collect, use, and protect your personal and financial data.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
   openGraph: {
     title: "Privacy Policy — Fintracko",
     description:
       "Learn how Fintracko collects, uses, and protects your personal and financial data.",
     siteName: "Fintracko",
     type: "website",
+    url: "/privacy-policy",
   },
   robots: {
     index: true,
-    follow: false,
+    follow: true,
   },
 };
 
@@ -240,14 +244,10 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-3 text-xl font-semibold">10. Contact Us</h2>
           <p>
-            If you have questions or concerns about this Privacy Policy or our
-            data practices, please contact us at:
+            A dedicated support email address has not yet been published. This
+            section will be updated with a contact channel once one becomes
+            available.
           </p>
-          <address className="mt-3 not-italic text-muted-foreground">
-            Email: support@fintracko.app
-            <br />
-            Location: Jakarta, Indonesia
-          </address>
         </section>
       </div>
     </article>

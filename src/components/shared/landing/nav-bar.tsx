@@ -18,6 +18,7 @@ import { useSession } from "@/components/shared/auth/session-provider";
 const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
+  { href: "/#faq", label: "FAQ" },
 ] as const;
 
 export function NavBar({ className }: { className?: string }) {
@@ -31,14 +32,16 @@ export function NavBar({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      {/* Row never wraps; the wordmark yields on very narrow screens so the
+          fixed-size buttons keep a single-line height (no clipped labels). */}
+      <div className="mx-auto flex h-16 max-w-7xl flex-nowrap items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
           href="/"
-          className="group flex items-center gap-2.5 rounded-lg p-1 transition-all hover:opacity-80"
+          className="group flex shrink-0 items-center gap-2 rounded-lg p-1 transition-all hover:opacity-80"
         >
-          <FintrackoLogo className="h-8 w-8 transition-transform group-hover:scale-105" />
-          <span className="text-xl font-bold tracking-tight text-foreground">
+          <FintrackoLogo className="h-8 w-8 shrink-0 transition-transform group-hover:scale-105" />
+          <span className="hidden min-[420px]:inline text-xl font-bold tracking-tight text-foreground">
             Fintracko
           </span>
         </Link>
@@ -57,14 +60,14 @@ export function NavBar({ className }: { className?: string }) {
         </nav>
 
         {/* CTA */}
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <span className="hidden h-5 w-px bg-border sm:inline-block" />
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <ThemeToggle className="shrink-0" />
+          <span className="hidden h-5 w-px shrink-0 bg-border sm:inline-block" />
           {isAuthenticated ? (
             <>
               <Link
                 href="/dashboard"
-                className="inline-flex h-9 items-center justify-center rounded-md bg-linear-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-linear-to-r from-primary to-accent px-3 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-5"
               >
                 Dashboard
               </Link>
@@ -74,7 +77,7 @@ export function NavBar({ className }: { className?: string }) {
                   await authClient.signOut();
                   window.location.href = "/account";
                 }}
-                className="inline-flex h-9 items-center rounded-md px-4 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md px-2.5 text-sm font-medium text-foreground transition-colors hover:text-primary sm:px-4"
               >
                 Log Out
               </button>
@@ -82,7 +85,7 @@ export function NavBar({ className }: { className?: string }) {
           ) : (
             <Link
               href="/account"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-linear-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-linear-to-r from-primary to-accent px-4 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-5"
             >
               Get Started
             </Link>

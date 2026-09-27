@@ -4,19 +4,23 @@ import type { Metadata } from "next";
  * SEO metadata for the Terms of Service page.
  */
 export const metadata: Metadata = {
-  title: "Terms of Service — Fintracko",
+  title: "Terms of Service",
   description:
     "Fintracko Terms of Service: read the terms and conditions governing your use of the Fintracko financial tracking platform.",
+  alternates: {
+    canonical: "/terms-of-service",
+  },
   openGraph: {
     title: "Terms of Service — Fintracko",
     description:
       "Read the terms and conditions governing your use of the Fintracko financial tracking platform.",
     siteName: "Fintracko",
     type: "website",
+    url: "/terms-of-service",
   },
   robots: {
     index: true,
-    follow: false,
+    follow: true,
   },
 };
 
@@ -236,13 +240,10 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="mb-3 text-xl font-semibold">12. Contact</h2>
           <p>
-            For questions about these Terms of Service, please contact:
+            A dedicated support email address has not yet been published. This
+            section will be updated with a contact channel once one becomes
+            available.
           </p>
-          <address className="mt-3 not-italic text-muted-foreground">
-            Email: support@fintracko.app
-            <br />
-            Location: Jakarta, Indonesia
-          </address>
         </section>
       </div>
     </article>

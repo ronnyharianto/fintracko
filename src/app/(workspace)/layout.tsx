@@ -9,6 +9,7 @@
  * the OnboardingGuardWrapper component
  */
 
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import OnboardingGuardWrapper from '@/components/guards/onboarding-guard-wrapper';
 import Sidebar from '@/components/shared/workspace/sidebar';
@@ -19,6 +20,20 @@ import { WorkspaceProvider } from '@/components/shared/workspace/workspace-conte
 interface DashboardLayoutProps {
   children: ReactNode;
 }
+
+/**
+ * Workspace app pages are private; keep them out of search indexes.
+ * Individual child pages inherit this via layout metadata precedence.
+ */
+export const metadata: Metadata = {
+  title: {
+    absolute: 'Dashboard — Fintracko',
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (

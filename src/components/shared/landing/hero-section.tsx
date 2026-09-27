@@ -28,19 +28,20 @@ export function HeroSection({ className }: { className?: string }) {
           Start Tracking in Seconds
         </div>
 
-        {/* Headline */}
+        {/* Headline — carries the primary long-tail keywords (budget
+            tracker / expense tracker) for search visibility. */}
         <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Take Control of Your{" "}
+          The Budget &amp; Expense Tracker for{" "}
           <span className="bg-linear-to-r from-primary via-teal-500 to-emerald-500 bg-clip-text text-transparent">
-            Financial Future
+            Shared Finances
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="mx-auto max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-          Fintracko helps individuals and small teams track income, expenses,
-          and budgets across multiple collaborative workspaces — all in one
-          intuitive, secure platform.
+          Fintracko helps individuals, families, and small teams track income,
+          expenses, and budgets across multiple collaborative workspaces — all
+          in one intuitive, secure platform.
         </p>
 
         {/* CTAs */}

@@ -6,8 +6,9 @@ import { FintrackoLogo } from "@/components/shared/fintracko-logo";
  * Public site footer — color-enhanced.
  *
  * Uses a teal-tinted surface, gradient top accent line, the
- * FintrackoLogo, grouped link columns, mailto link badge, and
- * legal links.
+ * FintrackoLogo, grouped link columns, and legal links. There is
+ * deliberately no contact section — re-add one only once a real,
+ * monitored channel exists (never render an unreachable address).
  */
 export function Footer({ className }: { className?: string }) {
   const currentYear = new Date().getFullYear();
@@ -26,7 +27,7 @@ export function Footer({ className }: { className?: string }) {
       />
 
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8">
           {/* Branding */}
           <div>
             <Link
@@ -40,7 +41,7 @@ export function Footer({ className }: { className?: string }) {
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               Smart financial tracking for individuals and small teams.
-              Collaborative, secure, and completely free to use.
+              Collaborative, secure, and simple to use.
             </p>
           </div>
 
@@ -64,6 +65,14 @@ export function Footer({ className }: { className?: string }) {
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   How It Works
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/#faq"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
+                  FAQ
                 </Link>
               </li>
               <li>
@@ -102,62 +111,12 @@ export function Footer({ className }: { className?: string }) {
             </ul>
           </div>
 
-          {/* Contact */}
-          <div>
-            <h4 className="mb-4 text-sm font-semibold text-foreground">
-              Contact
-            </h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li>
-                <a
-                  href="mailto:support@fintracko.app"
-                  className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
-                >
-                  {/* Mail icon */}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  >
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                  <span className="break-all">support@fintracko.app</span>
-                </a>
-              </li>
-              <li>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  {/* Pin icon */}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  >
-                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <span>Jakarta, Indonesia</span>
-                </div>
-              </li>
-            </ul>
-          </div>
         </div>
 
         {/* Bottom */}
         <div className="mt-12 border-t border-border pt-6">
           <p className="text-center text-xs text-muted-foreground">
-            &copy; {currentYear} Fintracko. All rights reserved. Built with
-            Next.js, Prisma, and Supabase.
+            &copy; {currentYear} Fintracko. All rights reserved.
           </p>
         </div>
       </div>

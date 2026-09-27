@@ -31,11 +31,12 @@ export default function MarketingLayout({
  * Optional SEO metadata for the marketing layout.
  *
  * Individual pages (privacy-policy, terms-of-service) override
- * `title` and `description` via their own metadata exports.
+ * `title` and `description` via their own metadata exports. `follow: true`
+ * keeps link equity flowing between the only publicly indexable pages.
  */
 export const metadata: Metadata = {
   robots: {
     index: true,
-    follow: false,
+    follow: true,
   },
 };

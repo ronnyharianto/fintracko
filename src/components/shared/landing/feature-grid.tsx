@@ -68,9 +68,9 @@ export function FeatureGrid({
             Features
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Smarter Finances,{" "}
+            Everything You Need to Track{" "}
             <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
-              One Dashboard
+              Shared Expenses &amp; Budgets
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">

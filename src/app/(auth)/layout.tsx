@@ -42,7 +42,7 @@ export default function AuthLayout({
  * be indexed — they are conversion entry points, not content.
  */
 export const metadata: Metadata = {
-  title: "Fintracko — Account",
+  title: "Account",
   robots: {
     index: false,
     follow: false,

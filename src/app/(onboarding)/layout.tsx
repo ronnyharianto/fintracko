@@ -44,7 +44,7 @@ export default async function OnboardingLayout({
  * SEO metadata for onboarding pages. These routes are not meant to be indexed.
  */
 export const metadata: Metadata = {
-  title: "Fintracko — Complete your profile",
+  title: "Complete your profile",
   robots: {
     index: false,
     follow: false,
