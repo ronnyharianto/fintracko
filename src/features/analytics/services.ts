@@ -24,6 +24,9 @@ import {
 } from "../../../generated/prisma/enums";
 import { AnalyticsServiceError } from "./errors";
 import type {
+  AnalyticsSlice,
+  AnalyticsSummary,
+  AnalyticsTrendPoint,
   BalanceTrendPoint,
   DashboardSummary,
   ExpenseBreakdownSlice,
@@ -95,31 +98,36 @@ export async function getTopBudgets(
 }
 
 /**
- * Expense distribution by parent category for a window.
+ * Distribution by parent category for a transaction type and window.
  *
- * Prisma cannot group by a relation field, so expenses are summed per
+ * Prisma cannot group by a relation field, so amounts are summed per
  * subcategory and rolled up to their parent category in JS. Transactions are
- * included regardless of archive state: the breakdown reports what was actually
- * spent, including history on since-archived categories.
+ * included regardless of archive state: the breakdown reports what actually
+ * happened, including history on since-archived categories.
+ *
+ * A category or subcategory whose net is zero or negative (fully refunded) is
+ * omitted, since a negative share cannot be drawn. `total` is the sum of the
+ * level-1 slices, so the shares always add up to the drawn ring.
  */
-export async function getExpenseBreakdown(
+export async function getCategoryBreakdown(
   userId: string,
   workspaceId: string,
+  type: TransactionType,
   window: { from: string; to: string },
-): Promise<ExpenseBreakdownSlice[]> {
+): Promise<{ categories: AnalyticsSlice[]; total: string }> {
   await requireMembership(userId, workspaceId);
 
   const grouped = await db.financialTransaction.groupBy({
     by: ["subCategoryId"],
     where: {
       workspaceId,
-      type: TransactionType.EXPENSE,
+      type,
       date: { gte: new Date(window.from), lte: new Date(window.to) },
     },
     _sum: { amount: true },
   });
 
-  if (grouped.length === 0) return [];
+  if (grouped.length === 0) return { categories: [], total: "0" };
 
   const subCategories = await db.subCategory.findMany({
     where: {
@@ -128,50 +136,103 @@ export async function getExpenseBreakdown(
     },
     select: {
       id: true,
+      name: true,
       categoryId: true,
       category: { select: { name: true } },
     },
   });
 
-  const subCategoryById = new Map(
-    subCategories.map((row) => [row.id, row]),
-  );
+  const subCategoryById = new Map(subCategories.map((row) => [row.id, row]));
 
-  const totals = new Map<string, DecimalLike>();
-  const names = new Map<string, string>();
+  // Roll subcategory sums up to their parent, keeping both levels so the page
+  // can drill into a category without another request.
+  const categoryNames = new Map<string, string>();
+  const categoryTotals = new Map<string, DecimalLike>();
+  const subCategoryTotals = new Map<
+    string,
+    { categoryId: string; name: string; amount: DecimalLike }
+  >();
 
   for (const row of grouped) {
     const subCategory = subCategoryById.get(row.subCategoryId);
     const amount = row._sum.amount;
     if (!subCategory || !amount) continue;
 
-    names.set(subCategory.categoryId, subCategory.category.name);
-    const existing = totals.get(subCategory.categoryId);
-    totals.set(
+    categoryNames.set(subCategory.categoryId, subCategory.category.name);
+    const categoryExisting = categoryTotals.get(subCategory.categoryId);
+    categoryTotals.set(
       subCategory.categoryId,
-      existing ? existing.add(amount) : amount,
+      categoryExisting ? categoryExisting.add(amount) : amount,
     );
+
+    const subExisting = subCategoryTotals.get(subCategory.id);
+    subCategoryTotals.set(subCategory.id, {
+      categoryId: subCategory.categoryId,
+      name: subCategory.name,
+      amount: subExisting ? subExisting.amount.add(amount) : amount,
+    });
   }
 
-  // A category whose net is zero or negative (fully refunded) is omitted.
-  const positive = [...totals.entries()].filter(
+  const positiveCategories = [...categoryTotals.entries()].filter(
     ([, amount]) => Number(amount.toString()) > 0,
   );
-  if (positive.length === 0) return [];
+  if (positiveCategories.length === 0) return { categories: [], total: "0" };
 
-  let total = positive[0][1];
-  for (let i = 1; i < positive.length; i++) {
-    total = total.add(positive[i][1]);
-  }
+  // Seed with the first amount minus itself: a Decimal zero without needing a
+  // runtime constructor.
+  const total = positiveCategories.reduce(
+    (sum, [, amount]) => sum.add(amount),
+    positiveCategories[0][1].sub(positiveCategories[0][1]),
+  );
 
-  return positive
-    .map(([categoryId, amount]) => ({
-      categoryId,
-      categoryName: names.get(categoryId) ?? "Unknown",
-      amount: amount.toString(),
-      share: Number(amount.div(total).mul(100).toString()),
-    }))
+  const categories: AnalyticsSlice[] = positiveCategories
+    .map(([categoryId, amount]) => {
+      const subCategories = [...subCategoryTotals.entries()]
+        .filter(
+          ([, sub]) =>
+            sub.categoryId === categoryId && Number(sub.amount.toString()) > 0,
+        )
+        .map(([subCategoryId, sub]) => ({
+          id: subCategoryId,
+          name: sub.name,
+          amount: sub.amount.toString(),
+          share: Number(sub.amount.div(amount).mul(100).toString()),
+          subCategories: [],
+        }))
+        .sort((a, b) => Number(b.amount) - Number(a.amount));
+
+      return {
+        id: categoryId,
+        name: categoryNames.get(categoryId) ?? "Unknown",
+        amount: amount.toString(),
+        share: Number(amount.div(total).mul(100).toString()),
+        subCategories,
+      };
+    })
     .sort((a, b) => Number(b.amount) - Number(a.amount));
+
+  return { categories, total: total.toString() };
+}
+
+/** Expense distribution by parent category in the dashboard's slice shape. */
+export async function getExpenseBreakdown(
+  userId: string,
+  workspaceId: string,
+  window: { from: string; to: string },
+): Promise<ExpenseBreakdownSlice[]> {
+  const { categories } = await getCategoryBreakdown(
+    userId,
+    workspaceId,
+    TransactionType.EXPENSE,
+    window,
+  );
+
+  return categories.map((category) => ({
+    categoryId: category.id,
+    categoryName: category.name,
+    amount: category.amount,
+    share: category.share,
+  }));
 }
 
 /**
@@ -308,4 +369,89 @@ export async function getDashboardSummary(
     ]);
 
   return { topMonthly, topYearly, expenseBreakdown, balanceTrend };
+}
+
+/**
+ * Monthly totals for a transaction type over the trailing `months` window,
+ * oldest first. Prisma cannot group by month without raw SQL, so the window's
+ * rows are bucketed in JS with Decimal arithmetic.
+ */
+export async function getTypeTrend(
+  userId: string,
+  workspaceId: string,
+  type: TransactionType,
+  months: number = TREND_MONTHS,
+): Promise<AnalyticsTrendPoint[]> {
+  await requireMembership(userId, workspaceId);
+
+  const now = new Date();
+  const monthStarts: Date[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    monthStarts.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
+  }
+
+  const windowFrom = toISODate(monthStarts[0]);
+  const windowTo = toISODate(now);
+
+  const transactions = await db.financialTransaction.findMany({
+    where: {
+      workspaceId,
+      type,
+      date: { gte: new Date(windowFrom), lte: new Date(windowTo) },
+    },
+    select: { amount: true, date: true },
+  });
+
+  const totalsByMonth = new Map<string, DecimalLike>();
+  for (const transaction of transactions) {
+    const key = transaction.date.toISOString().slice(0, 7);
+    const existing = totalsByMonth.get(key);
+    totalsByMonth.set(
+      key,
+      existing ? existing.add(transaction.amount) : transaction.amount,
+    );
+  }
+
+  return monthStarts.map((monthStart) => {
+    const month = toISODate(monthStart).slice(0, 7);
+    const amount = totalsByMonth.get(month);
+    return {
+      month,
+      label: monthStart.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      }),
+      axisLabel: monthStart.toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+      }),
+      amount: amount ? amount.toString() : "0",
+    };
+  });
+}
+
+/** Compose the analytics page payload for one type and window. */
+export async function getAnalyticsSummary(
+  userId: string,
+  workspaceId: string,
+  input: { type: TransactionType; from: string; to: string },
+): Promise<AnalyticsSummary> {
+  await requireMembership(userId, workspaceId);
+
+  const [{ categories, total }, trend] = await Promise.all([
+    getCategoryBreakdown(userId, workspaceId, input.type, {
+      from: input.from,
+      to: input.to,
+    }),
+    getTypeTrend(userId, workspaceId, input.type, TREND_MONTHS),
+  ]);
+
+  return {
+    type: input.type,
+    from: input.from,
+    to: input.to,
+    total,
+    categories,
+    trend,
+  };
 }

@@ -42,6 +42,13 @@ export interface UseWorkspaceCollectionResult<T, R> {
   errorCode: string | null;
   /** Manually re-fetch the collection. */
   refetch: () => Promise<void>;
+  /**
+   * True when a workspace-scoped fetch is in flight for a query change while
+   * the previous payload is still rendered. Distinct from `isLoading`, which
+   * also covers workspace switches and first loads, where there is no previous
+   * payload to keep on screen.
+   */
+  isRefreshing: boolean;
 }
 
 export function useWorkspaceCollection<T, R = unknown>({
@@ -86,6 +93,23 @@ export function useWorkspaceCollection<T, R = unknown>({
     return { items: selectRef.current(payload), payload };
   }, [workspaceId, query]);
 
+  // Workspace switches must drop stale data immediately — the workspace is
+  // not in the fetched payload, so the only honest state for a previous
+  // workspace's rows is the loading skeleton. Query refetches keep the
+  // previous payload instead, so callers can render stale-but-labeled data.
+  // React's documented "adjust state during render" pattern: resetting here
+  // (rather than in an effect) re-renders synchronously before commit, so no
+  // stale frame is ever painted.
+  const [lastWorkspaceId, setLastWorkspaceId] = useState(workspaceId);
+  if (lastWorkspaceId !== workspaceId) {
+    setLastWorkspaceId(workspaceId);
+    if (response !== null) {
+      setIsLoading(true);
+      setData([]);
+      setResponse(null);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     if (!workspaceId) return;
@@ -128,5 +152,15 @@ export function useWorkspaceCollection<T, R = unknown>({
     }
   }, [workspaceId, fetchData, applyError]);
 
-  return { data, response, isLoading, error, errorCode, refetch };
+  return {
+    data,
+    response,
+    isLoading,
+    // Query refetches keep the previous payload on screen, so `isLoading`
+    // alone cannot tell a caller when a background refresh is in flight.
+    isRefreshing: isLoading && response !== null,
+    error,
+    errorCode,
+    refetch,
+  };
 }

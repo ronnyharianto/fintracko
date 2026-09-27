@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  useId,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, TrendingUp } from "lucide-react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import type { BudgetView } from "@/features/budgets/types";
 import type { DashboardSummary } from "@/features/analytics/types";
@@ -268,28 +263,6 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
-  );
-}
-
-/** Matches the `lg` breakpoint where the dashboard grid becomes two columns. */
-const MOBILE_QUERY = "(max-width: 1023px)";
-
-function subscribeToMobile(callback: () => void) {
-  const query = window.matchMedia(MOBILE_QUERY);
-  query.addEventListener("change", callback);
-  return () => query.removeEventListener("change", callback);
-}
-
-/**
- * SSR-safe mobile detection. The server snapshot is always `false`, so the
- * first server HTML renders expanded and the client reconciles to the real
- * viewport on hydration without a mismatch.
- */
-function useIsMobile() {
-  return useSyncExternalStore(
-    subscribeToMobile,
-    () => window.matchMedia(MOBILE_QUERY).matches,
-    () => false,
   );
 }
 

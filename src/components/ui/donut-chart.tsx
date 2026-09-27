@@ -61,6 +61,16 @@ interface DonutChartProps {
   centerValue?: string;
   /** Formats a slice value in the legend. Defaults to a 2-decimal locale string. */
   valueFormatter?: (value: number) => string;
+  /**
+   * Show each slice's share in the legend (`58.1% · 1,575,000`). Off by
+   * default so summary surfaces stay clean; the analytics page turns it on.
+   */
+  showShare?: boolean;
+  /**
+   * Called when a slice is clicked (arc or legend row). Use for drill-down;
+   * hovering still only previews the slice in the center.
+   */
+  onSliceClick?: (index: number) => void;
   /** Message shown when there are no slices. */
   emptyMessage?: string;
   className?: string;
@@ -76,6 +86,8 @@ export function DonutChart({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }),
+  showShare = false,
+  onSliceClick,
   emptyMessage = "No data to display.",
   className,
 }: DonutChartProps) {
@@ -112,7 +124,10 @@ export function DonutChart({
   const centerFontSize = centerValueLength
     ? Math.max(
         9,
-        Math.min(18, Math.floor(holeDiameter / (centerValueLength * CHAR_WIDTH_EM))),
+        Math.min(
+          18,
+          Math.floor(holeDiameter / (centerValueLength * CHAR_WIDTH_EM)),
+        ),
       )
     : 18;
 
@@ -122,10 +137,7 @@ export function DonutChart({
     const percent = (slice.value / total) * 100;
     const offset = slices
       .slice(0, index)
-      .reduce(
-        (sum, previous) => sum + (previous.value / total) * 100,
-        0,
-      );
+      .reduce((sum, previous) => sum + (previous.value / total) * 100, 0);
     return {
       slice,
       percent,
@@ -211,12 +223,15 @@ export function DonutChart({
                   1,
                 )} percent, ${valueFormatter(arc.slice.value)}`}
                 className="cursor-pointer focus:outline-none"
-                onMouseEnter={canHover ? () => setActiveIndex(index) : undefined}
+                onMouseEnter={
+                  canHover ? () => setActiveIndex(index) : undefined
+                }
                 onFocus={() => setActiveIndex(index)}
                 onBlur={() => setActiveIndex(null)}
                 onClick={(event) => {
                   event.stopPropagation();
                   setActiveIndex(index);
+                  onSliceClick?.(index);
                 }}
               />
             ))}
@@ -260,6 +275,7 @@ export function DonutChart({
         {slices.map((slice, index) => {
           const palette = PALETTE[index % PALETTE.length];
           const isActive = active === index;
+          const percent = (slice.value / total) * 100;
           return (
             <li key={slice.label}>
               <button
@@ -269,12 +285,15 @@ export function DonutChart({
                   "flex w-full items-center justify-between gap-3 rounded-md px-2 py-1 text-left text-sm transition-colors",
                   isActive ? "bg-muted" : "hover:bg-muted/50",
                 )}
-                onMouseEnter={canHover ? () => setActiveIndex(index) : undefined}
+                onMouseEnter={
+                  canHover ? () => setActiveIndex(index) : undefined
+                }
                 onFocus={() => setActiveIndex(index)}
                 onBlur={() => setActiveIndex(null)}
                 onClick={(event) => {
                   event.stopPropagation();
                   setActiveIndex(index);
+                  onSliceClick?.(index);
                 }}
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -288,7 +307,9 @@ export function DonutChart({
                   <span className="truncate">{slice.label}</span>
                 </span>
                 <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {valueFormatter(slice.value)}
+                  {showShare
+                    ? `${percent.toFixed(1)}% · ${valueFormatter(slice.value)}`
+                    : valueFormatter(slice.value)}
                 </span>
               </button>
             </li>

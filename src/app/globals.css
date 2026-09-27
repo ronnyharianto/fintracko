@@ -159,8 +159,7 @@
   }
 
   html, body {
-    @apply bg-background text-foreground overflow-hidden;
+    @apply bg-background text-foreground;
     font-family: var(--font-sans, Arial, Helvetica, sans-serif);
-    height: 100%;
   }
 }
