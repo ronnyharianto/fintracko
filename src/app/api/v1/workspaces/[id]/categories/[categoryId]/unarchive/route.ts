@@ -10,7 +10,7 @@ import { handleCategoryErrors } from "@/features/categories/errors";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ id: string; categoryId: string }> },
 ) {
   return withPipeline(
     request,
@@ -28,8 +28,8 @@ export async function PATCH(
       },
       "Failed to unarchive category. Please try again.",
       async ({ userId }) => {
-        const { categoryId } = await params;
-        const result = await unarchiveCategory(userId, categoryId);
+        const { id: workspaceId, categoryId } = await params;
+        const result = await unarchiveCategory(userId, workspaceId, categoryId);
         return success(result);
       },
     ),

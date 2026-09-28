@@ -14,7 +14,7 @@ export async function PATCH(
   {
     params,
   }: {
-    params: Promise<{ categoryId: string; subCategoryId: string }>;
+    params: Promise<{ id: string; categoryId: string; subCategoryId: string }>;
   },
 ) {
   return withPipeline(
@@ -38,9 +38,11 @@ export async function PATCH(
       },
       "Failed to update subcategory. Please try again.",
       async ({ userId }, data) => {
-        const { subCategoryId } = await params;
+        const { id: workspaceId, categoryId, subCategoryId } = await params;
         const subCategory = await updateSubCategory(
           userId,
+          workspaceId,
+          categoryId,
           subCategoryId,
           data,
         );

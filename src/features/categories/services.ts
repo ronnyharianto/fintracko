@@ -114,15 +114,17 @@ export async function createCategory(
 
 /**
  * Updates a category's name.
+ * Both path identifiers are enforced (§4 — nested-path authorization).
  * Validates membership, unique name if changed.
  */
 export async function updateCategory(
   userId: string,
+  workspaceId: string,
   categoryId: string,
   data: UpdateCategoryInput,
 ) {
-  const category = await db.category.findUnique({
-    where: { id: categoryId },
+  const category = await db.category.findFirst({
+    where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true, name: true, type: true },
   });
 
@@ -130,7 +132,7 @@ export async function updateCategory(
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
 
-  await requireMembership(userId, category.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   if (data.name !== category.name) {
     const existing = await db.category.findUnique({
@@ -171,10 +173,15 @@ export async function updateCategory(
 
 /**
  * Archives a category. All subcategories become inaccessible.
+ * Both path identifiers are enforced (§4 — nested-path authorization).
  */
-export async function archiveCategory(userId: string, categoryId: string) {
-  const category = await db.category.findUnique({
-    where: { id: categoryId },
+export async function archiveCategory(
+  userId: string,
+  workspaceId: string,
+  categoryId: string,
+) {
+  const category = await db.category.findFirst({
+    where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true },
   });
 
@@ -182,7 +189,7 @@ export async function archiveCategory(userId: string, categoryId: string) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
 
-  await requireMembership(userId, category.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.category.update({
     where: { id: categoryId },
@@ -193,10 +200,15 @@ export async function archiveCategory(userId: string, categoryId: string) {
 
 /**
  * Unarchives a category, restoring access to its subcategories.
+ * Both path identifiers are enforced (§4 — nested-path authorization).
  */
-export async function unarchiveCategory(userId: string, categoryId: string) {
-  const category = await db.category.findUnique({
-    where: { id: categoryId },
+export async function unarchiveCategory(
+  userId: string,
+  workspaceId: string,
+  categoryId: string,
+) {
+  const category = await db.category.findFirst({
+    where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true },
   });
 
@@ -204,7 +216,7 @@ export async function unarchiveCategory(userId: string, categoryId: string) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
 
-  await requireMembership(userId, category.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.category.update({
     where: { id: categoryId },
@@ -272,25 +284,29 @@ export async function createSubCategory(
 
 /**
  * Updates a subcategory's name.
+ * Every path identifier is enforced: the subcategory must live in the stated
+ * workspace AND under the stated parent category (§4 — nested-path authorization).
  */
 export async function updateSubCategory(
   userId: string,
+  workspaceId: string,
+  categoryId: string,
   subCategoryId: string,
   data: UpdateSubCategoryInput,
 ) {
-  const subCategory = await db.subCategory.findUnique({
-    where: { id: subCategoryId },
+  const subCategory = await db.subCategory.findFirst({
+    where: { id: subCategoryId, workspaceId },
     select: { id: true, workspaceId: true, name: true, categoryId: true },
   });
 
-  if (!subCategory) {
+  if (!subCategory || subCategory.categoryId !== categoryId) {
     throw new CategoryServiceError(
       "SUBCATEGORY_NOT_FOUND",
       "Subcategory not found",
     );
   }
 
-  await requireMembership(userId, subCategory.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   if (data.name !== subCategory.name) {
     const existing = await db.subCategory.findUnique({
@@ -326,21 +342,27 @@ export async function updateSubCategory(
 
 /**
  * Archives a subcategory.
+ * Every path identifier is enforced: workspace and parent category (§4).
  */
-export async function archiveSubCategory(userId: string, subCategoryId: string) {
-  const subCategory = await db.subCategory.findUnique({
-    where: { id: subCategoryId },
-    select: { id: true, workspaceId: true },
+export async function archiveSubCategory(
+  userId: string,
+  workspaceId: string,
+  categoryId: string,
+  subCategoryId: string,
+) {
+  const subCategory = await db.subCategory.findFirst({
+    where: { id: subCategoryId, workspaceId },
+    select: { id: true, workspaceId: true, categoryId: true },
   });
 
-  if (!subCategory) {
+  if (!subCategory || subCategory.categoryId !== categoryId) {
     throw new CategoryServiceError(
       "SUBCATEGORY_NOT_FOUND",
       "Subcategory not found",
     );
   }
 
-  await requireMembership(userId, subCategory.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.subCategory.update({
     where: { id: subCategoryId },
@@ -351,24 +373,27 @@ export async function archiveSubCategory(userId: string, subCategoryId: string) 
 
 /**
  * Unarchives a subcategory.
+ * Every path identifier is enforced: workspace and parent category (§4).
  */
 export async function unarchiveSubCategory(
   userId: string,
+  workspaceId: string,
+  categoryId: string,
   subCategoryId: string,
 ) {
-  const subCategory = await db.subCategory.findUnique({
-    where: { id: subCategoryId },
-    select: { id: true, workspaceId: true },
+  const subCategory = await db.subCategory.findFirst({
+    where: { id: subCategoryId, workspaceId },
+    select: { id: true, workspaceId: true, categoryId: true },
   });
 
-  if (!subCategory) {
+  if (!subCategory || subCategory.categoryId !== categoryId) {
     throw new CategoryServiceError(
       "SUBCATEGORY_NOT_FOUND",
       "Subcategory not found",
     );
   }
 
-  await requireMembership(userId, subCategory.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.subCategory.update({
     where: { id: subCategoryId },

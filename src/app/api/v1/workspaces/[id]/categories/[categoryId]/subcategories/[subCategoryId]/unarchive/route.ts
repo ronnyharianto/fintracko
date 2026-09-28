@@ -13,7 +13,7 @@ export async function PATCH(
   {
     params,
   }: {
-    params: Promise<{ categoryId: string; subCategoryId: string }>;
+    params: Promise<{ id: string; categoryId: string; subCategoryId: string }>;
   },
 ) {
   return withPipeline(
@@ -32,8 +32,13 @@ export async function PATCH(
       },
       "Failed to unarchive subcategory. Please try again.",
       async ({ userId }) => {
-        const { subCategoryId } = await params;
-        const result = await unarchiveSubCategory(userId, subCategoryId);
+        const { id: workspaceId, categoryId, subCategoryId } = await params;
+        const result = await unarchiveSubCategory(
+          userId,
+          workspaceId,
+          categoryId,
+          subCategoryId,
+        );
         return success(result);
       },
     ),

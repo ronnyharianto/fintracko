@@ -11,7 +11,7 @@ import { UpdateCategorySchema } from "@/features/categories/schemas";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ id: string; categoryId: string }> },
 ) {
   return withPipeline(
     request,
@@ -33,8 +33,8 @@ export async function PATCH(
       },
       "Failed to update category. Please try again.",
       async ({ userId }, data) => {
-        const { categoryId } = await params;
-        const category = await updateCategory(userId, categoryId, data);
+        const { id: workspaceId, categoryId } = await params;
+        const category = await updateCategory(userId, workspaceId, categoryId, data);
         return success({ category });
       },
     ),

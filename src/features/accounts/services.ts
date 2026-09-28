@@ -122,15 +122,18 @@ export async function createAccount(
 
 /**
  * Updates an account's name and/or initial balance.
+ * Both path identifiers are enforced: the workspace id must match the
+ * account's own workspace (§4 — nested-path authorization).
  * Validates membership, unique name if changed, and that account exists.
  */
 export async function updateAccount(
   userId: string,
+  workspaceId: string,
   accountId: string,
   data: UpdateAccountInput,
 ) {
-  const account = await db.financialAccount.findUnique({
-    where: { id: accountId },
+  const account = await db.financialAccount.findFirst({
+    where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true, name: true },
   });
 
@@ -138,7 +141,7 @@ export async function updateAccount(
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
 
-  await requireMembership(userId, account.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   if (data.name !== account.name) {
     const existing = await db.financialAccount.findUnique({
@@ -173,10 +176,15 @@ export async function updateAccount(
 
 /**
  * Archives an account (hides from active list and transaction dropdowns).
+ * Both path identifiers are enforced (§4 — nested-path authorization).
  */
-export async function archiveAccount(userId: string, accountId: string) {
-  const account = await db.financialAccount.findUnique({
-    where: { id: accountId },
+export async function archiveAccount(
+  userId: string,
+  workspaceId: string,
+  accountId: string,
+) {
+  const account = await db.financialAccount.findFirst({
+    where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true },
   });
 
@@ -184,7 +192,7 @@ export async function archiveAccount(userId: string, accountId: string) {
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
 
-  await requireMembership(userId, account.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.financialAccount.update({
     where: { id: accountId },
@@ -195,10 +203,15 @@ export async function archiveAccount(userId: string, accountId: string) {
 
 /**
  * Unarchives an account (restores to active list).
+ * Both path identifiers are enforced (§4 — nested-path authorization).
  */
-export async function unarchiveAccount(userId: string, accountId: string) {
-  const account = await db.financialAccount.findUnique({
-    where: { id: accountId },
+export async function unarchiveAccount(
+  userId: string,
+  workspaceId: string,
+  accountId: string,
+) {
+  const account = await db.financialAccount.findFirst({
+    where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true },
   });
 
@@ -206,7 +219,7 @@ export async function unarchiveAccount(userId: string, accountId: string) {
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
 
-  await requireMembership(userId, account.workspaceId);
+  await requireMembership(userId, workspaceId);
 
   return db.financialAccount.update({
     where: { id: accountId },

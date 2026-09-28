@@ -32,8 +32,8 @@ export async function PATCH(
       },
       "Failed to archive account. Please try again.",
       async ({ userId }) => {
-        const { accountId } = await params;
-        const result = await archiveAccount(userId, accountId);
+        const { id: workspaceId, accountId } = await params;
+        const result = await archiveAccount(userId, workspaceId, accountId);
         return success(result);
       },
     ),

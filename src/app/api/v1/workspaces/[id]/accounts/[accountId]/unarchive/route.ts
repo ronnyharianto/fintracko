@@ -32,8 +32,8 @@ export async function PATCH(
       },
       "Failed to unarchive account. Please try again.",
       async ({ userId }) => {
-        const { accountId } = await params;
-        const result = await unarchiveAccount(userId, accountId);
+        const { id: workspaceId, accountId } = await params;
+        const result = await unarchiveAccount(userId, workspaceId, accountId);
         return success(result);
       },
     ),

@@ -8,7 +8,7 @@
 // runtime via its constructor in `src/lib/db.ts`.
 //
 // Why dotenv? `process.env.DATABASE_URL` is only populated in dev if `.env`
-// (or `.env.local` is symlinked) is loaded. In production (Vercel / Supabase
+// (or `.env.local` is symlinked) is loaded. In production (Vercel / Neon
 // Cloud), `dotenv/config` is a no-op because Vercel injects env vars at boot.
 // ============================================================================
 
@@ -26,8 +26,9 @@ export default defineConfig({
 
   // The runtime datasource URL consumed by every `prisma *` CLI command
   // (migrate, db push, studio, ...). For local dev this points to the
-  // Supabase CLI Docker instance; for staging/prod it points to Supabase
-  // Cloud. Both are supplied via the same `DATABASE_URL` env var.
+  // Supabase CLI Docker instance; for production it points to the Neon
+  // Cloud project (use the pooled connection string on Vercel). Both are
+  // supplied via the same `DATABASE_URL` env var.
   datasource: {
     url: process.env.DATABASE_URL,
   },

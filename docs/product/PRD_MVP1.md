@@ -69,12 +69,15 @@ Fintracko is a collaborative personal and business financial tracking SaaS appli
 
 ### Phase 3.5: Budgeting System
 - **Budget Scope:** Budgets are applied strictly to Level 2 (Sub-categories).
-- **Constraints:** Each sub-category can have exactly **one** active budget at a time.
-- **Intervals:** Budgets can be configured as either Monthly or Yearly. It must be defined when creating the budget and cannot be changed later.
-- **Budget Period:** Each budget has a start and end date, defining its active period. Must be stored without time component (date only).
-  - **Monthly:** Start date and end date must be the first day of the month.
-  - **Yearly:** Start date and end date must be the first day of the year.
-- **Monitoring:** Real-time tracking of budget utilization percentages against actual expenses in the corresponding category.
+- **Constraints:** A sub-category can have exactly **one** active budget covering any given date. A new budget for the same sub-category must not overlap an existing budget's range (enforced atomically at creation).
+- **Intervals:** Budgets can be configured as either Monthly or Yearly. The interval must be defined when creating the budget and cannot be changed later.
+- **Budget Range:** Each budget has a start date and an optional end date, defining a recurring range of interval-aligned periods. Stored without time component (date only).
+  - **Monthly:** The start date must be the first day of a month; the end date must be the last day of a month.
+  - **Yearly:** The start date must be January 1; the end date must be December 31.
+  - **Recurring (open-ended):** Omitting the end date creates a recurring budget that applies to every future period, represented internally by the sentinel end date `9999-12-31`.
+  - Each period inside the range carries the budget's full amount as its per-period limit (e.g., a 300/month budget spanning a year limits each month to 300).
+- **Editing:** The amount, sub-category, and range are editable. When moving or shrinking a range, earlier periods can be preserved by splitting: the existing range is ended the day before the split date and a new range starts there. Hard delete is allowed because budgets are never referenced by transactions.
+- **Monitoring:** Real-time tracking of budget utilization percentages against actual expenses in the corresponding sub-category, resolved to the period(s) covered by the viewed window.
 
 ### Phase 3.6: Dashboard & Analytics
 The workspace dashboard must compile and present the following financial insights:

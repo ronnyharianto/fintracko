@@ -12,7 +12,8 @@
 //   6. Workspace        — Root multi-tenancy isolation boundary. (Schema: ft_core)
 //  7. WorkspaceMember  — Collaboration access control (OWNER | COLLABORATOR). (Schema: ft_core)
 //  8. WorkspaceInvitation — Pending collaboration invitations (PENDING | ACCEPTED | REJECTED). (Schema: ft_core)
-//  9. FinancialAccount — Financial ledger node (Bank, Cash, Wallet). (Schema: ft_core)// 10. Category         — Level 1 transaction classification. (Schema: ft_core)
+//  9. FinancialAccount — Financial ledger node (Bank, Cash, Wallet). (Schema: ft_core)
+// 10. Category         — Level 1 transaction classification. (Schema: ft_core)
 // 11. SubCategory      — Level 2 transaction classification. (Schema: ft_core)
 // 12. Budget           — Spending limit bound to a SubCategory (L2) + interval. (Schema: ft_core)
 // 13. FinancialTransaction — Core financial mutation ledger entry. (Schema: ft_core)
@@ -311,7 +312,7 @@ model FinancialAccount {
 }
 
 // ----------------------------------------------------------------------------
-// 9. Category — Level 1 transaction classification
+// 10. Category — Level 1 transaction classification
 // ----------------------------------------------------------------------------
 
 model Category {
@@ -334,7 +335,7 @@ model Category {
 }
 
 // ----------------------------------------------------------------------------
-// 10. SubCategory — Level 2 transaction classification
+// 11. SubCategory — Level 2 transaction classification
 // ----------------------------------------------------------------------------
 
 model SubCategory {
@@ -359,7 +360,7 @@ model SubCategory {
 }
 
 // ----------------------------------------------------------------------------
-// 11. Budget — Spending limit on a SubCategory (Level 2) for an interval
+// 12. Budget — Spending limit on a SubCategory (Level 2) for an interval
 // ----------------------------------------------------------------------------
 
 model Budget {
@@ -386,7 +387,7 @@ model Budget {
 }
 
 // ----------------------------------------------------------------------------
-// 12. FinancialTransaction — Core financial mutation ledger
+// 13. FinancialTransaction — Core financial mutation ledger
 // ----------------------------------------------------------------------------
 // Account direction safeguards (enforced in the POST handler, Task 5.1):
 //   - INCOME    => destinationAccountId mandatory

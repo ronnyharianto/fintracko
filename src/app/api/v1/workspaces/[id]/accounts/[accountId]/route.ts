@@ -70,8 +70,8 @@ export async function PATCH(
       },
       "Failed to update account. Please try again.",
       async ({ userId }, data) => {
-        const { accountId } = await params;
-        const account = await updateAccount(userId, accountId, data);
+        const { id: workspaceId, accountId } = await params;
+        const account = await updateAccount(userId, workspaceId, accountId, data);
         return success({ account });
       },
     ),
