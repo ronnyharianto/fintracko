@@ -12,8 +12,10 @@
 // Cloud), `dotenv/config` is a no-op because Vercel injects env vars at boot.
 // ============================================================================
 
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { defineConfig } from "prisma/config";
+
+loadEnv({ path: [".env.local", ".env"] });
 
 export default defineConfig({
   // Path to the Prisma schema (source-of-truth data contract).
@@ -24,12 +26,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
 
-  // The runtime datasource URL consumed by every `prisma *` CLI command
-  // (migrate, db push, studio, ...). For local dev this points to the
-  // Supabase CLI Docker instance; for production it points to the Neon
-  // Cloud project (use the pooled connection string on Vercel). Both are
-  // supplied via the same `DATABASE_URL` env var.
+  // Use the direct endpoint for Prisma CLI operations when configured.
+  // Runtime application connections use DATABASE_URL in src/lib/db.ts.
   datasource: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 });

@@ -29,9 +29,9 @@ export const metadata: Metadata = {
  *
  * Accessible at `/privacy-policy`. Provides transparent disclosure
  * of data handling practices for a financial SaaS application:
- * data collection, OAuth identity processing, database storage on
- * Supabase, Imgur attachment hosting, cookie usage, user rights,
- * and contact information.
+ * data collection, infrastructure and database providers, OAuth identity
+ * processing, Imgur attachment hosting, cookie usage, user rights, and
+ * contact information.
  *
  * Rendered inside the `(marketing)` route group layout which
  * provides the public NavBar + Footer shell.
@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: August 2026
+        Last updated: September 2026
       </p>
 
       <div className="mt-10 space-y-8 text-base leading-relaxed text-foreground">
@@ -85,8 +85,8 @@ export default function PrivacyPolicyPage() {
           <p>
             During mandatory onboarding, you provide your phone number
             (optional), company name (optional), biography, date of birth,
-            gender, and currency preference. This information is stored in
-            your Profile record.
+            gender, and currency preference. This information is stored in your
+            Profile record.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">2.3 Financial Data</h3>
           <p>
@@ -137,16 +137,26 @@ export default function PrivacyPolicyPage() {
             4. Data Storage & Third-Party Services
           </h2>
           <h3 className="mb-2 mt-4 text-lg font-medium">
-            4.1 Database Hosting (Supabase)
+            4.1 Application Hosting (Vercel)
           </h3>
           <p>
-            All persistent data is stored in a PostgreSQL database hosted on
-            Supabase. Supabase provides encryption at rest and in transit. Your
-            data is logically isolated by workspace-level access control
-            enforced at the application tier.
+            The Service is hosted on Vercel. Requests to the Service, including
+            information you submit, are processed by infrastructure used to run
+            the application. Vercel may process technical and diagnostic data,
+            such as IP address and request metadata, to deliver, secure, and
+            maintain the Service.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">
-            4.2 Image Attachments (Imgur)
+            4.2 Database Hosting (Neon)
+          </h3>
+          <p>
+            In production, persistent data is stored in a PostgreSQL database
+            hosted on Neon. This includes profile, authentication, and financial
+            data. Your data is logically isolated by workspace-level access
+            control enforced at the application tier.
+          </p>
+          <h3 className="mb-2 mt-4 text-lg font-medium">
+            4.3 Image Attachments (Imgur)
           </h3>
           <p>
             When you attach a receipt image to a transaction, the image file is
@@ -155,7 +165,7 @@ export default function PrivacyPolicyPage() {
             governs the handling of uploaded images on their platform.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">
-            4.3 Authentication Providers (Google, GitHub)
+            4.4 Authentication Providers (Google, GitHub)
           </h3>
           <p>
             Authentication is delegated to Google and GitHub OAuth. We do not

@@ -4,7 +4,7 @@
  * Implements OAuth-only authentication (no password login) with Google and
  * GitHub providers. Per docs/architecture/ARCHITECTURE.md §4.1 security
  * requirements:
- *   - Explicitly reject OAuth payloads where `email_verified` is false.
+ *   - Reject OAuth payloads unless `email_verified` is explicitly true.
  *   - Account linking is disabled to prevent unsafe merges.
  */
 
@@ -16,27 +16,23 @@ import { requireEnv } from "./env";
 /**
  * Better Auth `signIn` callback.
  *
- * Extracted as a named export so the exact behaviour (reject
- * `emailVerified === false`, pass through every other value including
- * `null`/`undefined`) lives in one place and stays independently verifiable
+ * Extracted as a named export so the exact behaviour (reject unless
+ * `emailVerified === true`) lives in one place and stays independently verifiable
  * without spinning up Better Auth or a database.
  *
  * Google and GitHub OAuth payloads include an `email_verified` flag. We reject
- * any sign-in attempt where the email has not been verified by the provider,
- * as unverified emails could belong to any user who can receive mail at that
- * address. `null` / `undefined` are passed through unchanged: a missing flag
- * is treated as "provider did not assert" rather than a hard reject, matching
- * Better Auth's own contract for callers that legitimately omit the field.
+ * any sign-in attempt where the provider did not explicitly verify the email.
+ * Missing verification data is rejected rather than treated as verified.
  *
  * @throws Error("Email is not verified by the OAuth provider.") when
- *   `user.emailVerified === false`.
+ *   `user.emailVerified !== true`.
  */
 export async function signInCallback({
   user,
 }: {
   user: { emailVerified: boolean | null | undefined };
 }): Promise<{ user: { emailVerified: boolean | null | undefined } }> {
-  if (user.emailVerified === false) {
+  if (user.emailVerified !== true) {
     throw new Error("Email is not verified by the OAuth provider.");
   }
   return {
@@ -137,4 +133,3 @@ export const auth = betterAuth({
     },
   },
 });
-

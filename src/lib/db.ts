@@ -16,7 +16,7 @@
  * Singleton rationale:
  *   Next.js dev mode (and Serverless functions) can re-import modules on every
  *   request or hot-reload. Instantiating a new `PrismaClient` each time would
- *   exhaust the Supabase connection pool within seconds. We therefore cache
+ *   exhaust the database connection pool within seconds. We therefore cache
  *   the client on `globalThis` outside of production, so the same instance is
  *   reused across reloads without leaking handles.
  *
@@ -30,9 +30,9 @@
 // `generator.output` in `prisma/schema.prisma` (here: `./generated/prisma`).
 // We import the `PrismaClient` symbol from that location rather than from
 // the bare `@prisma/client` package, which no longer re-exports it directly.
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../../generated/prisma/client';
-import { requireEnv } from './env';
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../../generated/prisma/client";
+import { requireEnv } from "./env";
 
 // Augment the global namespace so TypeScript recognises our cached client.
 // Declared here (and not in a separate `*.d.ts`) to keep the singleton logic
@@ -55,7 +55,7 @@ declare global {
 // R3: fail fast with a clear message when DATABASE_URL is missing, instead
 // of letting the driver throw an opaque connection error at first use.
 const adapter = new PrismaPg({
-  connectionString: requireEnv('DATABASE_URL'),
+  connectionString: requireEnv("DATABASE_URL"),
 });
 
 const db: PrismaClient =
@@ -63,12 +63,12 @@ const db: PrismaClient =
   new PrismaClient({
     adapter,
     log:
-      process.env.NODE_ENV === 'development'
-        ? ['query', 'error', 'warn']
-        : ['error'],
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
   });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   globalThis.__prismaClient = db;
 }
 

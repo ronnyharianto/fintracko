@@ -7,7 +7,7 @@ import NextImage from "next/image";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 2 * 1024 * 1024;
 
 interface ImageUploadProps {
   value?: string | null;
@@ -26,7 +26,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       return;
     }
     if (file.size > MAX_SIZE) {
-      setUploadError("File too large. Maximum size is 5MB.");
+      setUploadError("File too large. Maximum size is 2MB.");
       return;
     }
 
@@ -118,9 +118,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
         onChange={handleInputChange}
         className="hidden"
       />
-      {uploadError && (
-        <p className="text-xs text-destructive">{uploadError}</p>
-      )}
+      {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
     </div>
   );
 }
