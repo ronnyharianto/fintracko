@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { FintrackoLogo } from "@/components/shared/fintracko-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -22,6 +23,7 @@ const navLinks = [
 ] as const;
 
 export function NavBar({ className }: { className?: string }) {
+  const router = useRouter();
   const { user } = useSession();
   const isAuthenticated = Boolean(user?.id);
 
@@ -75,7 +77,7 @@ export function NavBar({ className }: { className?: string }) {
                 type="button"
                 onClick={async () => {
                   await authClient.signOut();
-                  window.location.href = "/account";
+                  router.push("/account");
                 }}
                 className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md px-2.5 text-sm font-medium text-foreground transition-colors hover:text-primary sm:px-4"
               >
