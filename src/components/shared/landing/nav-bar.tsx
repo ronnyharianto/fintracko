@@ -66,10 +66,10 @@ export function NavBar({ className }: { className?: string }) {
           {isAuthenticated ? (
             <>
               <Link
-                href="/dashboard"
+                href="/transactions"
                 className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-linear-to-r from-primary to-accent px-3 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:shadow-md hover:shadow-primary/40 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-5"
               >
-                Dashboard
+                Go to App
               </Link>
               <button
                 type="button"
