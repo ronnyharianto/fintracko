@@ -35,7 +35,7 @@ export interface TransactionView {
 /** Form data for creating a transaction. */
 export interface TransactionFormData {
   type: TransactionType;
-  amount: number;
+  amount: string;
   date: string;
   subCategoryId: string;
   sourceAccountId?: string;

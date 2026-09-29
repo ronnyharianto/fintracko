@@ -199,7 +199,7 @@ export function CreateTransactionDialog({
         method: "POST",
         body: {
           type,
-          amount: parseFloat(amount) || 0,
+          amount,
           date,
           subCategoryId,
           sourceAccountId: sourceAccountId || undefined,

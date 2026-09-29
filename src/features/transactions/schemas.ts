@@ -16,17 +16,25 @@ export const TransactionTypeEnum = z.enum(
   Object.values(TransactionType) as [string, ...string[]],
 );
 
+const TransactionAmountSchema = z
+  .string()
+  .regex(
+    /^-?\d{1,14}(?:\.\d{1,4})?$/,
+    "Amount must fit within 14 digits and 4 decimal places",
+  )
+  .refine((value) => /[1-9]/.test(value), "Amount must not be zero");
+
 /**
  * Create transaction request schema.
  *
  * Validates the payload sent to POST /api/v1/workspaces/[workspaceId]/transactions.
- * Amount can be any non-zero number (positive or negative) to support
- * investment tracking and refunds.
+ * Amounts are decimal strings within the database precision limit. Positive
+ * and negative values are supported for investment tracking and refunds.
  */
 export const CreateTransactionSchema = z
   .object({
     type: TransactionTypeEnum,
-    amount: z.number().refine((v) => v !== 0, "Amount must not be zero"),
+    amount: TransactionAmountSchema,
     date: z.string().min(1, "Date is required"),
     subCategoryId: z.string().min(1, "Subcategory is required"),
     sourceAccountId: z.string().optional(),
@@ -64,7 +72,7 @@ export const CreateTransactionSchema = z
  */
 export const UpdateTransactionSchema = z
   .object({
-    amount: z.number().refine((v) => v !== 0, "Amount must not be zero").optional(),
+    amount: TransactionAmountSchema.optional(),
     date: z.string().min(1).optional(),
     subCategoryId: z.string().min(1).optional(),
     sourceAccountId: z.string().optional(),
@@ -76,7 +84,10 @@ export const UpdateTransactionSchema = z
   })
   .refine(
     (data) => {
-      if (data.sourceAccountId !== undefined && data.destinationAccountId !== undefined) {
+      if (
+        data.sourceAccountId !== undefined &&
+        data.destinationAccountId !== undefined
+      ) {
         return data.sourceAccountId !== data.destinationAccountId;
       }
       return true;

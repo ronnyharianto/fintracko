@@ -131,13 +131,15 @@ export function EditTransactionDialog({
   // Categories of the transaction type; keep the current selection visible
   // even when it is archived so the Select has a matching item for its value.
   const fetchedCategories = categories.filter(
-    (c) => c.type === transaction?.type && (!c.isArchived || c.id === categoryId),
+    (c) =>
+      c.type === transaction?.type && (!c.isArchived || c.id === categoryId),
   );
 
   // If the transaction's own category is missing from the fetched options
   // (e.g. deleted data), add a synthetic entry so the selection still shows.
   const filteredCategories =
-    !transaction || fetchedCategories.some((c) => c.id === transaction.categoryId)
+    !transaction ||
+    fetchedCategories.some((c) => c.id === transaction.categoryId)
       ? fetchedCategories
       : [
           ...fetchedCategories,
@@ -161,7 +163,9 @@ export function EditTransactionDialog({
   // Get subcategories for selected category
   const selectedCategory = filteredCategories.find((c) => c.id === categoryId);
   const subCategories =
-    selectedCategory?.subCategories.filter((s) => !s.isArchived || s.id === subCategoryId) ?? [];
+    selectedCategory?.subCategories.filter(
+      (s) => !s.isArchived || s.id === subCategoryId,
+    ) ?? [];
 
   const resetForm = useCallback(() => {
     setAmount("");
@@ -189,7 +193,7 @@ export function EditTransactionDialog({
         {
           method: "PATCH",
           body: {
-            amount: parseFloat(amount) || 0,
+            amount,
             date: date || undefined,
             subCategoryId: subCategoryId || undefined,
             sourceAccountId: sourceAccountId || undefined,
@@ -206,7 +210,9 @@ export function EditTransactionDialog({
       onUpdated();
     } catch (err) {
       const message =
-        err instanceof ApiClientError ? err.message : "Failed to update transaction.";
+        err instanceof ApiClientError
+          ? err.message
+          : "Failed to update transaction.";
       setError(message);
       toast.error(message);
     } finally {
@@ -214,8 +220,10 @@ export function EditTransactionDialog({
     }
   };
 
-  const showSource = transaction?.type === "EXPENSE" || transaction?.type === "TRANSFER";
-  const showDestination = transaction?.type === "INCOME" || transaction?.type === "TRANSFER";
+  const showSource =
+    transaction?.type === "EXPENSE" || transaction?.type === "TRANSFER";
+  const showDestination =
+    transaction?.type === "INCOME" || transaction?.type === "TRANSFER";
 
   return (
     <Dialog
@@ -229,7 +237,8 @@ export function EditTransactionDialog({
         <DialogHeader>
           <DialogTitle>Edit Transaction</DialogTitle>
           <DialogDescription>
-            Update the transaction details. The transaction type cannot be changed.
+            Update the transaction details. The transaction type cannot be
+            changed.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
@@ -239,7 +248,11 @@ export function EditTransactionDialog({
           <div className="space-y-2">
             <Label>Transaction Type</Label>
             <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-              {transaction?.type === "EXPENSE" ? "Money Out" : transaction?.type === "INCOME" ? "Money In" : "Transfer"}
+              {transaction?.type === "EXPENSE"
+                ? "Money Out"
+                : transaction?.type === "INCOME"
+                  ? "Money In"
+                  : "Transfer"}
             </div>
           </div>
 
@@ -328,7 +341,10 @@ export function EditTransactionDialog({
             {showSource && (
               <div className="space-y-2">
                 <Label>Source</Label>
-                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <Select
+                  value={sourceAccountId}
+                  onValueChange={setSourceAccountId}
+                >
                   <SelectTrigger className="mb-0 w-full text-[16px]">
                     <SelectValue placeholder="Select source" />
                   </SelectTrigger>
@@ -345,7 +361,10 @@ export function EditTransactionDialog({
             {showDestination && (
               <div className="space-y-2">
                 <Label>Destination</Label>
-                <Select value={destinationAccountId} onValueChange={setDestinationAccountId}>
+                <Select
+                  value={destinationAccountId}
+                  onValueChange={setDestinationAccountId}
+                >
                   <SelectTrigger className="mb-0 w-full text-[16px]">
                     <SelectValue placeholder="Select destination" />
                   </SelectTrigger>
@@ -374,7 +393,9 @@ export function EditTransactionDialog({
               />
             </div>
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="edit-txn-description">Description (optional)</Label>
+              <Label htmlFor="edit-txn-description">
+                Description (optional)
+              </Label>
               <Input
                 id="edit-txn-description"
                 placeholder="Any additional notes?"

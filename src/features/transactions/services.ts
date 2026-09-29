@@ -14,6 +14,7 @@
 
 import { db } from "@/lib/db";
 import { findWorkspaceMembership } from "@/lib/auth/membership";
+import { Prisma } from "../../../generated/prisma/client";
 import { TransactionType } from "../../../generated/prisma/enums";
 import type { CreateTransactionInput, UpdateTransactionInput } from "./schemas";
 import { TransactionServiceError } from "./errors";
@@ -24,7 +25,10 @@ import { TransactionServiceError } from "./errors";
 async function requireMembership(userId: string, workspaceId: string) {
   const membership = await findWorkspaceMembership(userId, workspaceId);
   if (!membership) {
-    throw new TransactionServiceError("FORBIDDEN", "You are not a member of this workspace");
+    throw new TransactionServiceError(
+      "FORBIDDEN",
+      "You are not a member of this workspace",
+    );
   }
   return membership;
 }
@@ -33,14 +37,19 @@ async function requireMembership(userId: string, workspaceId: string) {
  * Calculate the balance effect of a transaction on its accounts.
  * Returns [sourceDelta, destinationDelta].
  */
-function balanceEffect(type: TransactionType, amount: number): [number, number] {
+function balanceEffect(
+  type: TransactionType,
+  amount: string | Prisma.Decimal,
+): [Prisma.Decimal, Prisma.Decimal] {
+  const decimalAmount = new Prisma.Decimal(amount);
+
   switch (type) {
     case TransactionType.INCOME:
-      return [0, amount];
+      return [new Prisma.Decimal(0), decimalAmount];
     case TransactionType.EXPENSE:
-      return [-amount, 0];
+      return [decimalAmount.negated(), new Prisma.Decimal(0)];
     case TransactionType.TRANSFER:
-      return [-amount, amount];
+      return [decimalAmount.negated(), decimalAmount];
   }
 }
 
@@ -103,7 +112,11 @@ export async function getTransactions(
         date: true,
         subCategoryId: true,
         subCategory: {
-          select: { name: true, categoryId: true, category: { select: { name: true } } },
+          select: {
+            name: true,
+            categoryId: true,
+            category: { select: { name: true } },
+          },
         },
         sourceAccountId: true,
         sourceAccount: { select: { name: true } },
@@ -157,12 +170,25 @@ export async function getTransaction(
   return db.financialTransaction.findFirst({
     where: { id: transactionId, workspaceId },
     select: {
-      id: true, type: true, amount: true, date: true, subCategoryId: true,
-      subCategory: { select: { name: true, category: { select: { name: true } } } },
-      sourceAccountId: true, sourceAccount: { select: { name: true } },
-      destinationAccountId: true, destinationAccount: { select: { name: true } },
-      description: true, payeePayer: true, tags: true, attachmentUrl: true,
-      createdById: true, createdAt: true, updatedAt: true,
+      id: true,
+      type: true,
+      amount: true,
+      date: true,
+      subCategoryId: true,
+      subCategory: {
+        select: { name: true, category: { select: { name: true } } },
+      },
+      sourceAccountId: true,
+      sourceAccount: { select: { name: true } },
+      destinationAccountId: true,
+      destinationAccount: { select: { name: true } },
+      description: true,
+      payeePayer: true,
+      tags: true,
+      attachmentUrl: true,
+      createdById: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 }
@@ -180,14 +206,25 @@ export async function createTransaction(
   // Validate subcategory exists, is not archived, and belongs to workspace
   const subCategory = await db.subCategory.findUnique({
     where: { id: data.subCategoryId },
-    select: { id: true, workspaceId: true, isArchived: true, category: { select: { isArchived: true } } },
+    select: {
+      id: true,
+      workspaceId: true,
+      isArchived: true,
+      category: { select: { isArchived: true } },
+    },
   });
 
   if (!subCategory || subCategory.workspaceId !== workspaceId) {
-    throw new TransactionServiceError("INVALID_CATEGORY", "Subcategory not found");
+    throw new TransactionServiceError(
+      "INVALID_CATEGORY",
+      "Subcategory not found",
+    );
   }
   if (subCategory.isArchived || subCategory.category.isArchived) {
-    throw new TransactionServiceError("INVALID_CATEGORY", "Cannot use an archived subcategory");
+    throw new TransactionServiceError(
+      "INVALID_CATEGORY",
+      "Cannot use an archived subcategory",
+    );
   }
 
   // Validate source account if provided
@@ -197,10 +234,16 @@ export async function createTransaction(
       select: { id: true, workspaceId: true, isArchived: true },
     });
     if (!sourceAccount || sourceAccount.workspaceId !== workspaceId) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Source account not found");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Source account not found",
+      );
     }
     if (sourceAccount.isArchived) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Cannot use an archived source account");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Cannot use an archived source account",
+      );
     }
   }
 
@@ -211,19 +254,35 @@ export async function createTransaction(
       select: { id: true, workspaceId: true, isArchived: true },
     });
     if (!destAccount || destAccount.workspaceId !== workspaceId) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Destination account not found");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Destination account not found",
+      );
     }
     if (destAccount.isArchived) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Cannot use an archived destination account");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Cannot use an archived destination account",
+      );
     }
   }
 
   // Validate source != destination
-  if (data.sourceAccountId && data.destinationAccountId && data.sourceAccountId === data.destinationAccountId) {
-    throw new TransactionServiceError("SOURCE_DESTINATION_SAME", "Source and destination accounts must be different");
+  if (
+    data.sourceAccountId &&
+    data.destinationAccountId &&
+    data.sourceAccountId === data.destinationAccountId
+  ) {
+    throw new TransactionServiceError(
+      "SOURCE_DESTINATION_SAME",
+      "Source and destination accounts must be different",
+    );
   }
 
-  const [sourceDelta, destDelta] = balanceEffect(data.type as TransactionType, data.amount);
+  const [sourceDelta, destDelta] = balanceEffect(
+    data.type as TransactionType,
+    data.amount,
+  );
 
   // Atomic: create transaction + update balances
   return db.$transaction(async (tx) => {
@@ -246,7 +305,7 @@ export async function createTransaction(
     });
 
     // Update source account balance
-    if (data.sourceAccountId && sourceDelta !== 0) {
+    if (data.sourceAccountId && !sourceDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: data.sourceAccountId },
         data: { netTransactionSum: { increment: sourceDelta } },
@@ -254,7 +313,7 @@ export async function createTransaction(
     }
 
     // Update destination account balance
-    if (data.destinationAccountId && destDelta !== 0) {
+    if (data.destinationAccountId && !destDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: data.destinationAccountId },
         data: { netTransactionSum: { increment: destDelta } },
@@ -288,7 +347,10 @@ export async function updateTransaction(
   });
 
   if (!existing) {
-    throw new TransactionServiceError("TRANSACTION_NOT_FOUND", "Transaction not found");
+    throw new TransactionServiceError(
+      "TRANSACTION_NOT_FOUND",
+      "Transaction not found",
+    );
   }
 
   await requireMembership(userId, workspaceId);
@@ -296,8 +358,14 @@ export async function updateTransaction(
   // Merge: use new values or fall back to existing
   const newType = existing.type; // type is not editable
   const newAmount = data.amount ?? existing.amount;
-  const newSourceId = data.sourceAccountId !== undefined ? data.sourceAccountId : existing.sourceAccountId;
-  const newDestId = data.destinationAccountId !== undefined ? data.destinationAccountId : existing.destinationAccountId;
+  const newSourceId =
+    data.sourceAccountId !== undefined
+      ? data.sourceAccountId
+      : existing.sourceAccountId;
+  const newDestId =
+    data.destinationAccountId !== undefined
+      ? data.destinationAccountId
+      : existing.destinationAccountId;
 
   // Validate new accounts if changed
   if (data.sourceAccountId !== undefined && data.sourceAccountId) {
@@ -306,10 +374,16 @@ export async function updateTransaction(
       select: { id: true, workspaceId: true, isArchived: true },
     });
     if (!sourceAccount || sourceAccount.workspaceId !== existing.workspaceId) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Source account not found");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Source account not found",
+      );
     }
     if (sourceAccount.isArchived) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Cannot use an archived source account");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Cannot use an archived source account",
+      );
     }
   }
 
@@ -319,46 +393,69 @@ export async function updateTransaction(
       select: { id: true, workspaceId: true, isArchived: true },
     });
     if (!destAccount || destAccount.workspaceId !== existing.workspaceId) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Destination account not found");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Destination account not found",
+      );
     }
     if (destAccount.isArchived) {
-      throw new TransactionServiceError("INVALID_ACCOUNT", "Cannot use an archived destination account");
+      throw new TransactionServiceError(
+        "INVALID_ACCOUNT",
+        "Cannot use an archived destination account",
+      );
     }
   }
 
   if (data.subCategoryId) {
     const subCategory = await db.subCategory.findUnique({
       where: { id: data.subCategoryId },
-      select: { id: true, workspaceId: true, isArchived: true, category: { select: { isArchived: true } } },
+      select: {
+        id: true,
+        workspaceId: true,
+        isArchived: true,
+        category: { select: { isArchived: true } },
+      },
     });
     if (!subCategory || subCategory.workspaceId !== existing.workspaceId) {
-      throw new TransactionServiceError("INVALID_CATEGORY", "Subcategory not found");
+      throw new TransactionServiceError(
+        "INVALID_CATEGORY",
+        "Subcategory not found",
+      );
     }
     if (subCategory.isArchived || subCategory.category.isArchived) {
-      throw new TransactionServiceError("INVALID_CATEGORY", "Cannot use an archived subcategory");
+      throw new TransactionServiceError(
+        "INVALID_CATEGORY",
+        "Cannot use an archived subcategory",
+      );
     }
   }
 
   // Validate source != destination
   if (newSourceId && newDestId && newSourceId === newDestId) {
-    throw new TransactionServiceError("SOURCE_DESTINATION_SAME", "Source and destination accounts must be different");
+    throw new TransactionServiceError(
+      "SOURCE_DESTINATION_SAME",
+      "Source and destination accounts must be different",
+    );
   }
 
-  const [oldSourceDelta, oldDestDelta] = balanceEffect(existing.type, Number(existing.amount));
-  const [newSourceDelta, newDestDelta] = balanceEffect(newType, Number(newAmount));
+  const [oldSourceDelta, oldDestDelta] = balanceEffect(
+    existing.type,
+    existing.amount,
+  );
+  const [newSourceDelta, newDestDelta] = balanceEffect(newType, newAmount);
 
   return db.$transaction(async (tx) => {
     // Reverse old balance effect
-    if (existing.sourceAccountId && oldSourceDelta !== 0) {
+    if (existing.sourceAccountId && !oldSourceDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: existing.sourceAccountId },
-        data: { netTransactionSum: { increment: -oldSourceDelta } },
+        data: { netTransactionSum: { increment: oldSourceDelta.negated() } },
       });
     }
-    if (existing.destinationAccountId && oldDestDelta !== 0) {
+    if (existing.destinationAccountId && !oldDestDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: existing.destinationAccountId },
-        data: { netTransactionSum: { increment: -oldDestDelta } },
+        data: { netTransactionSum: { increment: oldDestDelta.negated() } },
       });
     }
 
@@ -380,13 +477,13 @@ export async function updateTransaction(
     });
 
     // Apply new balance effect
-    if (newSourceId && newSourceDelta !== 0) {
+    if (newSourceId && !newSourceDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: newSourceId },
         data: { netTransactionSum: { increment: newSourceDelta } },
       });
     }
-    if (newDestId && newDestDelta !== 0) {
+    if (newDestId && !newDestDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: newDestId },
         data: { netTransactionSum: { increment: newDestDelta } },
@@ -418,25 +515,31 @@ export async function deleteTransaction(
   });
 
   if (!existing) {
-    throw new TransactionServiceError("TRANSACTION_NOT_FOUND", "Transaction not found");
+    throw new TransactionServiceError(
+      "TRANSACTION_NOT_FOUND",
+      "Transaction not found",
+    );
   }
 
   await requireMembership(userId, workspaceId);
 
-  const [sourceDelta, destDelta] = balanceEffect(existing.type, Number(existing.amount));
+  const [sourceDelta, destDelta] = balanceEffect(
+    existing.type,
+    existing.amount,
+  );
 
   return db.$transaction(async (tx) => {
     // Reverse balance effect
-    if (existing.sourceAccountId && sourceDelta !== 0) {
+    if (existing.sourceAccountId && !sourceDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: existing.sourceAccountId },
-        data: { netTransactionSum: { increment: -sourceDelta } },
+        data: { netTransactionSum: { increment: sourceDelta.negated() } },
       });
     }
-    if (existing.destinationAccountId && destDelta !== 0) {
+    if (existing.destinationAccountId && !destDelta.isZero()) {
       await tx.financialAccount.update({
         where: { id: existing.destinationAccountId },
-        data: { netTransactionSum: { increment: -destDelta } },
+        data: { netTransactionSum: { increment: destDelta.negated() } },
       });
     }
 
