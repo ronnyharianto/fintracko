@@ -5,6 +5,7 @@ import "./globals.css";
 import Script from "next/script";
 import { SessionProvider } from "@/components/shared/auth/session-provider";
 import { siteConfig } from "@/lib/site";
+import { Analytics } from "@vercel/analytics/next";
 
 /**
  * Pre-hydration theme script — runs synchronously before React hydrates to
@@ -80,6 +81,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <Analytics />
         <SessionProvider>{children}</SessionProvider>
         <Toaster
           richColors

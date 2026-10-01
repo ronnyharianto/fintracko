@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +44,8 @@ export function CurrencyInput({
   ...props
 }: CurrencyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const selectionRef = useRef<{ start: number | null; end: number | null }>({
-    start: null,
-    end: null,
-  });
+  const pendingFocusCaretOffset = useRef<number | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   const formatDisplay = useCallback(
     (raw: string): string => {
@@ -68,6 +66,26 @@ export function CurrencyInput({
     },
     [locale, decimalPlaces],
   );
+
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    const charactersBeforeCursor = pendingFocusCaretOffset.current;
+    if (!isFocused || charactersBeforeCursor === null || !input) return;
+
+    pendingFocusCaretOffset.current = null;
+    const cursorPosition = Math.min(charactersBeforeCursor, input.value.length);
+    input.setSelectionRange(cursorPosition, cursorPosition);
+  }, [isFocused]);
+
+  const handleFocus = useCallback(() => {
+    const input = inputRef.current;
+    if (input) {
+      pendingFocusCaretOffset.current = input.value
+        .slice(0, input.selectionStart ?? 0)
+        .replace(/[^0-9.\-]/g, "").length;
+    }
+    setIsFocused(true);
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,31 +117,17 @@ export function CurrencyInput({
         return;
       }
 
-      // Save cursor position relative to numeric characters
-      const cursorPos = e.target.selectionStart ?? cleaned.length;
-      selectionRef.current = { start: cursorPos, end: cursorPos };
-
       onChange(cleaned);
-
-      // Restore cursor position after React re-render
-      requestAnimationFrame(() => {
-        if (inputRef.current) {
-          const displayValue = inputRef.current.value;
-          const numericBeforeCursor = displayValue
-            .slice(0, cursorPos)
-            .replace(/[^0-9.\-]/g, "").length;
-          const newPos = Math.min(numericBeforeCursor, displayValue.length);
-          inputRef.current.setSelectionRange(newPos, newPos);
-        }
-      });
     },
     [onChange, decimalPlaces],
   );
 
   const handleBlur = useCallback(() => {
+    setIsFocused(false);
+
     // Normalize "123." to "123" and ".5" to "0.5" on blur
     if (value && value !== "-" && value !== ".") {
-      const normalized = value.replace(/\.$/, "").replace(/^(\.?)/, "0$1");
+      const normalized = value.replace(/\.$/, "").replace(/^\./, "0.");
       if (normalized !== value) {
         onChange(normalized);
       }
@@ -136,8 +140,9 @@ export function CurrencyInput({
       type="text"
       inputMode="decimal"
       className={cn("tabular-nums", className)}
-      value={formatDisplay(value)}
+      value={isFocused ? value : formatDisplay(value)}
       onChange={handleChange}
+      onFocus={handleFocus}
       onBlur={handleBlur}
       {...props}
     />
