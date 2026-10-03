@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Card,
@@ -85,6 +86,7 @@ export function WorkspaceSetupForm() {
   );
   const [showPreview, setShowPreview] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const router = useRouter();
 
   const template = WORKSPACE_TEMPLATES[selectedTemplate];
 
@@ -117,7 +119,7 @@ export function WorkspaceSetupForm() {
       toast.success("Workspace created! Redirecting to dashboard...");
 
       // Redirect to dashboard after successful creation
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to create workspace.",

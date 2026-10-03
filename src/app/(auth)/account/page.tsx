@@ -7,6 +7,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { OAuthButtons } from "@/components/shared/auth/oauth-buttons";
+import { DevCredentialsForm } from "@/components/shared/auth/dev-credentials-form";
 
 /**
  * SEO metadata for the account page.
@@ -32,6 +33,11 @@ export const metadata: Metadata = {
  * Client Component imported below.
  */
 export default function AccountPage() {
+  // Dev-only email/password credentials. The server enforces the same flag in
+  // `src/lib/auth.ts` (`emailAndPassword.enabled`), so in production this form
+  // is neither rendered nor accepted by the credential endpoints.
+  const showDevCredentials = process.env.NODE_ENV === "development";
+
   return (
     <Card>
       <CardHeader className="text-center">
@@ -42,8 +48,9 @@ export default function AccountPage() {
           Sign in with Google or GitHub to start tracking your finances.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <OAuthButtons />
+        {showDevCredentials ? <DevCredentialsForm /> : null}
       </CardContent>
     </Card>
   );

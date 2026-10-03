@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -72,7 +72,11 @@ export default function AccountSettingsPage() {
 }
 
 function AccountSettingsContent() {
+  // Mirrors the dev-only email/password gate in `src/lib/auth.ts`. Used solely
+  // to keep the Security tab copy honest for locally created accounts.
+  const isDevelopment = process.env.NODE_ENV === "development";
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabFromUrl = parseTabParam(searchParams.get("tab"));
 
   // Local tab state for manual switching, seeded from the `?tab=` query
@@ -431,9 +435,9 @@ function AccountSettingsContent() {
                 Password
               </CardTitle>
               <CardDescription>
-                Fintracko uses OAuth-only sign-in (Google or GitHub), so there
-                is no password to manage here. To change your sign-in security,
-                visit your OAuth provider&apos;s account settings.
+                {isDevelopment
+                  ? "Email/password sign-in is enabled for local development only. Production uses OAuth-only sign-in (Google or GitHub), so production accounts never store a password."
+                  : "Fintracko uses OAuth-only sign-in (Google or GitHub), so there is no password to manage here. To change your sign-in security, visit your OAuth provider's account settings."}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -472,8 +476,9 @@ function AccountSettingsContent() {
           await apiFetch("/api/v1/account", { method: "DELETE" });
           await authClient.signOut();
         }}
-        onSuccess={() => {
-          window.location.href = "/";
+        onSuccess={async () => {
+          await refresh();
+          router.push("/");
         }}
         title="Delete Account"
         description={

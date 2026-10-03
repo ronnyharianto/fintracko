@@ -37,9 +37,15 @@ import { createAuthClient } from "better-auth/client";
  *
  * Available methods (selected):
  *   - `signIn.social({ provider })` — initiate an OAuth sign-in with Google or GitHub
+ *   - `signIn.email({ email, password })`  — development-only credential sign-in
+ *   - `signUp.email({ name, email, password })` — development-only account creation
  *   - `signOut()`                   — invalidate the current session and clear the cookie
  *   - `getSession()`                — fetch the active session (or null)
  *   - `updateUser({ name })`        — persist profile changes (used by the account settings page)
+ *
+ * The `email` methods only succeed while the server runs in development
+ * (`emailAndPassword.enabled` in `src/lib/auth.ts`). In production Better Auth
+ * rejects them and the form that calls them is not rendered.
  */
 export const authClient = createAuthClient({
   basePath: "/api/v1/auth",

@@ -12,6 +12,7 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api/client";
 import {
@@ -43,6 +44,7 @@ interface OnboardingFormData {
 export function OnboardingForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasReadTerms, setHasReadTerms] = useState(false);
+  const router = useRouter();
   const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
   const [formData, setFormData] = useState<OnboardingFormData>({
     name: "",
@@ -73,7 +75,7 @@ export function OnboardingForm() {
       toast.success("Profile created! Now set up your first workspace.");
 
       // Redirect to workspace setup step
-      window.location.href = "/onboarding/workspace";
+      router.push("/onboarding/workspace");
     } catch {
       toast.error("An error occurred. Please try again.");
     } finally {

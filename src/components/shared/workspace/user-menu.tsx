@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useSession } from "@/components/shared/auth/session-provider";
 import { LogOut, User, Settings, Shield } from "lucide-react";
@@ -18,11 +19,13 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function UserMenu() {
-  const { user, isLoading } = useSession();
+  const { user, isLoading, refresh } = useSession();
+  const router = useRouter();
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    window.location.href = "/account";
+    await refresh();
+    router.push("/account");
   };
 
   if (isLoading) {

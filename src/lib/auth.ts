@@ -1,17 +1,29 @@
 /**
  * Better Auth configuration.
  *
- * Implements OAuth-only authentication (no password login) with Google and
- * GitHub providers. Per docs/architecture/ARCHITECTURE.md §4.1 security
- * requirements:
+ * Implements OAuth-first authentication with Google and GitHub providers.
+ * Per docs/architecture/ARCHITECTURE.md §4.1 security requirements:
  *   - Reject OAuth payloads unless `email_verified` is explicitly true.
  *   - Account linking is disabled to prevent unsafe merges.
+ *
+ * Email/password credentials are enabled ONLY when
+ * `process.env.NODE_ENV === "development"` (see `isDevelopment` below). In
+ * production the credential endpoints stay disabled, so the deployed app
+ * remains OAuth-only. This is a developer convenience for local testing, not
+ * a production sign-in method.
  */
 
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "./db";
 import { requireEnv } from "./env";
+
+/**
+ * True only when the app runs under the Next.js development server. Evaluated
+ * at module load so the Better Auth instance (built once per process) freezes
+ * the correct credential policy.
+ */
+const isDevelopment = process.env.NODE_ENV === "development";
 
 /**
  * Better Auth `signIn` callback.
@@ -24,15 +36,27 @@ import { requireEnv } from "./env";
  * any sign-in attempt where the provider did not explicitly verify the email.
  * Missing verification data is rejected rather than treated as verified.
  *
- * @throws Error("Email is not verified by the OAuth provider.") when
- *   `user.emailVerified !== true`.
+ * The one exception is a development credential sign-in: local email/password
+ * accounts are never email-verified (no mailer is configured), so when
+ * `isDevelopment` is true we accept `providerId === "credential"` without the
+ * flag. Every OAuth provider still requires `emailVerified === true`, in every
+ * environment.
+ *
+ * @throws Error("Email is not verified by the OAuth provider.") when an OAuth
+ *   provider did not verify the email and the sign-in is not an accepted
+ *   development credential sign-in.
  */
 export async function signInCallback({
   user,
+  account,
 }: {
   user: { emailVerified: boolean | null | undefined };
+  account?: { providerId?: string | null } | null;
 }): Promise<{ user: { emailVerified: boolean | null | undefined } }> {
-  if (user.emailVerified !== true) {
+  const isDevCredentialSignIn =
+    isDevelopment && account?.providerId === "credential";
+
+  if (!isDevCredentialSignIn && user.emailVerified !== true) {
     throw new Error("Email is not verified by the OAuth provider.");
   }
   return {
@@ -51,8 +75,9 @@ export async function signInCallback({
  *   - Account and session storage via Prisma adapter
  *
  * Features explicitly disabled:
- *   - Password authentication (emailAndPassword: false)
  *   - Account linking (disableAccountLinking: true)
+ *   - Email/password authentication in production (`enabled: isDevelopment`,
+ *     so the credential endpoints are refused unless running locally)
  */
 export const auth = betterAuth({
   // Base path matches the Next.js route handler at
@@ -72,8 +97,14 @@ export const auth = betterAuth({
   // R3: validate the cookie-signing secret explicitly so a missing value
   // fails fast with a clear message instead of a cryptic Better Auth error.
   secret: requireEnv("BETTER_AUTH_SECRET"),
+  // Developer convenience only: local email/password sign-up/sign-in. When
+  // NODE_ENV is not "development" this is false, so Better Auth rejects the
+  // credential endpoints and the app stays OAuth-only in production.
   emailAndPassword: {
-    enabled: false,
+    enabled: isDevelopment,
+    // No mailer exists for local credential accounts; requiring verification
+    // would make dev sign-up unusable.
+    requireEmailVerification: false,
   },
   socialProviders: {
     google: {
