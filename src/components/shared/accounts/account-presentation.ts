@@ -1,11 +1,21 @@
 /**
  * Presentation helpers for financial accounts.
  *
- * Client-safe: plain constants and functions only, no server-only imports.
- * Shared by the accounts page and the account detail view so labels, badge
- * variants, and balance arithmetic cannot drift between the two surfaces.
+ * Client-safe: constants, icon components, and pure functions only, no
+ * server-only imports. Shared by the accounts page and the account detail view
+ * so labels, badge variants, icons, and balance arithmetic cannot drift
+ * between the two surfaces.
  */
 
+import type { LucideIcon } from "lucide-react";
+import {
+  Banknote,
+  CreditCard,
+  Landmark,
+  PiggyBank,
+  Smartphone,
+  TrendingUp,
+} from "lucide-react";
 import type { AccountType } from "@/features/accounts/types";
 import type { BadgeVariant } from "@/components/ui/badge";
 import type { AccountView } from "@/features/accounts/types";
@@ -28,6 +38,16 @@ export const ACCOUNT_TYPE_VARIANT: Record<AccountType, BadgeVariant> = {
   CREDIT_CARD: "danger",
   DIGITAL_WALLET: "accent",
   INVESTMENT: "primary",
+};
+
+/** Leading icon per account type, used by the compact mobile account list. */
+export const ACCOUNT_TYPE_ICON: Record<AccountType, LucideIcon> = {
+  CHECKING: Landmark,
+  SAVINGS: PiggyBank,
+  CASH: Banknote,
+  CREDIT_CARD: CreditCard,
+  DIGITAL_WALLET: Smartphone,
+  INVESTMENT: TrendingUp,
 };
 
 /**
