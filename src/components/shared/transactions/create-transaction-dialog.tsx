@@ -56,6 +56,14 @@ const TYPE_OPTIONS: {
   },
 ];
 
+function getTodayDateInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 interface CreateTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -77,9 +85,7 @@ export function CreateTransactionDialog({
 
   const [type, setType] = useState<TransactionType>("EXPENSE");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [date, setDate] = useState(getTodayDateInputValue);
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");
@@ -106,6 +112,7 @@ export function CreateTransactionDialog({
   // dialog) so a scoped view (e.g. an account page) starts from its account.
   if (open && !prevOpen) {
     setPrevOpen(true);
+    setDate(getTodayDateInputValue());
     if (defaultAccountId) {
       applyDefaultAccount("EXPENSE");
     }
@@ -176,7 +183,7 @@ export function CreateTransactionDialog({
   const resetForm = useCallback(() => {
     setType("EXPENSE");
     setAmount("");
-    setDate(new Date().toISOString().split("T")[0]);
+    setDate(getTodayDateInputValue());
     setCategoryId("");
     setSubCategoryId("");
     setSourceAccountId("");
