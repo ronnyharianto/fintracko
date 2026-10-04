@@ -11,5 +11,11 @@
 import { TransactionListView } from "@/components/shared/transactions/transaction-list-view";
 
 export default function TransactionsPage() {
-  return <TransactionListView title="Transactions" />;
+  // Bounded flex column so the shared list view can fill the viewport and
+  // scroll internally instead of growing the page.
+  return (
+    <div className="flex h-full flex-col">
+      <TransactionListView title="Transactions" />
+    </div>
+  );
 }

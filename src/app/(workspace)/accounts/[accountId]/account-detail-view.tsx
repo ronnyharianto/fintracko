@@ -102,7 +102,7 @@ export default function AccountDetailView({
   const finalBalance = getAccountFinalBalance(account);
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full flex-col gap-4">
       {/* Account header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">

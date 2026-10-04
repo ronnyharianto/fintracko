@@ -75,6 +75,19 @@ const DAY_GROUPING_STORAGE_KEY = "fintracko_transactions_group_by_day";
 const DAY_GROUPING_DEFAULT = true;
 
 // ---------------------------------------------------------------------------
+// View mode (Day / Week / Month) preference
+// ---------------------------------------------------------------------------
+
+const VIEW_MODES = ["day", "week", "month"] as const;
+const VIEW_MODE_STORAGE_KEY = "fintracko_transactions_view_mode";
+const VIEW_MODE_DEFAULT: ViewMode = "month";
+
+/** Narrow a stored string back to a known view mode. */
+function isViewMode(value: string): value is ViewMode {
+  return (VIEW_MODES as readonly string[]).includes(value);
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -101,7 +114,7 @@ export function TransactionListView({
   const { activeWorkspaceId } = useWorkspace();
 
   // View mode & date navigation
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>(VIEW_MODE_DEFAULT);
   const [refDate, setRefDate] = useState(() => new Date());
 
   // Filters
@@ -119,12 +132,28 @@ export function TransactionListView({
   // would make the first client render disagree with the server's HTML.
   const [groupByDay, setGroupByDay] = useState(DAY_GROUPING_DEFAULT);
 
+  // Restore the persisted view mode after mount. localStorage is not available
+  // during the server render, so it cannot seed the initial state without
+  // making the first client render disagree with the server's HTML.
   useLayoutEffect(() => {
     try {
-      const stored = localStorage.getItem(DAY_GROUPING_STORAGE_KEY);
-      if (stored === "true" || stored === "false") {
+      const storedMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      if (storedMode && isViewMode(storedMode)) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setGroupByDay(stored === "true");
+        setViewMode(storedMode);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode); keep the default.
+    }
+  }, []);
+
+  // Day grouping. Restored after mount the same way as the view mode above.
+  useLayoutEffect(() => {
+    try {
+      const storedGrouping = localStorage.getItem(DAY_GROUPING_STORAGE_KEY);
+      if (storedGrouping === "true" || storedGrouping === "false") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setGroupByDay(storedGrouping === "true");
       }
     } catch {
       // localStorage may be unavailable (private mode); keep the default.
@@ -133,6 +162,16 @@ export function TransactionListView({
 
   // Summary visibility
   const [isSummaryVisible, setIsSummaryVisible] = useState(true);
+
+  // On mobile the Summary starts collapsed so the transaction list gets the
+  // vertical space; desktop keeps it expanded. useLayoutEffect runs before
+  // paint, so the expanded default never flashes on small screens.
+  useLayoutEffect(() => {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsSummaryVisible(false);
+    }
+  }, []);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -300,12 +339,21 @@ export function TransactionListView({
     }
   };
 
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    } catch {
+      // localStorage may be unavailable (private mode); ignore gracefully.
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         {header ?? (
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight sm:text-3xl">
             {title}
           </h1>
         )}
@@ -325,14 +373,14 @@ export function TransactionListView({
 
       {/* View Mode + Date Navigation */}
       {!isInitialLoading && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           {/* View mode pills */}
           <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:flex sm:w-auto">
-            {(["day", "week", "month"] as const).map((mode) => (
+            {VIEW_MODES.map((mode) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                onClick={() => handleViewModeChange(mode)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                   viewMode === mode
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -408,7 +456,7 @@ export function TransactionListView({
 
       {/* Summary */}
       {!isInitialLoading && filteredTransactions.length > 0 && (
-        <Card className="gap-0 py-2">
+        <Card className="gap-0 py-1.5">
           <div className="flex items-center justify-between px-4 sm:px-6">
             <span className="text-sm font-medium text-muted-foreground">
               Summary
@@ -461,8 +509,8 @@ export function TransactionListView({
 
       {/* Loading State */}
       {isInitialLoading && (
-        <Card className="flex-1 overflow-hidden p-2 md:p-0">
-          <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
+        <Card className="flex-1 min-h-0 overflow-hidden p-1.5 md:p-0">
+          <div className="flex-1 min-h-0 px-1.5 overflow-y-auto md:px-0">
             {/* Mobile: card placeholders */}
             <div className="space-y-4 py-2 md:hidden">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -544,7 +592,7 @@ export function TransactionListView({
       {/* Transaction List */}
       {!isInitialLoading && sortedTransactions.length > 0 && (
         <div
-          className={`flex flex-col gap-4 min-h-0 flex-1 transition-opacity ${
+          className={`flex flex-col gap-2 min-h-0 flex-1 transition-opacity ${
             isRefreshing ? "opacity-60" : ""
           }`}
           aria-busy={isRefreshing}
@@ -553,10 +601,10 @@ export function TransactionListView({
           <Separator className="my-1" />
 
           {/* Scrollable transaction list */}
-          <Card className="flex-1 overflow-hidden p-2 md:p-0">
-            <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
+          <Card className="flex-1 min-h-0 overflow-hidden p-0 md:p-0">
+            <div className="flex-1 min-h-0 px-1.5 overflow-y-auto md:px-0">
               {/* Mobile: one card per transaction, under a day heading when grouped */}
-              <div className="space-y-2 py-2 md:hidden">
+              <div className="space-y-1.5 py-2 md:hidden">
                 {listSections.map((section) => (
                   <div key={section.date ?? "flat"} className="space-y-2">
                     {section.date && (

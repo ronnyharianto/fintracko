@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <TopBar />
             <div className="flex flex-1 min-h-0">
               <Sidebar />
-              <main className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-20 lg:ml-64">{children}</main>
+              <main className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-[4.5rem] sm:px-6 sm:pb-6 sm:pt-20 lg:ml-64">{children}</main>
             </div>
           </div>
         </SidebarProvider>

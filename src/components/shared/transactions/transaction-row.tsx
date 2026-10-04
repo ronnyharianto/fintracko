@@ -36,9 +36,12 @@ export function TransactionRow({
   const colorClass = TYPE_TEXT_COLOR[txn.type];
   const accountName = getAccountLabel(txn);
   const detail = getDetailText(txn);
+  // Account and detail share one muted line so the card stays two lines tall,
+  // which fits noticeably more rows on a small screen.
+  const secondary = [accountName, detail].filter(Boolean).join(" \u00b7 ");
 
   return (
-    <div className="flex items-center gap-3 py-2.5">
+    <div className="flex items-center gap-3 py-2">
       <div
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted ${colorClass}`}
       >
@@ -47,13 +50,8 @@ export function TransactionRow({
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate text-sm font-medium">{txn.subCategoryName}</p>
-        {accountName && (
-          <p className="truncate text-xs leading-6 text-muted-foreground">
-            {accountName}
-          </p>
-        )}
-        {detail && (
-          <p className="truncate text-xs text-muted-foreground">{detail}</p>
+        {secondary && (
+          <p className="truncate text-xs text-muted-foreground">{secondary}</p>
         )}
       </div>
 
@@ -90,9 +88,6 @@ export function TransactionRow({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {detail && (
-          <p className="truncate text-xs text-muted-foreground">&nbsp;</p>
-        )}
       </div>
     </div>
   );
