@@ -49,5 +49,12 @@ export interface TransactionFormData {
 /** Response shape from the transactions list endpoint. */
 export interface TransactionListResponse {
   transactions: TransactionView[];
+  /** Rows matching the requested period and filters (all pages). */
   total: number;
+  /**
+   * Rows in the persistent scope (workspace, or one account) ignoring the
+   * period/type filters, so an empty period is not mistaken for an empty
+   * workspace or account.
+   */
+  scopeTotal: number;
 }

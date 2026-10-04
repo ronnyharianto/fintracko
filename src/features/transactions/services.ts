@@ -72,34 +72,44 @@ export async function getTransactions(
   await requireMembership(userId, workspaceId);
 
   const where: Record<string, unknown> = { workspaceId };
+  // Rows matching only the persistent scope (workspace, plus account when the
+  // list is account-scoped). The period/type/subcategory filters narrow `where`
+  // but not `scopeWhere`, so the caller can tell an empty account or workspace
+  // apart from an empty period.
+  const scopeWhere: Record<string, unknown> = { workspaceId };
 
+  if (filters?.accountId) {
+    const accountFilter = [
+      { sourceAccountId: filters.accountId },
+      { destinationAccountId: filters.accountId },
+    ];
+    where.OR = accountFilter;
+    scopeWhere.OR = accountFilter;
+  }
   if (filters?.type) {
     where.type = filters.type;
   }
   if (filters?.subCategoryId) {
     where.subCategoryId = filters.subCategoryId;
   }
-  if (filters?.accountId) {
-    where.OR = [
-      { sourceAccountId: filters.accountId },
-      { destinationAccountId: filters.accountId },
-    ];
-  }
   if (filters?.from || filters?.to) {
-    where.date = {};
+    // `date` is a @db.Date column; bind real Date objects rather than the raw
+    // "YYYY-MM-DD" string so the filter matches what the writers store.
+    const date: { gte?: Date; lte?: Date } = {};
     if (filters.from) {
-      (where.date as Record<string, string>).gte = filters.from;
+      date.gte = new Date(filters.from);
     }
     if (filters.to) {
-      (where.date as Record<string, string>).lte = filters.to;
+      date.lte = new Date(filters.to);
     }
+    where.date = date;
   }
 
   const page = filters?.page ?? 1;
   const limit = filters?.limit ?? 50;
   const skip = (page - 1) * limit;
 
-  const [transactions, total] = await Promise.all([
+  const [transactions, total, scopeTotal] = await Promise.all([
     db.financialTransaction.findMany({
       where,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -132,6 +142,8 @@ export async function getTransactions(
       },
     }),
     db.financialTransaction.count({ where }),
+    // Count without the period/type/subcategory filters.
+    db.financialTransaction.count({ where: scopeWhere }),
   ]);
 
   return {
@@ -157,6 +169,7 @@ export async function getTransactions(
       updatedAt: t.updatedAt.toISOString(),
     })),
     total,
+    scopeTotal,
   };
 }
 

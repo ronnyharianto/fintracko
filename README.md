@@ -90,6 +90,32 @@ The Prisma client is generated into `generated/prisma` (git-ignored), so run `np
 - Check Supabase status: `npm run supabase:status` or `npx supabase status`
 - Reset local database: `npx supabase db reset`
 
+## Seeding Test Data (local development only)
+
+For manual testing of large transaction volumes (e.g. verifying the transaction
+list and Summary when a month has more rows than one page), a dev-only script
+inserts random transactions into a workspace.
+
+```bash
+node --env-file=.env node_modules/jiti/lib/jiti-cli.mjs scripts/seed-transactions.ts
+```
+
+- Inserts 150 transactions for the current month, each dated on a random day of
+  the month, then recomputes every account's `netTransactionSum` from the ledger
+  so the `initialBalance + netTransactionSum` invariant stays exact.
+- Default target is the "Personal" workspace; override it with
+  `SEED_WORKSPACE_ID`.
+- Options (set the env vars before `node`): `SEED_COUNT` (default 150),
+  `SEED_WORKSPACE_ID`, and `SEED_RESET=1` to delete previously seeded rows (they
+  are tagged `seed`) before inserting.
+- Requires local Supabase to be running (`npm run supabase:start`).
+- Re-running without `SEED_RESET=1` adds another batch (150 more rows).
+- `scripts/verify-seed.ts` re-checks the seeded month through the same paged
+  query the app uses.
+
+> **Do not run this against production.** The script has no environment guard
+> and writes to whichever database `DATABASE_URL` points at.
+
 ## Deployment (Vercel + Neon)
 
 The application deploys to Vercel with Neon as the production PostgreSQL host.

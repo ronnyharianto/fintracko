@@ -23,10 +23,26 @@ export interface UseWorkspaceCollectionOptions<T, R> {
    * a date window: changing it re-runs the fetch.
    */
   query?: string;
+  /**
+   * Opt-in exhaustive fetch. When set, the hook requests successive pages
+   * (appending `page` and `limit` to `query`) until it has collected `getTotal`
+   * rows, so a bounded window with more rows than a single page cannot silently
+   * truncate. The returned `response` stays the first page's payload, which
+   * carries the collection aggregates (`total`, `scopeTotal`).
+   */
+  fetchAll?: UseWorkspaceCollectionFetchAll<R>;
   /** Extracts the item list from the response envelope data. */
   select: (data: R) => T[];
   /** Fallback message when the error is not an ApiClientError. */
   fallbackMessage: string;
+}
+
+/** Configuration for {@link UseWorkspaceCollectionOptions.fetchAll}. */
+export interface UseWorkspaceCollectionFetchAll<R> {
+  /** Total row count as reported by the payload. */
+  getTotal: (data: R) => number;
+  /** Rows requested per page. Must match the server's page size. Defaults to 100. */
+  pageSize?: number;
 }
 
 export interface UseWorkspaceCollectionResult<T, R> {
@@ -55,6 +71,7 @@ export function useWorkspaceCollection<T, R = unknown>({
   workspaceId,
   getPath,
   query,
+  fetchAll,
   select,
   fallbackMessage,
 }: UseWorkspaceCollectionOptions<T, R>): UseWorkspaceCollectionResult<T, R> {
@@ -69,11 +86,13 @@ export function useWorkspaceCollection<T, R = unknown>({
   const getPathRef = useRef(getPath);
   const selectRef = useRef(select);
   const fallbackRef = useRef(fallbackMessage);
+  const fetchAllRef = useRef(fetchAll);
 
   useEffect(() => {
     getPathRef.current = getPath;
     selectRef.current = select;
     fallbackRef.current = fallbackMessage;
+    fetchAllRef.current = fetchAll;
   });
 
   const applyError = useCallback((err: unknown) => {
@@ -89,8 +108,40 @@ export function useWorkspaceCollection<T, R = unknown>({
   }> => {
     if (!workspaceId) return { items: [], payload: null };
     const path = getPathRef.current(workspaceId);
-    const payload = await apiFetch<R>(query ? `${path}?${query}` : path);
-    return { items: selectRef.current(payload), payload };
+    const fetchAllOption = fetchAllRef.current;
+
+    if (!fetchAllOption) {
+      const payload = await apiFetch<R>(query ? `${path}?${query}` : path);
+      return { items: selectRef.current(payload), payload };
+    }
+
+    const pageSize = fetchAllOption.pageSize ?? 100;
+    // Hard ceiling so a malformed total can never spin the page loop forever.
+    const MAX_PAGES = 50;
+    const items: T[] = [];
+    let payload: R | null = null;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const params = new URLSearchParams(query ?? "");
+      params.set("page", String(page));
+      params.set("limit", String(pageSize));
+      const pagePayload = await apiFetch<R>(`${path}?${params.toString()}`);
+      if (payload === null) payload = pagePayload;
+
+      const pageItems = selectRef.current(pagePayload);
+      items.push(...pageItems);
+
+      // Stop once every reported row is collected, or when the server returns
+      // an empty page — the collection is exhausted either way.
+      if (
+        pageItems.length === 0 ||
+        items.length >= fetchAllOption.getTotal(pagePayload)
+      ) {
+        break;
+      }
+    }
+
+    return { items, payload };
   }, [workspaceId, query]);
 
   // Workspace switches must drop stale data immediately — the workspace is

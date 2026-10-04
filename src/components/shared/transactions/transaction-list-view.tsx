@@ -16,6 +16,7 @@
 import { useLayoutEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type {
+  TransactionListResponse,
   TransactionView,
   TransactionType,
 } from "@/features/transactions/types";
@@ -142,42 +143,49 @@ export function TransactionListView({
   const [deletingTransaction, setDeletingTransaction] =
     useState<TransactionView | null>(null);
 
-  // Server-side scope: the endpoint filters by account, so a change of scope
-  // re-runs the fetch through the query dependency.
-  const query = useMemo(() => {
-    if (!accountId) return undefined;
-    return new URLSearchParams({ accountId }).toString();
-  }, [accountId]);
-
-  const {
-    data: transactions,
-    isLoading,
-    error,
-    refetch,
-  } = useWorkspaceCollection<
-    TransactionView,
-    { transactions: TransactionView[]; total: number }
-  >({
-    workspaceId: activeWorkspaceId,
-    getPath: (id) => `/api/v1/workspaces/${id}/transactions`,
-    query,
-    select: (data) => data.transactions ?? [],
-    fallbackMessage: "Failed to load transactions. Please try again.",
-  });
-
-  // Compute date range for current view
+  // The viewed period is part of the request, not a client-side slice over the
+  // first page. The endpoint returns exactly this window, and `fetchAll` pages
+  // through every row in it, so the list, search, type filter, and Summary all
+  // see the complete period even when it exceeds one page. `accountId` narrows
+  // the same request to one account.
   const dateRange = useMemo(
     () => getDateRange(viewMode, refDate),
     [viewMode, refDate],
   );
 
-  // Filter transactions by date range and type
-  const filteredTransactions = useMemo(() => {
-    let result = transactions.filter((t) => {
-      const inRange = t.date >= dateRange.from && t.date <= dateRange.to;
-      const matchesType = typeFilter === "ALL" || t.type === typeFilter;
-      return inRange && matchesType;
+  const query = useMemo(() => {
+    const params = new URLSearchParams({
+      from: dateRange.from,
+      to: dateRange.to,
     });
+    if (accountId) params.set("accountId", accountId);
+    return params.toString();
+  }, [accountId, dateRange]);
+
+  const {
+    data: transactions,
+    response,
+    isLoading,
+    isRefreshing,
+    error,
+    refetch,
+  } = useWorkspaceCollection<TransactionView, TransactionListResponse>({
+    workspaceId: activeWorkspaceId,
+    getPath: (id) => `/api/v1/workspaces/${id}/transactions`,
+    query,
+    // Pull every page of the window; a period wider than one page must not
+    // silently drop rows from the list or the Summary totals.
+    fetchAll: { getTotal: (data) => data.total, pageSize: 100 },
+    select: (data) => data.transactions ?? [],
+    fallbackMessage: "Failed to load transactions. Please try again.",
+  });
+
+  // The period is enforced server-side, so only the in-memory type filter and
+  // search narrow the (already complete) period rows here.
+  const filteredTransactions = useMemo(() => {
+    let result = transactions.filter(
+      (t) => typeFilter === "ALL" || t.type === typeFilter,
+    );
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -192,7 +200,7 @@ export function TransactionListView({
     }
 
     return result;
-  }, [transactions, dateRange, typeFilter, searchQuery]);
+  }, [transactions, typeFilter, searchQuery]);
 
   // Sort transactions
   const sortedTransactions = useMemo(() => {
@@ -235,6 +243,15 @@ export function TransactionListView({
 
   const isToday = isSamePeriod(viewMode, refDate, new Date());
   const isScoped = Boolean(accountId);
+
+  // A period change re-runs the fetch but keeps the previous payload, so only
+  // the first load (and workspace switches) should show the full skeleton;
+  // later refetches keep the list on screen and signal pending via `aria-busy`.
+  const isInitialLoading = isLoading && !isRefreshing;
+
+  // Whether this scope has any transactions at all, regardless of the period in
+  // view, so an empty account is not reported as an empty period.
+  const hasAnyTransactions = (response?.scopeTotal ?? 0) > 0;
 
   if (!activeWorkspaceId) {
     return (
@@ -296,7 +313,9 @@ export function TransactionListView({
           size="icon"
           onClick={() => setIsCreateOpen(true)}
           aria-label={
-            createDisabled ? "New Transaction (account archived)" : "New Transaction"
+            createDisabled
+              ? "New Transaction (account archived)"
+              : "New Transaction"
           }
           disabled={createDisabled}
         >
@@ -305,7 +324,7 @@ export function TransactionListView({
       </div>
 
       {/* View Mode + Date Navigation */}
-      {!isLoading && (
+      {!isInitialLoading && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* View mode pills */}
           <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:flex sm:w-auto">
@@ -362,7 +381,7 @@ export function TransactionListView({
       )}
 
       {/* Search and Sort */}
-      {!isLoading && transactions.length > 0 && (
+      {!isInitialLoading && transactions.length > 0 && (
         <div className="flex gap-2 items-center">
           <div className="flex-1 min-w-0">
             <TransactionSearch value={searchQuery} onChange={setSearchQuery} />
@@ -383,12 +402,12 @@ export function TransactionListView({
       )}
 
       {/* Type Filter */}
-      {!isLoading && transactions.length > 0 && (
+      {!isInitialLoading && transactions.length > 0 && (
         <TransactionFilters value={typeFilter} onChange={setTypeFilter} />
       )}
 
       {/* Summary */}
-      {!isLoading && filteredTransactions.length > 0 && (
+      {!isInitialLoading && filteredTransactions.length > 0 && (
         <Card className="gap-0 py-2">
           <div className="flex items-center justify-between px-4 sm:px-6">
             <span className="text-sm font-medium text-muted-foreground">
@@ -441,7 +460,7 @@ export function TransactionListView({
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {isInitialLoading && (
         <Card className="flex-1 overflow-hidden p-2 md:p-0">
           <div className="max-h-[60vh] px-2 overflow-y-auto md:px-0">
             {/* Mobile: card placeholders */}
@@ -469,47 +488,67 @@ export function TransactionListView({
         </Card>
       )}
 
-      {/* Empty State — no transactions at all */}
-      {!isLoading && transactions.length === 0 && (
+      {/* Empty State — this scope has no transactions at all */}
+      {!isInitialLoading &&
+        transactions.length === 0 &&
+        !hasAnyTransactions && (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+            <EmptyStateIllustration icon="no-transactions" className="mb-4" />
+            <p className="text-center text-lg font-medium">
+              {isScoped
+                ? "No transactions for this account yet"
+                : "No transactions yet"}
+            </p>
+            <p className="mb-4 text-center text-sm text-muted-foreground">
+              {isScoped
+                ? "Create a transaction to start tracking this account."
+                : "Create a transaction to start tracking your finances."}
+            </p>
+            {!createDisabled && (
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Transaction
+              </Button>
+            )}
+          </div>
+        )}
+
+      {/* Empty State — this scope has transactions, but none in this period */}
+      {!isInitialLoading && transactions.length === 0 && hasAnyTransactions && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-          <EmptyStateIllustration icon="no-transactions" className="mb-4" />
+          <EmptyStateIllustration icon="no-period" className="mb-4" />
           <p className="text-center text-lg font-medium">
-            {isScoped
-              ? "No transactions for this account yet"
-              : "No transactions yet"}
+            No transactions in this period
           </p>
-          <p className="mb-4 text-center text-sm text-muted-foreground">
-            {isScoped
-              ? "Create a transaction to start tracking this account."
-              : "Create a transaction to start tracking your finances."}
+          <p className="text-center text-sm text-muted-foreground">
+            Try a different date range or create a new transaction.
           </p>
-          {!createDisabled && (
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Transaction
-            </Button>
-          )}
         </div>
       )}
 
-      {/* Empty State — no transactions in this period */}
-      {!isLoading &&
+      {/* Empty State — type filter or search removed every row in the period */}
+      {!isInitialLoading &&
         transactions.length > 0 &&
         filteredTransactions.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
             <EmptyStateIllustration icon="no-period" className="mb-4" />
             <p className="text-center text-lg font-medium">
-              No transactions in this period
+              No matching transactions
             </p>
             <p className="text-center text-sm text-muted-foreground">
-              Try a different date range or create a new transaction.
+              Try clearing the search or changing the type filter.
             </p>
           </div>
         )}
 
       {/* Transaction List */}
-      {!isLoading && sortedTransactions.length > 0 && (
-        <div className="flex flex-col gap-4 min-h-0 flex-1">
+      {!isInitialLoading && sortedTransactions.length > 0 && (
+        <div
+          className={`flex flex-col gap-4 min-h-0 flex-1 transition-opacity ${
+            isRefreshing ? "opacity-60" : ""
+          }`}
+          aria-busy={isRefreshing}
+        >
           {/* Separator */}
           <Separator className="my-1" />
 
