@@ -70,27 +70,33 @@ export default function CategoriesPage() {
     null,
   );
 
-  const fetchCategories = useCallback(async () => {
-    if (!activeWorkspaceId) return;
+  const fetchCategories = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!activeWorkspaceId) return;
 
-    setIsLoading(true);
-    setError(null);
+      // A silent refresh keeps the mounted list (and the user's scroll
+      // position) in place; only first loads and workspace switches may
+      // collapse it into the skeleton grid.
+      if (!silent) setIsLoading(true);
+      setError(null);
 
-    try {
-      const data = await apiFetch<{ categories: CategoryView[] }>(
-        `/api/v1/workspaces/${activeWorkspaceId}/categories`,
-      );
-      setCategories(data.categories || []);
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to load categories. Please try again.";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeWorkspaceId]);
+      try {
+        const data = await apiFetch<{ categories: CategoryView[] }>(
+          `/api/v1/workspaces/${activeWorkspaceId}/categories`,
+        );
+        setCategories(data.categories || []);
+      } catch (err) {
+        const message =
+          err instanceof ApiClientError
+            ? err.message
+            : "Failed to load categories. Please try again.";
+        setError(message);
+      } finally {
+        if (!silent) setIsLoading(false);
+      }
+    },
+    [activeWorkspaceId],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -262,14 +268,14 @@ export default function CategoriesPage() {
                         `/api/v1/workspaces/${activeWorkspaceId}/categories/${category.id}/archive`,
                         { method: "PATCH" },
                       );
-                      await fetchCategories();
+                      await fetchCategories({ silent: true });
                     }}
                     onUnarchive={async () => {
                       await apiFetch(
                         `/api/v1/workspaces/${activeWorkspaceId}/categories/${category.id}/unarchive`,
                         { method: "PATCH" },
                       );
-                      await fetchCategories();
+                      await fetchCategories({ silent: true });
                     }}
                     onEditSubcategory={(sub) => {
                       setEditTarget({
@@ -285,14 +291,14 @@ export default function CategoriesPage() {
                         `/api/v1/workspaces/${activeWorkspaceId}/categories/${category.id}/subcategories/${subId}/archive`,
                         { method: "PATCH" },
                       );
-                      await fetchCategories();
+                      await fetchCategories({ silent: true });
                     }}
                     onUnarchiveSubcategory={async (subId) => {
                       await apiFetch(
                         `/api/v1/workspaces/${activeWorkspaceId}/categories/${category.id}/subcategories/${subId}/unarchive`,
                         { method: "PATCH" },
                       );
-                      await fetchCategories();
+                      await fetchCategories({ silent: true });
                     }}
                     isAddingSubcategory={addingSubcategoryTo === category.id}
                     onStartAddSubcategory={() =>
@@ -308,7 +314,7 @@ export default function CategoriesPage() {
                         },
                       );
                       setAddingSubcategoryTo(null);
-                      await fetchCategories();
+                      await fetchCategories({ silent: true });
                     }}
                     showArchived={showArchived}
                   />
@@ -334,13 +340,13 @@ export default function CategoriesPage() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         defaultType={createType}
-        onCreated={() => void fetchCategories()}
+        onCreated={() => void fetchCategories({ silent: true })}
       />
       <EditCategoryDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         target={editTarget}
-        onUpdated={() => void fetchCategories()}
+        onUpdated={() => void fetchCategories({ silent: true })}
       />
     </div>
   );

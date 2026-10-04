@@ -17,7 +17,8 @@ export type CategoryServiceErrorCode =
   | "FORBIDDEN"
   | "CATEGORY_NOT_FOUND"
   | "SUBCATEGORY_NOT_FOUND"
-  | "NAME_TAKEN";
+  | "NAME_TAKEN"
+  | "CATEGORY_ARCHIVED";
 
 /**
  * Domain error thrown by `src/features/categories/services.ts`. The `code`

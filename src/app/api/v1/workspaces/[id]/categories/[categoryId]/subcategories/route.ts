@@ -11,7 +11,7 @@ import { CreateSubCategorySchema } from "@/features/categories/schemas";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ id: string; categoryId: string }> },
 ) {
   return withPipeline(
     request,
@@ -31,11 +31,20 @@ export async function POST(
           message:
             "A subcategory with this name already exists in this category.",
         },
+        CATEGORY_ARCHIVED: {
+          code: "CONFLICT",
+          message: "Cannot add a subcategory to an archived category.",
+        },
       },
       "Failed to create subcategory. Please try again.",
       async ({ userId }, data) => {
-        const { categoryId } = await params;
-        const subCategory = await createSubCategory(userId, categoryId, data);
+        const { id: workspaceId, categoryId } = await params;
+        const subCategory = await createSubCategory(
+          userId,
+          workspaceId,
+          categoryId,
+          data,
+        );
         return success({ subCategory });
       },
     ),

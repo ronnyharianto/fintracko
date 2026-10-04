@@ -231,23 +231,34 @@ export async function unarchiveCategory(
 
 /**
  * Creates a new subcategory under a category.
- * Validates membership and unique name within the category.
+ * Both path identifiers are enforced (§4 — nested-path authorization):
+ * membership is checked against the stated workspace, and the parent
+ * category must live in that same workspace. Archived categories reject
+ * creation for parity with transaction validation.
  */
 export async function createSubCategory(
   userId: string,
+  workspaceId: string,
   categoryId: string,
   data: CreateSubCategoryInput,
 ) {
-  const category = await db.category.findUnique({
-    where: { id: categoryId },
-    select: { id: true, workspaceId: true },
+  await requireMembership(userId, workspaceId);
+
+  const category = await db.category.findFirst({
+    where: { id: categoryId, workspaceId },
+    select: { id: true, workspaceId: true, isArchived: true },
   });
 
   if (!category) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
 
-  await requireMembership(userId, category.workspaceId);
+  if (category.isArchived) {
+    throw new CategoryServiceError(
+      "CATEGORY_ARCHIVED",
+      "Cannot add a subcategory to an archived category",
+    );
+  }
 
   const existing = await db.subCategory.findUnique({
     where: {
