@@ -80,7 +80,7 @@ export default function RootLayout({
           {themeInitScript}
         </Script>
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-dvh flex flex-col bg-background text-foreground">
         <Analytics />
         <SessionProvider>{children}</SessionProvider>
         <Toaster

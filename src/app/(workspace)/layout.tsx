@@ -40,11 +40,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <OnboardingGuardWrapper>
       <WorkspaceProvider>
         <SidebarProvider>
-          <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+          <div className="h-dvh flex flex-col bg-background text-foreground overflow-hidden">
             <TopBar />
             <div className="flex flex-1 min-h-0">
               <Sidebar />
-              <main className="flex-1 overflow-y-auto px-6 pb-6 pt-20 lg:ml-64">{children}</main>
+              <main className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-20 lg:ml-64">{children}</main>
             </div>
           </div>
         </SidebarProvider>
