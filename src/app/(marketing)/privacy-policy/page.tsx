@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: September 2026
+        Last updated: October 2026
       </p>
 
       <div className="mt-10 space-y-8 text-base leading-relaxed text-foreground">
@@ -76,8 +76,8 @@ export default function PrivacyPolicyPage() {
             When you sign in via Google or GitHub OAuth, we receive your name,
             email address, and profile image from the OAuth provider. We only
             process OAuth payloads where the provider has verified your email
-            address. We do not store or manage traditional username/password
-            credentials.
+            address. In production, we do not store or manage traditional
+            username/password credentials.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">
             2.2 Profile & Onboarding Data
@@ -102,7 +102,7 @@ export default function PrivacyPolicyPage() {
             We automatically collect certain technical information when you
             access the Service, including your IP address, browser type,
             operating system, and access timestamps. This data is used for
-            security monitoring and rate-limiting purposes.
+            security monitoring and abuse prevention purposes.
           </p>
         </section>
 
@@ -150,8 +150,8 @@ export default function PrivacyPolicyPage() {
             4.2 Database Hosting (Neon)
           </h3>
           <p>
-            In production, persistent data is stored in a PostgreSQL database
-            hosted on Neon. This includes profile, authentication, and financial
+            Persistent data is stored in a PostgreSQL database hosted on
+            Neon. This includes profile, authentication, and financial
             data. Your data is logically isolated by workspace-level access
             control enforced at the application tier.
           </p>
@@ -182,8 +182,10 @@ export default function PrivacyPolicyPage() {
             We use a single HttpOnly session cookie to maintain your
             authenticated session with the Service. This cookie is not
             accessible to client-side JavaScript and is transmitted only over
-            secure HTTPS connections. We do not use tracking cookies,
-            advertising cookies, or third-party analytics scripts.
+            secure HTTPS connections. We do not use tracking or advertising
+            cookies. We use Vercel Web Analytics, a cookie-less, privacy-focused
+            service that records aggregate page-view metrics without storing
+            personal identifiers or tracking you across other sites.
           </p>
         </section>
 

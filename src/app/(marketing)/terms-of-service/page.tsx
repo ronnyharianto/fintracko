@@ -46,7 +46,7 @@ export default function TermsOfServicePage() {
         Terms of Service
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: September 2026
+        Last updated: October 2026
       </p>
 
       <div className="mt-10 space-y-8 text-base leading-relaxed text-foreground">
@@ -79,8 +79,8 @@ export default function TermsOfServicePage() {
             3. Accounts & Authentication
           </h2>
           <p>
-            You may only access the Service via OAuth authentication through
-            Google or GitHub. You are responsible for maintaining the security
+            In production, you may only access the Service via OAuth
+            authentication through Google or GitHub. You are responsible for maintaining the security
             of your third-party provider accounts. You must not share your
             session credentials or attempt to access workspaces to which you
             have not been explicitly invited. You are solely responsible for all
@@ -146,9 +146,9 @@ export default function TermsOfServicePage() {
           </h2>
           <p>
             The Service relies on third-party infrastructure including Vercel
-            (application hosting), Neon (production database hosting), Imgur
-            (image attachment hosting), Google (OAuth provider), and GitHub
-            (OAuth provider). We are not responsible for the availability,
+            (application hosting and cookie-less Web Analytics), Neon (database
+            hosting), Imgur (image attachment hosting), Google (OAuth provider),
+            and GitHub (OAuth provider). We are not responsible for the availability,
             accuracy, or practices of these third-party services. Your use of
             these services through Fintracko is also governed by their
             respective terms and policies.

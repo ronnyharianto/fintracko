@@ -24,6 +24,8 @@ export default defineConfig({
   // Where generated SQL migrations land after `prisma migrate dev`.
   migrations: {
     path: "prisma/migrations",
+    // Dev-only seed run by `prisma db seed` and after `prisma migrate reset`.
+    seed: "node node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts",
   },
 
   // Use the direct endpoint for Prisma CLI operations when configured.

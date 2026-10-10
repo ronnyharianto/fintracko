@@ -16,10 +16,7 @@
     "prisma:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
-    "supabase:start": "supabase start",
-    "supabase:stop": "supabase stop",
-    "supabase:status": "supabase status",
-    "supabase:reset": "supabase db reset"
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
@@ -55,8 +52,8 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "jiti": "^2.7.0",
     "prisma": "7.10.0",
-    "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

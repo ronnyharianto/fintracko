@@ -41,6 +41,3 @@ next-env.d.ts
 # prisma generated client (Prisma 7 emits to a project-local path, not node_modules)
 /generated
 
-# supabase (local branch data — config files are tracked, ephemeral data is not)
-/supabase/.branches
-/supabase/.temp

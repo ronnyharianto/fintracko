@@ -9,8 +9,8 @@ Provides workspace collaboration, financial account management, budget tracking,
 - React 19
 - TypeScript (strict mode)
 - Prisma ORM 7 (PostgreSQL, multi-schema `ft_auth` / `ft_core`)
-- Neon (PostgreSQL hosting in production) + local dev via Supabase CLI
-- Better Auth (OAuth-only: Google + GitHub)
+- Neon (PostgreSQL hosting for development and production)
+- Better Auth (OAuth-only: Google + GitHub; development-only email/password for seeded accounts)
 - Tailwind CSS 4
 - Zod v4
 - Radix UI components (shadcn-style `src/components/ui/`)
@@ -18,7 +18,7 @@ Provides workspace collaboration, financial account management, budget tracking,
 
 ## Features
 
-- **OAuth-only authentication** — Google + GitHub sign-in; unverified emails are rejected, account linking disabled; HttpOnly session cookies.
+- **OAuth-only authentication** — Google + GitHub sign-in; unverified emails are rejected, account linking disabled; HttpOnly session cookies. Development additionally enables local email/password accounts for the seeded test users; production stays OAuth-only.
 - **Mandatory onboarding** — profile setup with explicit Terms of Service and Privacy Policy acceptance before the first workspace.
 - **Multi-workspace collaboration** — invite collaborators by email (OWNER / COLLABORATOR roles), workspace switching, per-workspace currency.
 - **Financial accounts** — checking, savings, cash, credit card, digital wallet, investment; archive/unarchive instead of delete; balance = `initialBalance + netTransactionSum` maintained with atomic updates.
@@ -35,8 +35,7 @@ Provides workspace collaboration, financial account management, budget tracking,
 - Node.js 20.9+ (required by Next.js 16)
 - npm
 - Git
-- Supabase CLI (for local development only)
-- Docker (required by the Supabase CLI)
+- A Neon account for the development and production databases
 
 ### Setup
 
@@ -44,9 +43,10 @@ Provides workspace collaboration, financial account management, budget tracking,
 2. Navigate to the project directory: `cd fintracko`
 3. Install dependencies: `npm install`
 4. Configure environment variables: copy `.env.example` to `.env.local` and fill in the required values (see the table below).
-5. Start local Supabase: `npm run supabase:start`
-6. Generate the Prisma client and set up the database: `npm run prisma:generate && npm run db:push`
+5. Create a Neon project, use a dedicated development branch, and set `DATABASE_URL` (pooled) and `DIRECT_URL` (direct) to that branch.
+6. Generate the Prisma client, apply migrations, and seed development data: `npm run prisma:generate && npm run prisma:migrate:deploy && npm run db:seed`
 7. Start the dev server: `npm run dev` and open http://localhost:3000
+8. Sign in with a seeded development account — see [Signing in as a seeded user](#signing-in-as-a-seeded-user).
 
 ### Environment Variables
 
@@ -54,8 +54,8 @@ All variables are documented inline in `.env.example`.
 
 | Variable                                  | Purpose                                                                                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                            | Application runtime connection (local Supabase default provided; use Neon's pooled connection string in Vercel)                                                           |
-| `DIRECT_URL`                              | Optional Prisma CLI connection for migrations and schema changes; use Neon's direct, non-pooled connection string in production. Falls back to `DATABASE_URL` when unset. |
+| `DATABASE_URL`                            | Application runtime connection. Use Neon's pooled connection string (host contains `-pooler`) in both development and production.                                         |
+| `DIRECT_URL`                              | Prisma CLI connection for migrations and schema changes. Use Neon's direct, non-pooled connection string. Falls back to `DATABASE_URL` when unset.                        |
 | `BETTER_AUTH_SECRET`                      | Random 32+ char secret signing session cookies (`openssl rand -base64 32`)                                                                                                |
 | `BETTER_AUTH_URL`                         | App origin used for OAuth callback URLs                                                                                                                                   |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`   | Google OAuth credentials                                                                                                                                                  |
@@ -81,40 +81,53 @@ The Prisma client is generated into `generated/prisma` (git-ignored), so run `np
 - Apply migrations to a database: `npm run prisma:migrate:deploy`
 - Push schema changes without migration: `npm run prisma:push` (alias `npm run db:push`)
 - Reset database (drop and reseed): `npm run db:reset`
+- Seed development data: `npm run db:seed`
 - Inspect data: `npm run prisma:studio`
 
-## Supabase Management (local development only)
+## Seeding Development Data (development only)
 
-- Start local Supabase services: `npm run supabase:start` or `npx supabase start`
-- Stop Supabase services: `npm run supabase:stop` or `npx supabase stop`
-- Check Supabase status: `npm run supabase:status` or `npx supabase status`
-- Reset local database: `npx supabase db reset`
+`prisma/seed.ts` bootstraps a complete fixture through the Prisma client so
+every collaboration and financial flow has data to render:
 
-## Seeding Test Data (local development only)
-
-For manual testing of large transaction volumes (e.g. verifying the transaction
-list and Summary when a month has more rows than one page), a dev-only script
-inserts random transactions into a workspace.
+- Two users with different currency preferences (Alice = IDR, Bob = USD).
+- Two workspaces per user, including a shared workspace.
+- Credential accounts so both users can sign in locally (see below).
+- Accepted and pending cross-workspace invitations.
+- Financial accounts per workspace.
+- Monthly and yearly budgets over expense subcategories.
+- A batch of randomized current-month transactions (income, expense, and transfer).
 
 ```bash
-node --env-file=.env node_modules/jiti/lib/jiti-cli.mjs scripts/seed-transactions.ts
+npm run db:seed
 ```
 
-- Inserts 150 transactions for the current month, each dated on a random day of
-  the month, then recomputes every account's `netTransactionSum` from the ledger
-  so the `initialBalance + netTransactionSum` invariant stays exact.
-- Default target is the "Personal" workspace; override it with
-  `SEED_WORKSPACE_ID`.
-- Options (set the env vars before `node`): `SEED_COUNT` (default 150),
-  `SEED_WORKSPACE_ID`, and `SEED_RESET=1` to delete previously seeded rows (they
-  are tagged `seed`) before inserting.
-- Requires local Supabase to be running (`npm run supabase:start`).
-- Re-running without `SEED_RESET=1` adds another batch (150 more rows).
-- `scripts/verify-seed.ts` re-checks the seeded month through the same paged
-  query the app uses.
+The seed is re-runnable: each run appends another batch of randomized
+transactions dated within the current month to every workspace. Set
+`SEED_COUNT` to change the batch size (default 120 per workspace) and
+`SEED_RESET=1` to delete previously seeded (`seed`-tagged) transactions
+before inserting.
 
-> **Do not run this against production.** The script has no environment guard
-> and writes to whichever database `DATABASE_URL` points at.
+### Signing in as a seeded user
+
+In development the `/account` page renders an email/password form. Both seeded
+users have credential accounts, so you can sign in to exercise collaboration
+flows:
+
+| Email                   | Password        |
+| ----------------------- | --------------- |
+| `alice@fintracko.local` | `fintracko-dev` |
+| `bob@fintracko.local`   | `fintracko-dev` |
+
+Override the password with `SEED_PASSWORD` before running the seed. This form
+and the credential endpoints exist only when `NODE_ENV=development`; production
+remains OAuth-only.
+
+`prisma db seed` also runs automatically after `prisma migrate reset`. The
+seed refuses to run when `NODE_ENV=production`.
+
+> **Do not point the connection URL at production when seeding.** The script
+> is development-only but still writes to whichever database it is
+> configured with.
 
 ## Deployment (Vercel + Neon)
 
@@ -178,5 +191,6 @@ build configuration is required. Apply schema migrations separately with
 - `src/components/` — shared UI; shadcn primitives in `src/components/ui/`, landing sections in `src/components/shared/landing/`
 - `src/lib/` — infrastructure: `db.ts` (Prisma singleton), `auth.ts` (Better Auth), `api/` (request pipeline, response envelope, sanitization), `site.ts` (SEO config)
 - `prisma/schema.prisma` — data model source of truth (13 models across `ft_auth` and `ft_core` schemas)
+- `prisma/seed.ts` — development-only fixture seeder (run with `npm run db:seed`)
 - `generated/prisma/` — generated Prisma client (git-ignored; regenerate after clone)
 - `docs/product/PRD_MVP1.md` — product requirements for MVP 1
