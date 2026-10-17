@@ -104,25 +104,24 @@ export default function AccountDetailView({
   return (
     <div className="flex h-full flex-col gap-4">
       {/* Account header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 has-[>svg]:pl-0"
+          >
             <Link href="/accounts" aria-label="Back to accounts">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 pl-0" />
             </Link>
           </Button>
-          <h1 className="min-w-0 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="min-w-0 truncate text-lg font-bold tracking-tight sm:text-3xl">
             {account.name}
           </h1>
-          <Badge
-            variant={ACCOUNT_TYPE_VARIANT[account.type] ?? "default"}
-            className="ml-1 hidden sm:inline-flex"
-          >
-            {ACCOUNT_TYPE_LABELS[account.type] ?? account.type}
-          </Badge>
         </div>
         {!account.isArchived ? (
-          <p className="pl-10 text-3xl font-bold tracking-tight">
+          <p className="pl-10 text-lg sm:text-3xl font-bold tracking-tight">
             {finalBalance.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
