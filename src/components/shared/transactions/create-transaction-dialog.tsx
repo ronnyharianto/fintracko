@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -29,6 +29,10 @@ import { useBudgetForDate } from "@/features/budgets/hooks/use-budget-for-date";
 import { BudgetSnapshot } from "./budget-snapshot";
 import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
+import {
+  useEnterToAdvance,
+  useSelectHandoff,
+} from "@/lib/hooks/use-enter-to-advance";
 
 const TYPE_OPTIONS: {
   value: TransactionType;
@@ -99,6 +103,23 @@ export function CreateTransactionDialog({
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [prevOpen, setPrevOpen] = useState(false);
+  // Enter moves through the fields instead of submitting a partial form.
+  const handleEnterAdvance = useEnterToAdvance();
+  // Choosing from a dropdown hands the chain to the next field, so each ref
+  // points at a dropdown that can start the following step.
+  const selectHandoff = useSelectHandoff();
+  const categoryTriggerRef = useRef<React.ComponentRef<typeof SelectTrigger>>(
+    null,
+  );
+  const subCategoryTriggerRef = useRef<React.ComponentRef<typeof SelectTrigger>>(
+    null,
+  );
+  const sourceTriggerRef = useRef<React.ComponentRef<typeof SelectTrigger>>(
+    null,
+  );
+  const destinationTriggerRef = useRef<
+    React.ComponentRef<typeof SelectTrigger>
+  >(null);
 
   // Budget snapshot: only expense transactions are measured against budgets.
   const isBudgetRelevant = type === "EXPENSE";
@@ -248,7 +269,11 @@ export function CreateTransactionDialog({
             Record a new financial transaction.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={handleEnterAdvance}
+          className="space-y-4 py-2"
+        >
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* Type Selection */}
@@ -284,6 +309,7 @@ export function CreateTransactionDialog({
                 placeholder="0.00"
                 value={amount}
                 onChange={setAmount}
+                enterKeyHint="next"
                 required
               />
             </div>
@@ -294,6 +320,7 @@ export function CreateTransactionDialog({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                enterKeyHint="next"
                 required
               />
             </div>
@@ -308,12 +335,18 @@ export function CreateTransactionDialog({
                 onValueChange={(v) => {
                   setCategoryId(v);
                   setSubCategoryId("");
+                  selectHandoff.handOffFrom(categoryTriggerRef.current);
                 }}
               >
-                <SelectTrigger className="w-full mb-0 text-[16px]">
+                <SelectTrigger
+                  ref={categoryTriggerRef}
+                  className="w-full mb-0 text-[16px]"
+                >
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  onCloseAutoFocus={selectHandoff.handleCloseAutoFocus}
+                >
                   {filteredCategories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -326,13 +359,21 @@ export function CreateTransactionDialog({
               <Label>Subcategory</Label>
               <Select
                 value={subCategoryId}
-                onValueChange={setSubCategoryId}
+                onValueChange={(v) => {
+                  setSubCategoryId(v);
+                  selectHandoff.handOffFrom(subCategoryTriggerRef.current);
+                }}
                 disabled={!categoryId}
               >
-                <SelectTrigger className="w-full mb-0 text-[16px]">
+                <SelectTrigger
+                  ref={subCategoryTriggerRef}
+                  className="w-full mb-0 text-[16px]"
+                >
                   <SelectValue placeholder="Select subcategory" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  onCloseAutoFocus={selectHandoff.handleCloseAutoFocus}
+                >
                   {subCategories.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -359,12 +400,20 @@ export function CreateTransactionDialog({
                 <Label>Source</Label>
                 <Select
                   value={sourceAccountId}
-                  onValueChange={setSourceAccountId}
+                  onValueChange={(v) => {
+                    setSourceAccountId(v);
+                    selectHandoff.handOffFrom(sourceTriggerRef.current);
+                  }}
                 >
-                  <SelectTrigger className="w-full mb-0 text-[16px]">
+                  <SelectTrigger
+                    ref={sourceTriggerRef}
+                    className="w-full mb-0 text-[16px]"
+                  >
                     <SelectValue placeholder="Select source" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    onCloseAutoFocus={selectHandoff.handleCloseAutoFocus}
+                  >
                     {accounts.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.name}
@@ -379,12 +428,20 @@ export function CreateTransactionDialog({
                 <Label>Destination</Label>
                 <Select
                   value={destinationAccountId}
-                  onValueChange={setDestinationAccountId}
+                  onValueChange={(v) => {
+                    setDestinationAccountId(v);
+                    selectHandoff.handOffFrom(destinationTriggerRef.current);
+                  }}
                 >
-                  <SelectTrigger className="w-full mb-0">
+                  <SelectTrigger
+                    ref={destinationTriggerRef}
+                    className="w-full mb-0"
+                  >
                     <SelectValue placeholder="Select destination" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    onCloseAutoFocus={selectHandoff.handleCloseAutoFocus}
+                  >
                     {accounts.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.name}
@@ -405,6 +462,7 @@ export function CreateTransactionDialog({
                 placeholder="Who was involved?"
                 value={payeePayer}
                 onChange={(e) => setPayeePayer(e.target.value)}
+                enterKeyHint="next"
                 maxLength={100}
               />
             </div>
@@ -415,6 +473,7 @@ export function CreateTransactionDialog({
                 placeholder="Any additional notes?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                enterKeyHint="done"
                 maxLength={500}
               />
             </div>
