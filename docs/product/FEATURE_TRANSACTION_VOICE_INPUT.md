@@ -1,7 +1,7 @@
 # Feature Proposal - Frictionless Transaction Input (Voice-First + Alternatives)
 
-- **Status:** Proposal (not implemented, not approved)
-- **Date:** 2026-10-10
+- **Status:** Partially implemented: typed natural-language quick composer and the Indonesian/code-switched parser (build order step 1). Voice capture, review card, and instrumentation are not implemented.
+- **Date:** 2026-10-10 (revised 2026-10-18: Indonesian id-ID requirements added, see Section 3.9)
 - **Author:** Product (drafted with AI assistance)
 - **Related docs:** [PRD_MVP1.md](./PRD_MVP1.md) (Phase 3.4 Transaction Management)
 - **Scope of this document:** Reduce the effort required to record a transaction.
@@ -122,6 +122,13 @@ a reference "today" in the user's timezone.
 | "to savings"                   | `destinationAccountId`     | Account for income/transfer                           |
 | "at Subway"                    | `payeePayer`               | Third-party entity                                    |
 | leftover text                  | `description`              | Free notes                                            |
+| "beli / belanja / bayar / jajan" | `type = EXPENSE`           | Indonesian verb lexicon, matched alongside English (3.9.2) |
+| "gajian / dapat / terima / jualan" | `type = INCOME`          | Indonesian verb lexicon (3.9.2)                       |
+| "top up GoPay dari BCA"        | `type = TRANSFER`          | Top-up between own accounts is a move, not spend (3.9.6) |
+| "15rb", "2,5jt", "lima belas ribu" | `amount`               | Magnitude suffixes, decimal commas, currency omitted (3.9.3) |
+| "kemarin / minggu lalu / tanggal 5" | `date`                | Indonesian relative-date tokens (3.9.4)               |
+| "pakai BCA 7625"               | `sourceAccountId`          | Alias match, then digit-run suffix in the name (3.9.5) |
+| "kopi / bensin / listrik"      | category/subcategory hints | Alias dictionary, then user history (3.9.7)           |
 
 **Parsing rules (proposed):**
 
@@ -221,6 +228,165 @@ opt-in field and a separate migration.
   updates, and parse results.
 - Currency and date parsing are locale-sensitive; the parser must use the
   workspace currency and the user's timezone rather than assuming USD/en-US.
+  The Indonesian requirements in Section 3.9 are part of the MVP scope.
+
+### 3.9 Indonesian locale requirements (id-ID, part of MVP scope)
+
+The product targets Indonesian users. Everything in this section is treated as
+MVP scope for the parser, not as a later localization pass.
+
+#### 3.9.1 Speech recognition
+
+- Modern Chrome supports `id-ID` recognition, including on-device recognition
+  in recent versions. Firefox and Safari remain weak or absent; the fallback
+  design in Section 3.6 is unchanged.
+- The recording sheet exposes an explicit language toggle (`id-ID` default,
+  `en-US` optional) instead of guessing. Chrome's recognizer degrades when
+  Indonesian speakers drift toward English pronunciation, so the toggle is
+  per-tap, not buried in settings.
+- Consent and state copy must be presented in the product's UI language -- for
+  example: "Audio dikirim ke server untuk dikonversi menjadi teks" -- so that
+  consent for network-assisted recognition is informed.
+- Recognition uploads audio on metered mobile connections. The typed
+  natural-language path (5.7) avoids this entirely, which reinforces the
+  build order for Indonesian users: typed input first, voice second.
+
+#### 3.9.2 Bilingual verb and preposition lexicon
+
+Real Indonesian utterances mix English and Indonesian mid-sentence ("spent
+25k buat jajan di warkop kemarin pakai gopay"). The parser therefore matches
+both lexicons simultaneously on every utterance; no language setting gates
+parsing. Representative entries (non-exhaustive, maintained in the feature
+module):
+
+| Fragment                                                    | Field                  | Notes                                    |
+| ----------------------------------------------------------- | ---------------------- | ---------------------------------------- |
+| "beli", "belanja", "bayar", "jajan", "keluar", "spent"        | `type = EXPENSE`        |                                          |
+| "gajian", "dapat", "terima", "masuk", "dibayar", "jualan", "penjualan", "bonus" | `type = INCOME`      |                                          |
+| "pindah", "pindahkan", "transfer"                            | `type = TRANSFER`       | Requires two own accounts                |
+| "pakai", "dari", "via", "make"                               | `sourceAccountId`       | Account for expense/transfer             |
+| "ke"                                                         | `destinationAccountId`  | Account for income/transfer              |
+| "di <merchant>", "gofood", "grabfood", "shopee", "tokopedia", "warung", "warkop" | `payeePayer`         | Replaces the English "at" pattern        |
+
+#### 3.9.3 Amounts: magnitude suffixes, decimal commas, no currency word
+
+- Magnitude suffixes are the workhorse: "ribu"/"rb"/"k" = x1000 and
+  "juta"/"jt" = x1,000,000. Spoken multipliers and written suffixes
+  ("15rb", "15k", "2,5jt", "dua belas ribu") normalize identically.
+- The decimal point is a comma: "2,5jt" and spoken "dua koma lima juta" are
+  2,500,000. Within a phrase, the multipliers scale the whole number, so
+  "dua koma lima ribu" is 2,500. Rare ambiguous readings surface on the
+  review card instead of being guessed.
+- Currency words are usually omitted ("beli kopi 15rb") and must never be
+  required. Workspace currency comes from session context (3.7).
+- Number words and numerals normalize identically, because recognizer
+  output varies ("lima belas ribu" / "15 ribu" / "15.000").
+- The output is always an exact decimal string (e.g. "15000"), never a
+  binary float, per the existing amount convention.
+
+#### 3.9.4 Dates
+
+Recognized tokens: "kemarin", "semalam", "tadi malam/pagi/siang", "minggu
+lalu", "bulan lalu", "awal bulan", "akhir bulan", and day-of-month reference
+"tanggal N". Month names are matched case-insensitively through the intl
+locale ("id"), resolved against "today" in the user's timezone.
+
+#### 3.9.5 Accounts and digit-suffix resolution
+
+Account aliases, case-insensitive and tolerant of colloquial forms: e-wallets
+"gopay", "ovo", "dana", "linkaja", "shopeepay", "jenius"; banks "bca",
+"mandiri", "bri", "bni", "bsi"; cash "tunai", "cash", "dompet".
+
+`FinancialAccount` currently stores only a name (no account-number field),
+so a spoken card/wallet suffix can be matched only against digits embedded
+in account names. Users who name accounts "BCA 7625" get exact resolution;
+onboarding copy should recommend this naming convention.
+
+Rules:
+
+- The matched alias narrows the candidate set to accounts whose name
+  contains it. The spoken digit cluster is only ever an additional filter on
+  that candidate set; it must never become a new matching key on its own.
+- Split candidate names into digit runs. A spoken digit cluster matches a
+  run when it equals the run or is a trailing suffix of the run (card last-4
+  against a full number). Raw substring matching across run boundaries is
+  forbidden: "625" must not match "7625", and "0125" must not match "76250".
+- Ordering rule: number clusters before the account preposition are amount
+  candidates; after an account match, digit clusters with no magnitude word
+  following are suffix candidates. This keeps "15rb" and "7625" from
+  colliding even though both come from the same number-word vocabulary.
+- Ambiguity resolution: one workspace account matches -> the suffix confirms
+  it, or is safely ignored as noise; multiple accounts match the suffix ->
+  auto-select and display why; the suffix matches none -> a required choice
+  among that alias's accounts, with the fragment left visible in the sheet,
+  never defaulted to the first match.
+
+Worked example -- utterance: "Beli kopi lima belas ribu pakai bca tujuh
+enam dua lima"
+
+1. "Beli" -> `type = EXPENSE`.
+2. "kopi" -> subcategory candidates via dictionary/history (3.9.7).
+3. "lima belas ribu" -> amount "15000" (currency word omitted).
+4. "pakai" -> account preposition; "bca" narrows candidates to BCA-named
+   accounts.
+5. "tujuh enam dua lima" -> digit cluster "7625"; it follows an account
+   match with no magnitude word behind it, so it is a suffix, not an
+   amount, and resolves the account whose name contains a "7625" run.
+
+Resulting review card: Expense, 15000, today, resolved account, description
+"kopi", subcategory as the ranked choice, payee empty.
+
+#### 3.9.6 Top-up semantics
+
+- "top up GoPay 100rb" (source implied to be another own account) and
+  "isi gopay dari BCA" are moves between own accounts and map to
+  `TRANSFER`, with the matched wallet as `destinationAccountId` and the
+  bank as `sourceAccountId`.
+- "beli pulsa", "paket data", and "token listrik" are third-party purchases
+  (expense), because the counterpart is a telco/utility provider, not an
+  own account.
+- When intent cannot be determined -- e.g. "top up" with no resolvable
+  destination account -- the review card surfaces a required choice. It
+  must not default to either reading.
+
+#### 3.9.7 Mapping unstructured tokens to categories
+
+Every workspace is created with English-named template taxonomies (Food ->
+Proteins, Dairy & Beverages, Grains & Bakery, Snacks; Housing & Utilities ->
+Electricity & Water, Internet & Phone), so Indonesian tokens like "kopi"
+match nothing textually: fuzzy matching against workspace names alone
+cannot map them. Mapping therefore uses a three-layer fallback,
+deterministic first:
+
+1. **Bilingual alias dictionary (primary).** A static, client-safe keyword
+   table in `src/features/transactions/` maps common Indonesian items to
+   ranked template targets: "kopi / ngopi / warkop" -> Food / Dairy &
+   Beverages, then Snacks and Hangout; "bensin / pertalite / pertamax / pom"
+   -> Fuel; "listrik / token" -> Electricity & Water; "pulsa / paket data"
+   -> Internet & Phone; "gofood / jajan" -> Food. An alias maps to a
+   meaning, and the meaning is fuzzy-matched against the workspace's live
+   category/SubCategory names, so it also works when users rename
+   categories into Indonesian.
+2. **History recency.** Before the dictionary, inspect the user's own
+   recently saved transactions whose description contains the token and
+   reuse their mapping. This is near-perfect for that user, adapts to any
+   custom taxonomy automatically, and costs one indexed query.
+3. **Never guess.** When the layers disagree or the token is unknown, the
+   field is a required choice and the dictionary's ranked alternatives are
+   shown as one-tap chips. Corrections are instrumented (Section 7) to grow
+   the dictionary.
+
+LLM mapping is not in the MVP: it adds latency, cost, non-determinism, and
+a data-sharing surface for financial descriptions. If later needed, it
+can be added behind the same `parseTransactionUtterance(text, context)`
+signature as an opt-in fallback consulted only for tokens the deterministic
+layers could not resolve, returning ranked candidates for confirmation.
+
+Known product gap, flagged for a separate proposal: templates are
+English-named while Indonesian users will organize in Indonesian
+("Makanan", "Transportasi", "Jajan"). The dictionary bridges capture, but
+localized workspace templates would make organization natively Indonesian
+(see the follow-up list in Section 8).
 
 ---
 
@@ -228,7 +394,11 @@ opt-in field and a separate migration.
 
 1. **Parser + typed NL field first.** Ship the natural-language parser behind a
    text input. It is the hard part, it is fully testable without a microphone,
-   and it delivers value on its own.
+   and it delivers value on its own. The parser ships Indonesian-first: the
+   bilingual lexicon, magnitude-suffix amounts, decimal commas,
+   digit-suffix account matching, and layered category mapping from Section
+   3.9 are in scope from day one, because retrofitting a locale after the
+   parser is stable is a known failure mode.
 2. **Voice capture on top.** Wrap the proven parser with the Web Speech API and
    the review card. Gate it behind a flag while browser support is uneven.
 3. **Measure.** Only after real usage should the team decide whether cloud STT
@@ -314,6 +484,14 @@ or notification already is, instead of making them navigate into the app.
    testable, no new dependency) or a hosted LLM call (more flexible, adds cost,
    latency, and a data-sharing surface)? The MVP recommendation is the
    deterministic parser; an LLM can be layered behind the same contract later.
+6. Should workspace templates be created with Indonesian-localized category
+   names instead of the current English ones? The alias dictionary (3.9.7)
+   bridges capture, but localized templates would make organization natively
+   Indonesian. Separate proposal.
+7. Should an optional `accountNumberSuffix` field be added to
+   `FinancialAccount` for exact card/wallet suffix matching, or is the
+   "put the digits in the account name" convention (3.9.5) enough for the
+   MVP?
 
 ---
 
@@ -331,10 +509,13 @@ include raw transcripts, amounts, account names, or other financial detail.
 
 ## 8. Summary recommendation
 
-Start with the **typed natural-language parser and a fast composer**, because it
-is low-risk and useful immediately. Add **voice capture** as a thin layer over the
-same parser once the parser is proven, gated behind a feature flag and always with
-explicit confirmation before saving. Add **quick-add templates** and **smart
-defaults** in parallel as cheap wins. Treat **receipt OCR**, **recurring
-transactions**, **bulk import**, and a **cloud STT provider** as clearly-scoped
+Start with the **Indonesian-first typed natural-language parser and a fast
+composer** (the Section 3.9 requirements are MVP scope), because it is
+low-risk and useful immediately. Add **voice capture** as a thin layer over
+the same parser once the parser is proven, gated behind a feature flag and
+always with explicit confirmation before saving. Add **quick-add templates**
+and **smart defaults** in parallel as cheap wins. Treat **receipt OCR**,
+**recurring transactions**, **bulk import**, a **cloud STT provider**,
+**Indonesian-localized workspace templates**, and an optional
+**`accountNumberSuffix` field on `FinancialAccount`** as clearly-scoped
 follow-ups that each require their own proposal.
