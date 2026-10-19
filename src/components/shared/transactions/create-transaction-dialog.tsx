@@ -25,9 +25,14 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { TransactionType } from "@/features/transactions/types";
 import type { CategoryView } from "@/features/categories/types";
 import type { AccountView } from "@/features/accounts/types";
+import {
+  parseTransactionUtterance,
+  type SubCategoryAlternative,
+  type UtteranceParserContext,
+} from "@/features/transactions/utterance-parser";
 import { useBudgetForDate } from "@/features/budgets/hooks/use-budget-for-date";
 import { BudgetSnapshot } from "./budget-snapshot";
-import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Sparkles } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 import {
   useEnterToAdvance,
@@ -102,6 +107,16 @@ export function CreateTransactionDialog({
 
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
+  // Quick-input composer: a single natural-language line fills the form
+  // (typed NL path, FEATURE_TRANSACTION_VOICE_INPUT.md Section 5.7). The
+  // form remains the review-and-save surface, so nothing is persisted
+  // without the usual submit validation.
+  const [composerText, setComposerText] = useState("");
+  const [composerFeedback, setComposerFeedback] = useState<string | null>(null);
+  const [composerFeedbackIsError, setComposerFeedbackIsError] = useState(false);
+  const [composerAlternatives, setComposerAlternatives] = useState<
+    SubCategoryAlternative[]
+  >([]);
   const [prevOpen, setPrevOpen] = useState(false);
   // Enter moves through the fields instead of submitting a partial form.
   const handleEnterAdvance = useEnterToAdvance();
@@ -150,6 +165,96 @@ export function CreateTransactionDialog({
       setSourceAccountId(defaultAccountId);
       setDestinationAccountId("");
     }
+  }
+
+  function handleComposerFill() {
+    const text = composerText.trim();
+    if (!text) {
+      setComposerFeedbackIsError(true);
+      setComposerFeedback(
+        'Type a phrase first, e.g. "15rb kopi pakai gopay kemarin".',
+      );
+      return;
+    }
+    const context: UtteranceParserContext = {
+      today: getTodayDateInputValue(),
+      categories,
+      accounts,
+    };
+    const draft = parseTransactionUtterance(text, context);
+    const hasAnySignal = Boolean(
+      draft.type ||
+        draft.amount ||
+        draft.date ||
+        draft.categoryId ||
+        draft.sourceAccountId ||
+        draft.destinationAccountId ||
+        draft.payeePayer ||
+        draft.description,
+    );
+    if (!hasAnySignal) {
+      setComposerFeedbackIsError(true);
+      setComposerFeedback(
+        'Could not read any fields. Mention an amount, e.g. "beli kopi 15rb".',
+      );
+      setComposerAlternatives([]);
+      return;
+    }
+
+    // Apply the parse as a complete draft (bypassing handleTypeChange so the
+    // parsed category/account values survive the type switch). Unresolved
+    // fields are cleared rather than left over from an earlier utterance,
+    // matching the parser contract: empty means "choose this yourself".
+    const nextType = draft.type ?? "EXPENSE";
+    setType(nextType);
+    setAmount(draft.amount ?? "");
+    setDate(draft.date ?? getTodayDateInputValue());
+    setCategoryId(draft.categoryId ?? "");
+    setSubCategoryId(draft.subCategoryId ?? "");
+    setSourceAccountId(draft.sourceAccountId ?? "");
+    setDestinationAccountId(draft.destinationAccountId ?? "");
+    setPayeePayer(draft.payeePayer ?? "");
+    setDescription(draft.description ?? "");
+    setComposerAlternatives(draft.subCategoryAlternatives);
+    // Preselected default account applies only when the utterance named
+    // no account of its own.
+    if (!draft.sourceAccountId && !draft.destinationAccountId) {
+      applyDefaultAccount(nextType);
+    }
+
+    const summary: string[] = [];
+    const typeLabel = TYPE_OPTIONS.find((opt) => opt.value === nextType)?.label;
+    if (typeLabel) summary.push(typeLabel);
+    if (draft.amount !== undefined) summary.push(draft.amount);
+    if (draft.date) summary.push(draft.date);
+    const category = categories.find((c) => c.id === draft.categoryId);
+    const sub = category?.subCategories.find((s) => s.id === draft.subCategoryId);
+    if (sub) summary.push(`${category?.name ?? ""} / ${sub.name}`);
+    if (draft.sourceAccountId) {
+      summary.push(
+        accounts.find((a) => a.id === draft.sourceAccountId)?.name ?? "",
+      );
+    }
+    if (draft.destinationAccountId) {
+      summary.push(
+        accounts.find((a) => a.id === draft.destinationAccountId)?.name ?? "",
+      );
+    }
+    if (draft.payeePayer) summary.push(draft.payeePayer);
+    setComposerFeedbackIsError(false);
+    const notes: string[] = [];
+    if (draft.ambiguity?.kind === "TOP_UP_INTENT") {
+      notes.push("Top-up detected: pick the correct transaction type yourself.");
+    }
+    if (draft.notes.includes("account-ambiguous")) {
+      notes.push("Account name matched several accounts: double-check the account selects.");
+    }
+    if (draft.notes.includes("category-type-mismatch-dropped")) {
+      notes.push("Category could not be matched to this type: choose one manually.");
+    }
+    setComposerFeedback(
+      `Filled: ${[summary.join(" + "), ...notes].filter(Boolean).join(" ")}`,
+    );
   }
 
   const handleTypeChange = (nextType: TransactionType) => {
@@ -213,6 +318,10 @@ export function CreateTransactionDialog({
     setPayeePayer("");
     setAttachmentUrl(null);
     setError(null);
+    setComposerText("");
+    setComposerFeedback(null);
+    setComposerFeedbackIsError(false);
+    setComposerAlternatives([]);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -275,6 +384,79 @@ export function CreateTransactionDialog({
           className="space-y-4 py-2"
         >
           {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* Quick input: natural-language composer fills the form */}
+          <div className="space-y-2">
+            <Label htmlFor="txn-quick-input">Quick input</Label>
+            <div className="flex gap-2">
+              <Input
+                id="txn-quick-input"
+                placeholder={`e.g. "beli kopi 15rb pakai bca kemarin"`}
+                value={composerText}
+                onChange={(e) => {
+                  setComposerText(e.target.value);
+                  setComposerFeedback(null);
+                  setComposerFeedbackIsError(false);
+                  setComposerAlternatives([]);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    // The form-level Enter-to-advance chain must not fire
+                    // while the composer parses its own input.
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleComposerFill();
+                  }
+                }}
+                enterKeyHint="done"
+                maxLength={500}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0"
+                onClick={handleComposerFill}
+              >
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                Fill form
+              </Button>
+            </div>
+            {/* Reserved height keeps controls from jumping as feedback
+                and chips appear (AGENTS.md Section 6). */}
+            <div className="min-h-5 text-xs">
+              {composerFeedback && (
+                <p
+                  className={
+                    composerFeedbackIsError
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {composerFeedback}
+                </p>
+              )}
+              {composerAlternatives.length > 0 && (
+                <div
+                  className="mt-1 flex flex-wrap gap-1.5"
+                  aria-label="Category alternatives"
+                >
+                  {composerAlternatives.map((alternative) => (
+                    <button
+                      key={alternative.subCategoryId}
+                      type="button"
+                      onClick={() => {
+                        setCategoryId(alternative.categoryId);
+                        setSubCategoryId(alternative.subCategoryId);
+                      }}
+                      className="rounded-full border px-2 py-0.5 text-xs hover:bg-muted"
+                    >
+                      {alternative.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Type Selection */}
           <div className="space-y-2">
