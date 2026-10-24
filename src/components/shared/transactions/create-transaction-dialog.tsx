@@ -300,19 +300,8 @@ export function CreateTransactionDialog({
             </div>
           </div>
 
-          {/* Amount & Date */}
+          {/* Date & Amount */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="txn-amount">Amount</Label>
-              <CurrencyInput
-                id="txn-amount"
-                placeholder="0.00"
-                value={amount}
-                onChange={setAmount}
-                enterKeyHint="next"
-                required
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="txn-date">Date</Label>
               <Input
@@ -320,6 +309,17 @@ export function CreateTransactionDialog({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                enterKeyHint="next"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="txn-amount">Amount</Label>
+              <CurrencyInput
+                id="txn-amount"
+                placeholder="0.00"
+                value={amount}
+                onChange={setAmount}
                 enterKeyHint="next"
                 required
               />

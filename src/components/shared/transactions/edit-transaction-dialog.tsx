@@ -22,17 +22,47 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch, ApiClientError } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
-import type { TransactionView } from "@/features/transactions/types";
+import type {
+  TransactionType,
+  TransactionView,
+} from "@/features/transactions/types";
 import type { CategoryView } from "@/features/categories/types";
 import type { AccountView } from "@/features/accounts/types";
 import { useBudgetForDate } from "@/features/budgets/hooks/use-budget-for-date";
 import { BudgetSnapshot } from "./budget-snapshot";
 import { toast } from "sonner";
+import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 import {
   useEnterToAdvance,
   useSelectHandoff,
 } from "@/lib/hooks/use-enter-to-advance";
+
+const TYPE_OPTIONS: {
+  value: TransactionType;
+  label: string;
+  icon: typeof TrendingUp;
+  color: string;
+}[] = [
+  {
+    value: "EXPENSE",
+    label: "Money Out",
+    icon: TrendingDown,
+    color: "border-red-500 bg-red-50 text-red-700",
+  },
+  {
+    value: "INCOME",
+    label: "Money In",
+    icon: TrendingUp,
+    color: "border-emerald-500 bg-emerald-50 text-emerald-700",
+  },
+  {
+    value: "TRANSFER",
+    label: "Transfer",
+    icon: ArrowRightLeft,
+    color: "border-blue-500 bg-blue-50 text-blue-700",
+  },
+];
 
 interface EditTransactionDialogProps {
   open: boolean;
@@ -269,31 +299,33 @@ export function EditTransactionDialog({
         >
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          {/* Type (read-only) */}
+          {/* Type Selection (locked: type cannot change after creation) */}
           <div className="space-y-2">
-            <Label>Transaction Type</Label>
-            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-              {transaction?.type === "EXPENSE"
-                ? "Money Out"
-                : transaction?.type === "INCOME"
-                  ? "Money In"
-                  : "Transfer"}
+            <div className="grid grid-cols-3 gap-2">
+              {TYPE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled
+                    aria-pressed={transaction?.type === opt.value}
+                    className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-xs font-medium transition-colors disabled:cursor-not-allowed ${
+                      transaction?.type === opt.value
+                        ? opt.color
+                        : "border-muted bg-background text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Amount & Date */}
+          {/* Date & Amount */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit-txn-amount">Amount</Label>
-              <CurrencyInput
-                id="edit-txn-amount"
-                placeholder="0.00"
-                value={amount}
-                onChange={setAmount}
-                enterKeyHint="next"
-                required
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-txn-date">Date</Label>
               <Input
@@ -301,6 +333,17 @@ export function EditTransactionDialog({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                enterKeyHint="next"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-txn-amount">Amount</Label>
+              <CurrencyInput
+                id="edit-txn-amount"
+                placeholder="0.00"
+                value={amount}
+                onChange={setAmount}
                 enterKeyHint="next"
                 required
               />
