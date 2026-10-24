@@ -7,7 +7,9 @@ import {
   useEffect,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { SESSION_EXPIRED_EVENT } from "@/lib/api/client";
 
 export interface AuthUser {
   id: string;
@@ -43,6 +45,7 @@ async function fetchSessionUser(): Promise<AuthUser | null> {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   const refresh = useCallback(async () => {
     try {
@@ -72,6 +75,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  // `apiFetch` signals session expiry (401 from any private endpoint) via a
+  // browser event because it has no router access. Leaving through the router
+  // keeps the navigation sanctioned and lets the session-aware root route
+  // decide between the marketing page and the app.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      // replace, not push: the dead-session screen must not stay in history
+      void router.replace("/");
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
+  }, [router]);
 
   return (
     <SessionContext.Provider value={{ user, isLoading, refresh }}>

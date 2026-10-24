@@ -73,6 +73,48 @@ export class ApiClientError extends Error {
 }
 
 // ---------------------------------------------------------------------------
+// Session-expiry signal
+// ---------------------------------------------------------------------------
+
+/**
+ * Browser event the app shell listens on to navigate away once the API
+ * reports the session is gone. Named here so producer and consumer agree.
+ */
+export const SESSION_EXPIRED_EVENT = "fintracko:session-expired";
+
+/** Collapses a burst of parallel 401s into a single navigation. */
+const SESSION_EXPIRED_COOLDOWN_MS = 2_000;
+
+let lastSessionExpiredSignalAt = 0;
+
+/**
+ * Signals that the session is no longer active.
+ *
+ * `apiFetch` is a plain library function without router access, and
+ * `window.location.assign()` is disallowed for internal navigation, so the
+ * signal is a browser event: the SessionProvider listens for it and runs
+ * `router.replace('/')`. Client-side navigation between private pages
+ * reuses the mounted `(workspace)` layout, so the server-side auth guard
+ * does not re-run and this 401 is the first sign of an expired session —
+ * surfacing it as a retryable error state would be dishonest, since Retry
+ * fails identically. The root route is session-aware: signed-out visitors
+ * get the marketing page, live sessions are sent back into the app.
+ */
+function signalSessionExpired(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastSessionExpiredSignalAt < SESSION_EXPIRED_COOLDOWN_MS) {
+    return;
+  }
+  lastSessionExpiredSignalAt = now;
+
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+}
+
+// ---------------------------------------------------------------------------
 // apiFetch
 // ---------------------------------------------------------------------------
 
@@ -154,6 +196,15 @@ export async function apiFetch<T>(
   const validationErrors = Array.isArray(errorBlock?.validationErrors)
     ? (errorBlock.validationErrors as Array<{ path: string; message: string }>)
     : undefined;
+
+  // UNAUTHORIZED means the session cookie no longer resolves to a live
+  // session (expired, or signed out in another tab). Every private page
+  // depends on it, so signal the app shell to leave for the homepage
+  // instead of surfacing an error state the user can only retry into the
+  // same failure.
+  if (code === "UNAUTHORIZED") {
+    signalSessionExpired();
+  }
 
   throw new ApiClientError(code, message, validationErrors);
 }

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getOnboardingSession } from "@/features/onboarding/guards";
 import { HeroSection } from "@/components/shared/landing/hero-section";
 import { FeatureGrid } from "@/components/shared/landing/feature-grid";
 import { HowItWorks } from "@/components/shared/landing/how-it-works";
@@ -44,6 +46,11 @@ export const metadata: Metadata = {
 /**
  * Public marketing landing page — the root route (`/`).
  *
+ * Session-aware: when the request carries a live session, the page skips the
+ * landing content entirely and sends the visitor straight to the app
+ * (`/transactions`) instead of rendering a session-dependent nav CTA.
+ * Signed-out visitors keep seeing the marketing page.
+ *
  * Composed of section components imported from
  * `src/components/shared/landing/`. NavBar and Footer are provided
  * by the `(marketing)` layout — this page only renders the content
@@ -59,7 +66,13 @@ export const metadata: Metadata = {
  * (previously Next.js logos, Vercel links) in compliance with
  * TASK_ROADMAP.md Task 2.1.
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await getOnboardingSession();
+
+  if (session?.user?.id) {
+    redirect("/transactions");
+  }
+
   return (
     <>
       <StructuredData />
