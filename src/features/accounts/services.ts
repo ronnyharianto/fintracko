@@ -132,6 +132,8 @@ export async function updateAccount(
   accountId: string,
   data: UpdateAccountInput,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const account = await db.financialAccount.findFirst({
     where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true, name: true },
@@ -140,8 +142,6 @@ export async function updateAccount(
   if (!account) {
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   if (data.name !== account.name) {
     const existing = await db.financialAccount.findUnique({
@@ -183,6 +183,8 @@ export async function archiveAccount(
   workspaceId: string,
   accountId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const account = await db.financialAccount.findFirst({
     where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true },
@@ -191,8 +193,6 @@ export async function archiveAccount(
   if (!account) {
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.financialAccount.update({
     where: { id: accountId },
@@ -210,6 +210,8 @@ export async function unarchiveAccount(
   workspaceId: string,
   accountId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const account = await db.financialAccount.findFirst({
     where: { id: accountId, workspaceId },
     select: { id: true, workspaceId: true },
@@ -218,8 +220,6 @@ export async function unarchiveAccount(
   if (!account) {
     throw new AccountServiceError("ACCOUNT_NOT_FOUND", "Account not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.financialAccount.update({
     where: { id: accountId },

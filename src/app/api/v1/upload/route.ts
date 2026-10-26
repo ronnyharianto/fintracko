@@ -11,6 +11,10 @@ import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
 import { success, failure } from "@/lib/api/envelope";
 import { requireEnv } from "@/lib/env";
+import {
+  readBoundedFormData,
+  RequestBodyTooLargeError,
+} from "@/lib/api/read-bounded-form-data";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
@@ -50,15 +54,7 @@ function detectImageType(bytes: Buffer): string | null {
 export async function POST(request: NextRequest) {
   return withPipeline(request, { requireOnboarding: true }, async () => {
     try {
-      const contentLength = Number(request.headers.get("content-length"));
-      if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_SIZE) {
-        return failure(
-          "BAD_REQUEST",
-          "Request too large. Maximum image size is 2MB.",
-        );
-      }
-
-      const formData = await request.formData();
+      const formData = await readBoundedFormData(request, MAX_REQUEST_SIZE);
       const file = formData.get("file");
 
       if (!(file instanceof File)) {
@@ -115,7 +111,13 @@ export async function POST(request: NextRequest) {
       }
 
       return success({ url: imgurData.data.link });
-    } catch {
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return failure(
+          "BAD_REQUEST",
+          "Request too large. Maximum image size is 2MB.",
+        );
+      }
       return failure(
         "INTERNAL_SERVER_ERROR",
         "Failed to upload image. Please try again.",

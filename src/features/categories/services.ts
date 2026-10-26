@@ -123,6 +123,8 @@ export async function updateCategory(
   categoryId: string,
   data: UpdateCategoryInput,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const category = await db.category.findFirst({
     where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true, name: true, type: true },
@@ -131,8 +133,6 @@ export async function updateCategory(
   if (!category) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   if (data.name !== category.name) {
     const existing = await db.category.findUnique({
@@ -180,6 +180,8 @@ export async function archiveCategory(
   workspaceId: string,
   categoryId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const category = await db.category.findFirst({
     where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true },
@@ -188,8 +190,6 @@ export async function archiveCategory(
   if (!category) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.category.update({
     where: { id: categoryId },
@@ -207,6 +207,8 @@ export async function unarchiveCategory(
   workspaceId: string,
   categoryId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const category = await db.category.findFirst({
     where: { id: categoryId, workspaceId },
     select: { id: true, workspaceId: true },
@@ -215,8 +217,6 @@ export async function unarchiveCategory(
   if (!category) {
     throw new CategoryServiceError("CATEGORY_NOT_FOUND", "Category not found");
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.category.update({
     where: { id: categoryId },
@@ -305,6 +305,8 @@ export async function updateSubCategory(
   subCategoryId: string,
   data: UpdateSubCategoryInput,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const subCategory = await db.subCategory.findFirst({
     where: { id: subCategoryId, workspaceId },
     select: { id: true, workspaceId: true, name: true, categoryId: true },
@@ -316,8 +318,6 @@ export async function updateSubCategory(
       "Subcategory not found",
     );
   }
-
-  await requireMembership(userId, workspaceId);
 
   if (data.name !== subCategory.name) {
     const existing = await db.subCategory.findUnique({
@@ -361,6 +361,8 @@ export async function archiveSubCategory(
   categoryId: string,
   subCategoryId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const subCategory = await db.subCategory.findFirst({
     where: { id: subCategoryId, workspaceId },
     select: { id: true, workspaceId: true, categoryId: true },
@@ -372,8 +374,6 @@ export async function archiveSubCategory(
       "Subcategory not found",
     );
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.subCategory.update({
     where: { id: subCategoryId },
@@ -392,6 +392,8 @@ export async function unarchiveSubCategory(
   categoryId: string,
   subCategoryId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const subCategory = await db.subCategory.findFirst({
     where: { id: subCategoryId, workspaceId },
     select: { id: true, workspaceId: true, categoryId: true },
@@ -403,8 +405,6 @@ export async function unarchiveSubCategory(
       "Subcategory not found",
     );
   }
-
-  await requireMembership(userId, workspaceId);
 
   return db.subCategory.update({
     where: { id: subCategoryId },

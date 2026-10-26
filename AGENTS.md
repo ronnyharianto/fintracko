@@ -23,9 +23,7 @@ remaining limitations.
 - Use Prisma through `src/lib/db.ts`; `prisma/schema.prisma` is the data-model
   source of truth. Do not edit generated Prisma output. Prefer Prisma
   operations; if raw SQL is necessary, parameterize it.
-- Prefer plain functions and existing helpers. Introduce abstractions only
-  when they clarify ownership, remove meaningful duplication, or provide a
-  needed test seam. Keep imports within `src` on the `@/*` alias.
+- Prefer plain functions and existing helpers. Introduce abstractions only when they clarify ownership, remove meaningful duplication, or provide a needed test seam. Use relative imports for colocated files within the same route, component, or feature; use the `@/*` alias for imports across those boundaries.
 
 ## Security and data integrity
 
@@ -66,12 +64,6 @@ remaining limitations.
   For TypeScript/application changes, use `npx tsc --noEmit` and
   `npm run lint`; for route, database, or cross-module changes, also run
   `npm run build` when feasible. Check the affected user flow when relevant.
-- Add focused regression tests for workspace isolation, mismatched nested
-  route IDs, and financial mutations (decimal precision, direction,
-  update/delete balance reversal, and archived-resource rejection).
-  Use the configured test runner. If none exists, say so and use the
-  applicable static checks and focused manual validation; don't claim
-  automated coverage or add a test framework for unrelated work.
 - If validation is blocked by missing tools, environment, or services, report
   the exact blocker and run independent checks that remain available. Never
   weaken checks to make a change pass.

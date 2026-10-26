@@ -8,10 +8,10 @@ import { apiFetch } from "@/lib/api/client";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useOwnedWorkspaces } from "@/features/workspaces/hooks/use-owned-workspaces";
-import { WorkspaceCard } from "@/app/(workspace)/settings/workspace/_components/workspace-card";
-import { CreateWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/create-workspace-dialog";
-import { EditWorkspaceDialog } from "@/app/(workspace)/settings/workspace/_components/edit-workspace-dialog";
-import { InviteCollaboratorDialog } from "@/app/(workspace)/settings/workspace/_components/invite-collaborator-dialog";
+import { WorkspaceCard } from "./_components/workspace-card";
+import { CreateWorkspaceDialog } from "./_components/create-workspace-dialog";
+import { EditWorkspaceDialog } from "./_components/edit-workspace-dialog";
+import { InviteCollaboratorDialog } from "./_components/invite-collaborator-dialog";
 
 
 export default function WorkspaceSettingsPage() {

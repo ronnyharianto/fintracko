@@ -347,6 +347,8 @@ export async function updateTransaction(
   transactionId: string,
   data: UpdateTransactionInput,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const existing = await db.financialTransaction.findFirst({
     where: { id: transactionId, workspaceId },
     select: {
@@ -365,8 +367,6 @@ export async function updateTransaction(
       "Transaction not found",
     );
   }
-
-  await requireMembership(userId, workspaceId);
 
   // Merge: use new values or fall back to existing
   const newType = existing.type; // type is not editable
@@ -515,6 +515,8 @@ export async function deleteTransaction(
   workspaceId: string,
   transactionId: string,
 ) {
+  await requireMembership(userId, workspaceId);
+
   const existing = await db.financialTransaction.findFirst({
     where: { id: transactionId, workspaceId },
     select: {
@@ -533,8 +535,6 @@ export async function deleteTransaction(
       "Transaction not found",
     );
   }
-
-  await requireMembership(userId, workspaceId);
 
   const [sourceDelta, destDelta] = balanceEffect(
     existing.type,
