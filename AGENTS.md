@@ -1,205 +1,91 @@
-# Fintracko Agent Rules
+# Fintracko Agent Instructions
 
-These rules apply to every AI agent that reads, reviews, modifies, or validates
-this repository. The goal is predictable, production-quality work in a
-financial application: clear ownership, narrow changes, explicit contracts,
-and evidence from validation.
+Use these project-specific rules when reviewing, changing, or validating this
+financial application. Read the owning code and its callers first; make the
+smallest complete change, preserve unrelated work, and report validation and
+remaining limitations.
 
-## 1. Operating Standard
+## Stack and architecture
 
-- Read the relevant code before proposing or editing anything.
-- Start from the most concrete anchor available: a failing command, bug,
-  route, component, service, schema, or symbol.
-- Before the first edit, identify one local hypothesis about the behavior and
-  one cheap check that could disprove it.
-- Follow the existing ownership boundary. If a file only wires or forwards,
-  step to the nearest function that actually decides or mutates behavior.
-- Prefer the smallest reversible change that fixes the root cause. Do not
-  combine unrelated cleanup, formatting, dependency upgrades, or redesigns.
-- After the first substantive edit, run the narrowest available executable
-  validation before reading broadly or starting another edit.
-- If validation fails, repair the same slice and rerun the same check before
-  expanding scope.
-- Do not claim a change is complete without stating what was validated and
-  what could not be validated.
+- Next.js 16 App Router, React 19, strict TypeScript, Prisma 7, PostgreSQL, and
+  Zod 4. Server Components are the default; use Client Components only for
+  interaction, browser APIs, or client state.
+- Keep route pages and API Route Handlers thin. Put reusable domain logic,
+  schemas, services, and errors under `src/features/<domain>/`.
+- API handlers under `src/app/api/v1/` should use
+  `src/lib/api/pipeline.ts` for session, onboarding, and JSON validation, and
+  `src/lib/api/envelope.ts` for standard responses. Keep domain rules in
+  feature services.
+- Validate untrusted input with Zod. JSON request bodies use the shared
+  `validateBody()` and `sanitizeObject()` pipeline. Validate multipart or
+  other non-JSON input at the route boundary, including its size, format, and
+  fields.
+- Use Prisma through `src/lib/db.ts`; `prisma/schema.prisma` is the data-model
+  source of truth. Do not edit generated Prisma output. Prefer Prisma
+  operations; if raw SQL is necessary, parameterize it.
+- Prefer plain functions and existing helpers. Introduce abstractions only
+  when they clarify ownership, remove meaningful duplication, or provide a
+  needed test seam. Keep imports within `src` on the `@/*` alias.
 
-## 2. Repository Conventions
+## Security and data integrity
 
-- Source code, names, comments, documentation, API contracts, and user-facing
-  text must be written in English.
-- Use TypeScript strict mode and the `@/*` alias for imports within `src`.
-  Avoid deep relative imports across feature boundaries.
-- Preserve the repository's existing formatting and quote style in the file
-  being changed. Do not reformat unrelated code.
-- Use ASCII by default in source and documentation. Use Unicode only when the
-  surrounding file already uses it or the product text clearly requires it.
-- Do not add comments that merely narrate obvious code. Add a short comment
-  only when it explains a non-obvious constraint, security decision, or
-  control-flow tradeoff.
+- Every workspace-scoped read or mutation must authorize the authenticated
+  `userId` as a member of the specified `workspaceId`; owner-only operations
+  must also enforce `role: "OWNER"`. Treat all resource IDs as untrusted.
+- Nested workspace routes must use every parent path ID in authorization and
+  database predicates; checking only a leaf ID is insufficient.
+- Keep related multi-row or multi-model writes atomic, using a Prisma
+  transaction or an equivalent atomic Prisma operation. This is especially
+  important for onboarding, workspace creation, and financial balances.
+- Preserve exact financial arithmetic and transaction/account direction
+  invariants. Reject archived categories or accounts where they cannot be
+  used.
+- Keep production authentication OAuth-only. Preserve the existing
+  development-only email/password sign-in for local seeded accounts; never
+  enable it in production.
+- Never hardcode secrets or production origins, log credentials or sensitive
+  financial data, expose raw provider/database errors, or render untrusted
+  HTML. Return safe errors through the standard API envelope.
 
-## 3. Technology and Architecture
+## UI and contracts
 
-- Use Next.js 16 App Router and React 19. Server Components are the default.
-  Use Client Components only for interaction, browser APIs, client state, or
-  event handlers.
-- Keep layouts and route pages thin. Put reusable business rules, schemas,
-  services, domain errors, and domain types under `src/features/<domain>/`.
-- Route Handlers under `src/app/api/v1/` are transport adapters. They should
-  authenticate, validate, invoke a feature service, map expected errors, and
-  return the standard envelope. They must not own domain rules.
-- Use the shared API pipeline in `src/lib/api/pipeline.ts` for API handlers:
-  session, optional onboarding guard, validation, and sanitization.
-- Use the response builders in `src/lib/api/envelope.ts`. Never invent a
-  second response-envelope format.
-- Use Prisma through the singleton in `src/lib/db.ts`. Do not edit generated
-  Prisma output by hand. Avoid raw SQL; if it is explicitly necessary, use
-  parameterized Prisma raw queries.
-- Use functional modules and plain functions by default. Use a class when it
-  represents a real domain concept or stable error contract, as with
-  `WorkspaceServiceError`; do not introduce classes merely to make code look
-  object-oriented.
-- Reuse an existing helper or abstraction when it owns the same behavior.
-  Create a new abstraction only when it removes meaningful duplication,
-  clarifies a boundary, or provides a required test seam.
+- Follow existing design tokens and shared components in `src/components/ui/`.
+  Use `apiFetch()` for browser calls to Fintracko API routes and `withToast()`
+  for async actions that only need toast handling.
+- Keep user-facing states honest: loading, empty, success, failure, and
+  unavailable actions. Preserve responsive layouts and accessible labels.
+- Keep public contracts stable. Check callers and update migrations or
+  documentation when changing schemas, API responses, or database fields.
+- Do not fake persistence or success. Catch `unknown`, use typed domain
+  errors/results, and map expected failures to explicit error codes and HTTP
+  statuses. Unexpected errors must not expose internal details.
 
-## 4. Data and Security Rules
+## Validation and delivery
 
-- The Prisma schema at `prisma/schema.prisma` is the source of truth for the
-  data model. Check it before adding or renaming fields.
-- Validate all untrusted input with Zod v4. Domain schemas belong in the
-  feature schema module, not inside route handlers or UI components.
-- API request bodies must pass through the shared `validateBody()` and
-  `sanitizeObject()` pipeline before business logic or database writes.
-- Never use `dangerouslySetInnerHTML`, unsanitized dynamic URLs, or ad hoc
-  HTML injection. React text rendering is the safe default.
-- Every workspace-scoped read or mutation must enforce membership using both
-  `workspaceId` and authenticated `userId`. Owner-only operations must also
-  enforce `role: "OWNER"`. Treat every resource identifier as attacker-
-  controlled; prevent IDOR by construction.
-- For nested workspace routes, every parent path identifier must be consumed
-  by the authorization and database predicate. A leaf-ID-only lookup is not
-  sufficient, even when the leaf service independently checks membership.
-- Mutations affecting multiple rows or models must use a Prisma transaction.
-  Keep related writes atomic, especially onboarding, workspace creation, and
-  financial balance updates.
-- Never hardcode secrets, credentials, tokens, or production origins. Read
-  required configuration through the existing environment helpers and keep
-  real values out of `.env.example` and source control.
-- Never log session tokens, passwords, credentials, financial secrets, or raw
-  provider/database errors. Return safe generic API errors to clients.
-- Preserve OAuth-only authentication. Do not add password or credential flows
-  unless the product requirements and authentication configuration explicitly
-  change.
+- Run the narrowest relevant validation after completing a coherent change.
+  For TypeScript/application changes, use `npx tsc --noEmit` and
+  `npm run lint`; for route, database, or cross-module changes, also run
+  `npm run build` when feasible. Check the affected user flow when relevant.
+- Add focused regression tests for workspace isolation, mismatched nested
+  route IDs, and financial mutations (decimal precision, direction,
+  update/delete balance reversal, and archived-resource rejection).
+  Use the configured test runner. If none exists, say so and use the
+  applicable static checks and focused manual validation; don't claim
+  automated coverage or add a test framework for unrelated work.
+- If validation is blocked by missing tools, environment, or services, report
+  the exact blocker and run independent checks that remain available. Never
+  weaken checks to make a change pass.
+- Inspect `git status` before editing. Preserve changes you did not make;
+  don't discard work, commit, create branches, amend, or force-push unless
+  explicitly asked. Keep changes scoped, review staged files before a
+  requested commit, and verify the final worktree.
+- In reviews, put bugs, regressions, risks, and missing tests first, ordered
+  by severity. Final reports should state what changed, what was validated,
+  and any remaining risk or blocker.
 
-## 5. Error and Contract Design
+## Style
 
-- Use discriminated results or typed domain errors instead of matching error
-  message strings. Catch `unknown`, not `any`.
-- Expected domain failures must map to explicit API error codes and standard
-  HTTP statuses through the envelope helpers.
-- Unexpected exceptions must fall through to a safe generic server error;
-  never expose stack traces, ORM messages, or provider internals.
-- Keep public contracts stable. When changing a schema, API response, or
-  database field, inspect all callers and update documentation or migrations
-  when required.
-- Do not silently fake persistence or success. A control that is unavailable
-  in the current MVP must be disabled, clearly marked as unavailable, or
-  removed rather than pretending to work.
-
-## 6. Frontend Rules
-
-- Match the existing Fintracko design tokens and component patterns in
-  `src/components/ui/`. Prefer shared UI primitives over duplicate markup.
-- Keep user-facing workflows complete: loading, empty, success, failure, and
-  disabled states must behave honestly.
-- Use `apiFetch()` for browser calls to Fintracko API routes so envelope
-  parsing and client errors remain consistent.
-- Keep browser-only auth in `src/lib/auth-client.ts` and shared client session
-  state in the existing session provider. Never import server Prisma/auth
-  modules into Client Components.
-- Use stable dimensions and responsive layouts. Do not let dynamic labels,
-  errors, or loading states cause controls to jump or overlap.
-- Use icons from the existing icon library inside icon-capable controls and
-  provide accessible labels for unfamiliar icon-only controls.
-- Avoid adding a new client dependency when an existing local helper or
-  installed package solves the problem.
-- Use `withToast()` from `@/lib/toast` for async actions that show success/
-  error toast notifications. It eliminates the repeated try/catch +
-  toast.success/toast.error pattern. Do not use it when the action also
-  manages loading state or has side effects beyond the toast (e.g. closing
-  a dialog, resetting a form) — in those cases the explicit try/catch is
-  clearer.
-
-## 7. Validation Gates
-
-Run the narrowest relevant check first, then broaden when the change warrants
-it. For normal TypeScript or application changes, use:
-
-```bash
-npx tsc --noEmit
-npm run lint
-```
-
-For route, database, build, or cross-module changes, also run:
-
-```bash
-npm run build
-```
-
-Additional requirements:
-
-- Run a focused lint command for a narrow change when possible.
-- Check the actual route flow for redirects, authentication, loading, and
-  error behavior when the change affects a user-facing workflow.
-- Do not weaken lint rules, TypeScript settings, validation, or security
-  checks just to make a change pass.
-- Security-sensitive scoped routes must have a focused regression test for
-  cross-workspace access and mismatched nested path identifiers.
-- Financial mutation tests must cover exact decimal arithmetic, account
-  direction invariants, balance reversal on update/delete, and archived
-  category/account rejection.
-- If a command cannot run because of missing environment variables, services,
-  or tools, report the exact blocker and run every independent check that is
-  still available.
-- This repository may not contain automated tests for every feature. Static
-  typechecking, linting, build output, and focused manual flow checks are still
-  required evidence; do not imply tests exist when they do not.
-
-## 8. Git and Worktree Discipline
-
-- Inspect `git status` before editing or committing.
-- Never discard, revert, or overwrite changes you did not make. Work with them
-  unless they make the requested change impossible.
-- Do not use destructive commands such as `git reset --hard` or
-  `git checkout --` unless the user explicitly requests that exact operation.
-- Do not commit, create branches, amend history, or force-push unless the user
-  explicitly asks.
-- Keep commits focused and describe the behavior or capability changed.
-- Before committing, review the staged scope and ensure unrelated files are
-  not included. After committing, verify the worktree and report the commit.
-
-## 9. Communication and Completion
-
-- Keep progress updates short and concrete: what was learned, what changed,
-  and what validation is next.
-- Ask a clarifying question only when an ambiguity changes the implementation
-  or could cause data loss. Otherwise make the safest local assumption and
-  state it.
-- In reviews, list bugs, regressions, risks, and missing tests first, ordered
-  by severity. Put summaries and positive observations after findings.
-- Final responses must include the files or behavior changed, validation
-  results, and any remaining risk or blocker. Do not hide failed checks.
-
-## 10. Definition of Done
-
-A change is complete only when:
-
-1. The owning code path and relevant callers were checked.
-2. The implementation is scoped to the request and follows existing
-   architecture.
-3. Input, authorization, tenant isolation, and error behavior are covered.
-4. Relevant loading, empty, success, and failure states are honest.
-5. The narrowest executable validation passes, followed by broader checks when
-   appropriate.
-6. Documentation or migrations are updated when the contract changed.
-7. The final response clearly reports the outcome and remaining limitations.
+- Write source, documentation, names, and user-facing text in English.
+- Preserve local formatting; avoid unrelated reformatting. Use ASCII by
+  default and add comments only to explain non-obvious constraints or
+  decisions.
