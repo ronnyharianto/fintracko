@@ -3,6 +3,8 @@
 A multi-tenant financial tracking application built with Next.js and React.
 Provides workspace collaboration, financial account management, budget tracking, and onboarding workflows.
 
+**Production app:** [fintracko.vercel.app](https://fintracko.vercel.app)
+
 ## Tech Stack
 
 - Next.js 16 (App Router, Turbopack)
@@ -181,7 +183,7 @@ build configuration is required. Apply schema migrations separately with
 - **Imgur receipts** — uploaded receipt images are public URLs on Imgur's free
   tier; plan a migration to private storage if this becomes a requirement.
 - **Upload rate limiting** — configure a Vercel Firewall rate-limit rule for
-  `POST /api/v1/upload` before public launch. The route requires an authenticated
+  `POST /api/v1/upload` in production. The route requires an authenticated
   session, but app-instance memory is not a reliable rate-limit store on Vercel.
 
 ## Project Structure
