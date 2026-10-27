@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import type { WorkspaceSummary, PendingInvitation } from "@/features/workspaces/types";
 import { ApiClientError, apiFetch } from "@/lib/api/client";
+import { usePendingInvitations } from "@/features/workspaces/hooks/use-pending-invitations";
 
 interface WorkspaceContextType {
   workspaces: WorkspaceSummary[];
@@ -18,6 +19,7 @@ interface WorkspaceContextType {
   isLoading: boolean;
   refreshWorkspaces: () => Promise<void>;
   invitations: PendingInvitation[];
+  isInvitationsLoading: boolean;
   refreshInvitations: () => Promise<void>;
   acceptInvitation: (invitationId: string) => Promise<void>;
   rejectInvitation: (invitationId: string) => Promise<void>;
@@ -79,19 +81,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-
-  const fetchInvitations = useCallback(async () => {
-    try {
-      const { invitations: list } = await apiFetch<{
-        invitations: PendingInvitation[];
-      }>("/api/v1/invitations");
-      setInvitations(list || []);
-    } catch {
-      // Silently ignore — invitations are non-critical
-    }
-  }, []);
-
   const applyWorkspaces = useCallback((list: WorkspaceSummary[]) => {
     setWorkspaces(list);
 
@@ -121,7 +110,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     applyWorkspaces(list);
   }, [applyWorkspaces]);
 
-  // Mount fetch + invitation polling
+  const {
+    invitations,
+    isLoading: isInvitationsLoading,
+    refetch: refreshInvitations,
+    acceptInvitation,
+    rejectInvitation,
+  } = usePendingInvitations({ onAccepted: fetchAndApply });
+
+  // Mount fetch
   useEffect(() => {
     let cancelled = false;
 
@@ -129,7 +126,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       try {
         if (!cancelled) {
           await fetchAndApply();
-          await fetchInvitations();
         }
       } catch {
         if (!cancelled) console.error("Failed to fetch workspaces");
@@ -138,20 +134,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
-    const pollInterval = Number(
-      process.env.NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS,
-    ) || 30000;
-    const interval = setInterval(() => {
-      if (!cancelled) {
-        void fetchInvitations();
-      }
-    }, pollInterval);
-
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
-  }, [fetchAndApply, fetchInvitations]);
+  }, [fetchAndApply]);
 
   const refreshWorkspaces = useCallback(async () => {
     try {
@@ -162,21 +148,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, [fetchAndApply]);
-
-  const handleAcceptInvitation = useCallback(async (invitationId: string) => {
-    await apiFetch(`/api/v1/invitations/${invitationId}/accept`, {
-      method: "POST",
-    });
-    await fetchInvitations();
-    await fetchAndApply();
-  }, [fetchInvitations, fetchAndApply]);
-
-  const handleRejectInvitation = useCallback(async (invitationId: string) => {
-    await apiFetch(`/api/v1/invitations/${invitationId}/reject`, {
-      method: "POST",
-    });
-    await fetchInvitations();
-  }, [fetchInvitations]);
 
   const setActiveWorkspaceId = useCallback((id: string) => {
     setActiveWorkspaceIdState(id);
@@ -191,9 +162,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refreshWorkspaces,
       invitations,
-      refreshInvitations: fetchInvitations,
-      acceptInvitation: handleAcceptInvitation,
-      rejectInvitation: handleRejectInvitation,
+      isInvitationsLoading,
+      refreshInvitations,
+      acceptInvitation,
+      rejectInvitation,
     }),
     [
       workspaces,
@@ -202,9 +174,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refreshWorkspaces,
       invitations,
-      fetchInvitations,
-      handleAcceptInvitation,
-      handleRejectInvitation,
+      isInvitationsLoading,
+      refreshInvitations,
+      acceptInvitation,
+      rejectInvitation,
     ],
   );
 

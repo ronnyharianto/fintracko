@@ -6,7 +6,7 @@ import type { PendingInvitation } from "@/features/workspaces/types";
 
 export interface UsePendingInvitationsOptions {
   /** Called after an invitation is accepted, so the caller can refresh related data. */
-  onAccepted?: () => void;
+  onAccepted?: () => void | Promise<void>;
 }
 
 export interface UsePendingInvitationsResult {
@@ -104,7 +104,7 @@ export function usePendingInvitations(
         method: "POST",
       });
       await refetch();
-      onAccepted?.();
+      await onAccepted?.();
     },
     [refetch, onAccepted],
   );

@@ -6,11 +6,12 @@
  */
 
 import type { NextResponse } from "next/server";
+import type { FailureEnvelope } from "@/lib/api/envelope";
 import {
-  failure,
-  type ApiErrorCode,
-  type FailureEnvelope,
-} from "@/lib/api/envelope";
+  handleServiceErrors,
+  serviceErrorFailure,
+  type ServiceErrorMapping,
+} from "@/lib/api/service-errors";
 
 /** Stable machine-readable codes thrown by the transaction services. */
 export type TransactionServiceErrorCode =
@@ -35,10 +36,7 @@ export class TransactionServiceError extends Error {
 }
 
 /** Target failure envelope for a given service error code. */
-export interface TransactionErrorMapping {
-  code: ApiErrorCode;
-  message: string;
-}
+export type TransactionErrorMapping = ServiceErrorMapping;
 
 /**
  * Map a thrown error to a ready-to-return failure envelope.
@@ -48,11 +46,12 @@ export function transactionErrorFailure(
   err: unknown,
   messages: Partial<Record<TransactionServiceErrorCode, TransactionErrorMapping>>,
 ): NextResponse<FailureEnvelope> | null {
-  if (!(err instanceof TransactionServiceError)) {
-    return null;
-  }
-  const mapped = messages[err.code];
-  return mapped ? failure(mapped.code, mapped.message) : null;
+  return serviceErrorFailure(
+    err,
+    (error): error is TransactionServiceError =>
+      error instanceof TransactionServiceError,
+    messages,
+  );
 }
 
 /**
@@ -65,13 +64,11 @@ export function handleTransactionErrors<Args extends unknown[]>(
   fallbackMessage: string,
   handler: (...args: Args) => Promise<NextResponse>,
 ): (...args: Args) => Promise<NextResponse> {
-  return async (...args: Args) => {
-    try {
-      return await handler(...args);
-    } catch (err) {
-      const mapped = transactionErrorFailure(err, messages);
-      if (mapped) return mapped;
-      return failure("INTERNAL_SERVER_ERROR", fallbackMessage);
-    }
-  };
+  return handleServiceErrors(
+    (error): error is TransactionServiceError =>
+      error instanceof TransactionServiceError,
+    messages,
+    fallbackMessage,
+    handler,
+  );
 }

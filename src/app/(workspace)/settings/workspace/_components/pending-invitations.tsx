@@ -5,23 +5,29 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Check, X } from 'lucide-react';
 import { withToast } from '@/lib/toast';
-import { usePendingInvitations } from '@/features/workspaces/hooks/use-pending-invitations';
+import { useWorkspace } from '@/components/shared/workspace/workspace-context';
 
 interface PendingInvitationsProps {
   onAccepted?: () => void;
 }
 
 export function PendingInvitations({ onAccepted }: PendingInvitationsProps) {
-  const { invitations, isLoading, acceptInvitation, rejectInvitation } =
-    usePendingInvitations();
+  const {
+    invitations,
+    isInvitationsLoading,
+    acceptInvitation,
+    rejectInvitation,
+  } = useWorkspace();
 
   const handleAccept = async (invitationId: string) => {
     await withToast(
-      () => acceptInvitation(invitationId),
+      async () => {
+        await acceptInvitation(invitationId);
+        onAccepted?.();
+      },
       'Invitation accepted. You are now a collaborator.',
       'Failed to accept invitation.',
     );
-    onAccepted?.();
   };
 
   const handleReject = (invitationId: string) =>
@@ -31,7 +37,7 @@ export function PendingInvitations({ onAccepted }: PendingInvitationsProps) {
       'Failed to reject invitation.',
     );
 
-  if (isLoading) {
+  if (isInvitationsLoading) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground animate-pulse">

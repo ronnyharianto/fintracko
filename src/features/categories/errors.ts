@@ -6,11 +6,12 @@
  */
 
 import type { NextResponse } from "next/server";
+import type { FailureEnvelope } from "@/lib/api/envelope";
 import {
-  failure,
-  type ApiErrorCode,
-  type FailureEnvelope,
-} from "@/lib/api/envelope";
+  handleServiceErrors,
+  serviceErrorFailure,
+  type ServiceErrorMapping,
+} from "@/lib/api/service-errors";
 
 /** Stable machine-readable codes thrown by the category services. */
 export type CategoryServiceErrorCode =
@@ -35,10 +36,7 @@ export class CategoryServiceError extends Error {
 }
 
 /** Target failure envelope for a given service error code. */
-export interface CategoryErrorMapping {
-  code: ApiErrorCode;
-  message: string;
-}
+export type CategoryErrorMapping = ServiceErrorMapping;
 
 /**
  * Map a thrown error to a ready-to-return failure envelope.
@@ -48,11 +46,12 @@ export function categoryErrorFailure(
   err: unknown,
   messages: Partial<Record<CategoryServiceErrorCode, CategoryErrorMapping>>,
 ): NextResponse<FailureEnvelope> | null {
-  if (!(err instanceof CategoryServiceError)) {
-    return null;
-  }
-  const mapped = messages[err.code];
-  return mapped ? failure(mapped.code, mapped.message) : null;
+  return serviceErrorFailure(
+    err,
+    (error): error is CategoryServiceError =>
+      error instanceof CategoryServiceError,
+    messages,
+  );
 }
 
 /**
@@ -65,13 +64,11 @@ export function handleCategoryErrors<Args extends unknown[]>(
   fallbackMessage: string,
   handler: (...args: Args) => Promise<NextResponse>,
 ): (...args: Args) => Promise<NextResponse> {
-  return async (...args: Args) => {
-    try {
-      return await handler(...args);
-    } catch (err) {
-      const mapped = categoryErrorFailure(err, messages);
-      if (mapped) return mapped;
-      return failure("INTERNAL_SERVER_ERROR", fallbackMessage);
-    }
-  };
+  return handleServiceErrors(
+    (error): error is CategoryServiceError =>
+      error instanceof CategoryServiceError,
+    messages,
+    fallbackMessage,
+    handler,
+  );
 }

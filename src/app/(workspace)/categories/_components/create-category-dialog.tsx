@@ -19,9 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { TransactionType } from "@/features/categories/types";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: "INCOME", label: "Income" },
@@ -46,17 +47,13 @@ export function CreateCategoryDialog({
 
   const [name, setName] = useState("");
   const [type, setType] = useState<TransactionType>(defaultType);
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isPending: isCreating, error, run } = useAsyncFormAction();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !activeWorkspaceId) return;
 
-    setIsCreating(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(
         `/api/v1/workspaces/${activeWorkspaceId}/categories`,
         {
@@ -64,18 +61,12 @@ export function CreateCategoryDialog({
           body: { name: name.trim(), type },
         },
       );
-      setName("");
-      onOpenChange(false);
-      onCreated();
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to create category.";
-      setError(message);
-    } finally {
-      setIsCreating(false);
-    }
+    }, "Failed to create category.");
+    if (errorMessage !== null) return;
+
+    setName("");
+    onOpenChange(false);
+    onCreated();
   };
 
   return (

@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { formatCurrency } from "@/lib/utils";
 import { parseDate } from "@/lib/date-period";
@@ -34,6 +34,7 @@ import {
   formatPeriodRange,
 } from "./budget-period";
 import { YearPicker } from "./year-picker";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 /**
  * `SINGLE` covers one period, `UNTIL` covers a chosen end period, and `ONGOING`
@@ -82,8 +83,12 @@ export function CreateBudgetDialog({
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("ONGOING");
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isPending: isCreating,
+    error,
+    clearError,
+    run,
+  } = useAsyncFormAction();
 
   useEffect(() => {
     if (!open || !activeWorkspaceId) return;
@@ -148,7 +153,7 @@ export function CreateBudgetDialog({
     setStartPeriodValue(defaultPeriodValue("MONTHLY", anchorDate));
     setEndPeriodValue(defaultPeriodValue("MONTHLY", anchorDate));
     setRepeatMode("ONGOING");
-    setError(null);
+    clearError();
   };
 
   const handleIntervalChange = (next: BudgetInterval) => {
@@ -167,10 +172,7 @@ export function CreateBudgetDialog({
     e.preventDefault();
     if (!activeWorkspaceId || !startBounds || !canSubmit) return;
 
-    setIsCreating(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(`/api/v1/workspaces/${activeWorkspaceId}/budgets`, {
         method: "POST",
         body: {
@@ -181,18 +183,12 @@ export function CreateBudgetDialog({
           ...(rangeEndDate ? { endDate: rangeEndDate } : {}),
         },
       });
-      resetForm();
-      onOpenChange(false);
-      onCreated();
-    } catch (err) {
-      setError(
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to create budget.",
-      );
-    } finally {
-      setIsCreating(false);
-    }
+    }, "Failed to create budget.");
+    if (errorMessage !== null) return;
+
+    resetForm();
+    onOpenChange(false);
+    onCreated();
   };
 
   const amountLabel = Number(amount) > 0 ? formatCurrency(Number(amount)) : null;

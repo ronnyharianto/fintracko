@@ -12,7 +12,12 @@
  * their generic `INTERNAL_SERVER_ERROR` fallback.
  */
 import type { NextResponse } from 'next/server';
-import { failure, type ApiErrorCode, type FailureEnvelope } from '@/lib/api/envelope';
+import type { FailureEnvelope } from '@/lib/api/envelope';
+import {
+  handleServiceErrors,
+  serviceErrorFailure,
+  type ServiceErrorMapping,
+} from '@/lib/api/service-errors';
 
 /** Stable machine-readable codes thrown by the workspace services. */
 export type WorkspaceServiceErrorCode =
@@ -40,10 +45,7 @@ export class WorkspaceServiceError extends Error {
 }
 
 /** Target failure envelope for a given service error code. */
-export interface WorkspaceErrorMapping {
-  code: ApiErrorCode;
-  message: string;
-}
+export type WorkspaceErrorMapping = ServiceErrorMapping;
 
 /**
  * Map a thrown error to a ready-to-return failure envelope.
@@ -57,11 +59,12 @@ export function workspaceErrorFailure(
   err: unknown,
   messages: Partial<Record<WorkspaceServiceErrorCode, WorkspaceErrorMapping>>
 ): NextResponse<FailureEnvelope> | null {
-  if (!(err instanceof WorkspaceServiceError)) {
-    return null;
-  }
-  const mapped = messages[err.code];
-  return mapped ? failure(mapped.code, mapped.message) : null;
+  return serviceErrorFailure(
+    err,
+    (error): error is WorkspaceServiceError =>
+      error instanceof WorkspaceServiceError,
+    messages,
+  );
 }
 
 /**
@@ -93,13 +96,11 @@ export function handleWorkspaceErrors<Args extends unknown[]>(
   fallbackMessage: string,
   handler: (...args: Args) => Promise<NextResponse>
 ): (...args: Args) => Promise<NextResponse> {
-  return async (...args: Args) => {
-    try {
-      return await handler(...args);
-    } catch (err) {
-      const mapped = workspaceErrorFailure(err, messages);
-      if (mapped) return mapped;
-      return failure('INTERNAL_SERVER_ERROR', fallbackMessage);
-    }
-  };
+  return handleServiceErrors(
+    (error): error is WorkspaceServiceError =>
+      error instanceof WorkspaceServiceError,
+    messages,
+    fallbackMessage,
+    handler,
+  );
 }

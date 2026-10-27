@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { CalendarRange } from "lucide-react";
+import { GroupingToggle } from "@/components/shared/grouping-toggle";
 
 interface TransactionGroupingProps {
   grouped: boolean;
@@ -20,16 +20,12 @@ export function TransactionGrouping({
   onChange,
 }: TransactionGroupingProps) {
   return (
-    <Button
-      variant={grouped ? "secondary" : "outline"}
-      size="sm"
-      className="h-9 w-9 shrink-0"
-      aria-label="Group by day"
-      aria-pressed={grouped}
-      title={grouped ? "Grouped by day" : "Group by day"}
-      onClick={() => onChange(!grouped)}
-    >
-      <CalendarRange className="h-3.5 w-3.5" />
-    </Button>
+    <GroupingToggle
+      grouped={grouped}
+      label="Group by day"
+      activeLabel="Grouped by day"
+      icon={CalendarRange}
+      onChange={onChange}
+    />
   );
 }

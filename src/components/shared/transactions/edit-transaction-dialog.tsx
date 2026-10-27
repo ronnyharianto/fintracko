@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type {
   TransactionType,
@@ -37,6 +37,7 @@ import {
   useEnterToAdvance,
   useSelectHandoff,
 } from "@/lib/hooks/use-enter-to-advance";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 const TYPE_OPTIONS: {
   value: TransactionType;
@@ -88,8 +89,12 @@ export function EditTransactionDialog({
   const [description, setDescription] = useState("");
   const [payeePayer, setPayeePayer] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isPending: isSaving,
+    error,
+    clearError,
+    run,
+  } = useAsyncFormAction();
 
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
@@ -144,7 +149,7 @@ export function EditTransactionDialog({
       setDescription(transaction.description ?? "");
       setPayeePayer(transaction.payeePayer ?? "");
       setAttachmentUrl(transaction.attachmentUrl ?? null);
-      setError(null);
+      clearError();
     }
   } else if (!open && prevOpen) {
     setPrevOpen(false);
@@ -228,17 +233,14 @@ export function EditTransactionDialog({
     setDescription("");
     setPayeePayer("");
     setAttachmentUrl(null);
-    setError(null);
-  }, []);
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeWorkspaceId || !transaction || !amount) return;
 
-    setIsSaving(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(
         `/api/v1/workspaces/${activeWorkspaceId}/transactions/${transaction.id}`,
         {
@@ -255,20 +257,16 @@ export function EditTransactionDialog({
           },
         },
       );
-      toast.success("Transaction updated");
-      resetForm();
-      onOpenChange(false);
-      onUpdated();
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to update transaction.";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setIsSaving(false);
+    }, "Failed to update transaction.");
+    if (errorMessage !== null) {
+      toast.error(errorMessage);
+      return;
     }
+
+    toast.success("Transaction updated");
+    resetForm();
+    onOpenChange(false);
+    onUpdated();
   };
 
   const showSource =

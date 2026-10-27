@@ -13,9 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { AccountView } from "@/features/accounts/types";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 const TYPE_LABELS: Record<string, string> = {
   CHECKING: "Checking",
@@ -52,8 +53,12 @@ export function EditAccountDialog({
 
   const [name, setName] = useState("");
   const [initialBalance, setInitialBalance] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isPending: isSaving,
+    error,
+    clearError,
+    run,
+  } = useAsyncFormAction();
 
   // Adjust state during render (React docs: you-might-not-need-an-effect)
   // instead of a setState-in-effect, which the lint rule flags.
@@ -63,7 +68,7 @@ export function EditAccountDialog({
     if (account && open) {
       setName(account.name);
       setInitialBalance(account.initialBalance);
-      setError(null);
+      clearError();
     }
   }
 
@@ -71,10 +76,7 @@ export function EditAccountDialog({
     e.preventDefault();
     if (!name.trim() || !activeWorkspaceId || !account) return;
 
-    setIsSaving(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(
         `/api/v1/workspaces/${activeWorkspaceId}/accounts/${account.id}`,
         {
@@ -85,17 +87,11 @@ export function EditAccountDialog({
           },
         },
       );
-      onOpenChange(false);
-      onUpdated();
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to update account.";
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
+    }, "Failed to update account.");
+    if (errorMessage !== null) return;
+
+    onOpenChange(false);
+    onUpdated();
   };
 
   if (!account) return null;

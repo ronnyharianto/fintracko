@@ -5,12 +5,13 @@
  * Only *expected* domain failures are typed here. Unexpected errors
  * fall through to the generic `INTERNAL_SERVER_ERROR` fallback.
  */
-import type { NextResponse } from "next/server";
 import {
-  failure,
-  type ApiErrorCode,
-  type FailureEnvelope,
-} from "@/lib/api/envelope";
+  handleServiceErrors,
+  serviceErrorFailure,
+  type ServiceErrorMapping,
+} from "@/lib/api/service-errors";
+import type { NextResponse } from "next/server";
+import type { FailureEnvelope } from "@/lib/api/envelope";
 
 /** Stable machine-readable codes thrown by the account services. */
 export type AccountServiceErrorCode =
@@ -33,10 +34,7 @@ export class AccountServiceError extends Error {
 }
 
 /** Target failure envelope for a given service error code. */
-export interface AccountErrorMapping {
-  code: ApiErrorCode;
-  message: string;
-}
+export type AccountErrorMapping = ServiceErrorMapping;
 
 /**
  * Map a thrown error to a ready-to-return failure envelope.
@@ -48,11 +46,12 @@ export function accountErrorFailure(
   err: unknown,
   messages: Partial<Record<AccountServiceErrorCode, AccountErrorMapping>>,
 ): NextResponse<FailureEnvelope> | null {
-  if (!(err instanceof AccountServiceError)) {
-    return null;
-  }
-  const mapped = messages[err.code];
-  return mapped ? failure(mapped.code, mapped.message) : null;
+  return serviceErrorFailure(
+    err,
+    (error): error is AccountServiceError =>
+      error instanceof AccountServiceError,
+    messages,
+  );
 }
 
 /**
@@ -65,13 +64,11 @@ export function handleAccountErrors<Args extends unknown[]>(
   fallbackMessage: string,
   handler: (...args: Args) => Promise<NextResponse>,
 ): (...args: Args) => Promise<NextResponse> {
-  return async (...args: Args) => {
-    try {
-      return await handler(...args);
-    } catch (err) {
-      const mapped = accountErrorFailure(err, messages);
-      if (mapped) return mapped;
-      return failure("INTERNAL_SERVER_ERROR", fallbackMessage);
-    }
-  };
+  return handleServiceErrors(
+    (error): error is AccountServiceError =>
+      error instanceof AccountServiceError,
+    messages,
+    fallbackMessage,
+    handler,
+  );
 }

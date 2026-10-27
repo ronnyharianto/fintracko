@@ -12,7 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 interface EditCategoryDialogProps {
   open: boolean;
@@ -34,8 +35,12 @@ export function EditCategoryDialog({
   onUpdated,
 }: EditCategoryDialogProps) {
   const [name, setName] = useState(target?.name ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isPending: isSaving,
+    error,
+    clearError,
+    run,
+  } = useAsyncFormAction();
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Adjust state during render (React docs: you-might-not-need-an-effect)
@@ -44,7 +49,7 @@ export function EditCategoryDialog({
     setPrevTarget(target);
     if (target && open) {
       setName(target.name);
-      setError(null);
+      clearError();
     }
   }
 
@@ -71,26 +76,18 @@ export function EditCategoryDialog({
   };
 
   const save = async () => {
-    setIsSaving(true);
-    setError(null);
     setShowConfirm(false);
 
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(target.endpoint, {
         method: "PATCH",
         body: { name: name.trim() },
       });
-      onOpenChange(false);
-      onUpdated();
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to update.";
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
+    }, "Failed to update.");
+    if (errorMessage !== null) return;
+
+    onOpenChange(false);
+    onUpdated();
   };
 
   return (

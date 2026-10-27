@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { formatCurrency } from "@/lib/utils";
 import { parseDate } from "@/lib/date-period";
@@ -40,6 +40,7 @@ import {
 } from "./budget-period";
 import { YearPicker } from "./year-picker";
 import { BudgetImpactDialog } from "./budget-impact-dialog";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 /** `SINGLE` covers one period, `UNTIL` covers a chosen end period, `ONGOING` never ends. */
 type RepeatMode = "SINGLE" | "UNTIL" | "ONGOING";
@@ -160,8 +161,7 @@ function EditBudgetForm({ budget, onClose, onUpdated }: EditBudgetFormProps) {
   );
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isPending: isSaving, error, run } = useAsyncFormAction();
   const [pendingImpact, setPendingImpact] = useState<{
     impact: HistoricalImpact;
     splitFrom: string;
@@ -233,10 +233,7 @@ function EditBudgetForm({ budget, onClose, onUpdated }: EditBudgetFormProps) {
   const save = async (splitFrom?: string) => {
     if (!activeWorkspaceId || !startBounds || !rangeEndDate) return;
 
-    setIsSaving(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(
         `/api/v1/workspaces/${activeWorkspaceId}/budgets/${budget.id}`,
         {
@@ -250,17 +247,12 @@ function EditBudgetForm({ budget, onClose, onUpdated }: EditBudgetFormProps) {
           },
         },
       );
-      setPendingImpact(null);
-      onClose();
-      onUpdated();
-    } catch (err) {
-      setPendingImpact(null);
-      setError(
-        err instanceof ApiClientError ? err.message : "Failed to update budget.",
-      );
-    } finally {
-      setIsSaving(false);
-    }
+    }, "Failed to update budget.");
+    setPendingImpact(null);
+    if (errorMessage !== null) return;
+
+    onClose();
+    onUpdated();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

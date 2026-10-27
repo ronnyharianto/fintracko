@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiClientError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type { TransactionType } from "@/features/transactions/types";
 import type { CategoryView } from "@/features/categories/types";
@@ -33,6 +33,7 @@ import {
   useEnterToAdvance,
   useSelectHandoff,
 } from "@/lib/hooks/use-enter-to-advance";
+import { useAsyncFormAction } from "@/lib/hooks/use-async-form-action";
 
 const TYPE_OPTIONS: {
   value: TransactionType;
@@ -97,8 +98,12 @@ export function CreateTransactionDialog({
   const [description, setDescription] = useState("");
   const [payeePayer, setPayeePayer] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isPending: isCreating,
+    error,
+    clearError,
+    run,
+  } = useAsyncFormAction();
 
   const [categories, setCategories] = useState<CategoryView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
@@ -212,17 +217,14 @@ export function CreateTransactionDialog({
     setDescription("");
     setPayeePayer("");
     setAttachmentUrl(null);
-    setError(null);
-  }, []);
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeWorkspaceId || !amount || !subCategoryId) return;
 
-    setIsCreating(true);
-    setError(null);
-
-    try {
+    const errorMessage = await run(async () => {
       await apiFetch(`/api/v1/workspaces/${activeWorkspaceId}/transactions`, {
         method: "POST",
         body: {
@@ -237,18 +239,12 @@ export function CreateTransactionDialog({
           attachmentUrl: attachmentUrl || undefined,
         },
       });
-      resetForm();
-      onOpenChange(false);
-      onCreated();
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.message
-          : "Failed to create transaction.";
-      setError(message);
-    } finally {
-      setIsCreating(false);
-    }
+    }, "Failed to create transaction.");
+    if (errorMessage !== null) return;
+
+    resetForm();
+    onOpenChange(false);
+    onCreated();
   };
 
   const showSource = type === "EXPENSE" || type === "TRANSFER";
