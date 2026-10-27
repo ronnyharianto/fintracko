@@ -83,6 +83,16 @@ export function Footer({ className }: { className?: string }) {
                   Sign In
                 </Link>
               </li>
+              <li>
+                <a
+                  href="https://github.com/ronnyharianto/fintracko"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
+                  GitHub
+                </a>
+              </li>
             </ul>
           </div>
 

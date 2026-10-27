@@ -196,3 +196,7 @@ build configuration is required. Apply schema migrations separately with
 - `prisma/seed.ts` — development-only fixture seeder (run with `npm run db:seed`)
 - `generated/prisma/` — generated Prisma client (git-ignored; regenerate after clone)
 - `docs/product/PRD_MVP1.md` — product requirements for MVP 1
+
+## License
+
+Fintracko is licensed under the [MIT License](./LICENSE).
