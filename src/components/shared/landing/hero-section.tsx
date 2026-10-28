@@ -25,7 +25,7 @@ export function HeroSection({ className }: { className?: string }) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
-          Start Tracking in Seconds
+          Start Tracking Today
         </div>
 
         {/* Headline — carries the primary long-tail keywords (budget
@@ -39,9 +39,9 @@ export function HeroSection({ className }: { className?: string }) {
 
         {/* Subtitle */}
         <p className="mx-auto max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-          Fintracko helps individuals, families, and small teams track income,
-          expenses, and budgets across multiple collaborative workspaces — all
-          in one intuitive, secure platform.
+          Fintracko helps individuals, families, and small businesses record
+          income and expenses, manage budgets, and organize shared finances
+          across personal and collaborative workspaces.
         </p>
 
         {/* CTAs */}
@@ -64,15 +64,15 @@ export function HeroSection({ className }: { className?: string }) {
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            OAuth-Secured
+            Google & GitHub Sign-In
           </div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Real-Time Collaboration
+            Shared Workspaces
           </div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-teal-500" />
-            Precision Budgeting
+            Budget Tracking
           </div>
         </div>
       </div>

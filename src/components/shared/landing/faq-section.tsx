@@ -4,8 +4,7 @@ import { cn } from "@/lib/utils";
  * Landing page FAQ content.
  *
  * Q&As target the secondary long-tail keywords (free, collaborative, shared
- * finances). This constant is the single source of truth shared by the
- * visible section below and the `FAQPage` JSON-LD in `structured-data.tsx`.
+ * finances) and are rendered as visible content below.
  */
 export const FAQ_ITEMS = [
   {
@@ -16,22 +15,22 @@ export const FAQ_ITEMS = [
   {
     question: "Can I share a budget with my family?",
     answer:
-      "Yes. Create a family workspace, add financial accounts and a budget per category, then invite family members by email. Everyone with access sees live balances and budget utilization in real time.",
+      "Yes. Create a family workspace, add financial accounts and category budgets, then invite family members by email. Workspace members can view shared accounts and budgets.",
   },
   {
     question: "Can my small team track expenses together?",
     answer:
-      "Yes. A small-team workspace gives each member shared visibility into accounts, transactions, and budgets. You control who joins via email invitations and can switch between personal, family, and team workspaces at any time.",
+      "Yes. Create a small-business workspace and invite collaborators by email to share access to its accounts, transactions, and budgets. You can also create personal or family workspaces.",
   },
   {
     question: "Does Fintracko support multiple currencies?",
     answer:
-      "Each workspace uses one currency, chosen at creation from your profile's currency preference. Create separate workspaces to track finances in different currencies, with high-precision decimal amounts throughout.",
+      "Each workspace uses one currency, selected when it is created. You can create separate workspaces to track finances in different currencies.",
   },
   {
     question: "How is my financial data secured?",
     answer:
-      "Fintracko uses OAuth-only sign-in (Google or GitHub) — no passwords are stored. Data lives in an encrypted-at-rest PostgreSQL database, every request is validated against workspace-level access control, and inputs are sanitized against XSS. See the Privacy Policy for details.",
+      "In production, sign-in uses Google or GitHub. Protected API routes use session validation and workspace access checks. See the Privacy Policy for more about data handling and security practices.",
   },
   {
     question: "Do I need a credit card to sign up?",
@@ -43,10 +42,8 @@ export const FAQ_ITEMS = [
 /**
  * Landing page FAQ section.
  *
- * Keyword-bearing Q&As rendered as native `<details>/<summary>` accordions —
- * real visible content (a Google requirement for FAQ structured data) with
- * zero JavaScript and no new dependency. The matching `FAQPage` JSON-LD lives
- * in `structured-data.tsx`, which imports {@link FAQ_ITEMS} from here.
+ * Keyword-bearing Q&As rendered as native `<details>/<summary>` accordions
+ * with zero JavaScript and no new dependency.
  */export function FaqSection({ className }: { className?: string }) {
   return (
     <section
@@ -68,8 +65,8 @@ export const FAQ_ITEMS = [
               </span>
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">
-              Everything you need to know about the free collaborative budget
-              tracker.
+              Answers about Fintracko&apos;s budgeting and shared-workspace
+              features.
             </p>
           </div>
 

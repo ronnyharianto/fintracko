@@ -18,25 +18,25 @@ const FEATURES: FeatureItem[] = [
     icon: LayoutDashboard,
     title: "Multi-Workspace Management",
     description:
-      "Separate personal, family, and business finances into isolated workspaces — each with its own accounts, categories, and collaborators.",
+      "Keep personal, family, and small-business finances in separate workspaces, each with its own accounts, categories, and members.",
   },
   {
     icon: PiggyBank,
-    title: "Precision Budgeting",
+    title: "Category Budgeting",
     description:
-      "Set monthly or yearly spending limits on any sub-category with real-time utilization tracking.",
+      "Set monthly or yearly spending limits for sub-categories and review their utilization.",
   },
   {
     icon: BarChart3,
-    title: "Insightful Analytics",
+    title: "Workspace Analytics",
     description:
-      "Visualize expense breakdowns, rolling net-worth trends, and budget exhaustion alerts.",
+      "Review expense breakdowns, net-worth trends, and budgets approaching their limits.",
   },
   {
     icon: ShieldCheck,
-    title: "Bank-Grade Security",
+    title: "Security & Privacy",
     description:
-      "OAuth-only authentication, session validation on every request, workspace isolation, and input sanitization against XSS.",
+      "Production sign-in uses Google or GitHub. Protected requests use session and workspace access checks, and API inputs are validated.",
   },
 ];
 
@@ -68,14 +68,15 @@ export function FeatureGrid({
             Features
           </span>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Everything You Need to Track{" "}
+            Tools for Tracking{" "}
             <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
               Shared Expenses &amp; Budgets
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">
             From daily transaction logging to long-term budget planning,
-            Fintracko provides a complete toolkit for financial clarity.
+            Log transactions, manage category budgets, and review workspace
+            analytics.
           </p>
         </div>
 

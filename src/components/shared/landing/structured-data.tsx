@@ -1,14 +1,10 @@
 import { siteConfig } from "@/lib/site";
-import { FAQ_ITEMS } from "@/components/shared/landing/faq-section";
 
 /**
  * JSON-LD structured data for the landing page.
  *
- * Emits `WebSite`, `Organization`, `SoftwareApplication`, and `FAQPage`
- * entities so search engines can associate the brand, product type, free
- * price, security model, and Q&A content with the domain. `FAQPage` items are
- * derived from {@link FAQ_ITEMS}, the same constant rendered visibly by
- * {@link FaqSection}, so the two can never drift apart.
+ * Emits `WebSite`, `Organization`, and `SoftwareApplication` entities so
+ * search engines can associate the brand and product type with the domain.
  *
  * @remarks Pure Server Component. React 19 serializes string children of
  * `script` tags verbatim, so `<script>{JSON.stringify(...)}</script>` produces
@@ -58,30 +54,17 @@ const softwareApplication = {
   },
   featureList: [
     "Multi-workspace financial tracking",
-    "Collaborative budgeting with real-time utilization",
+    "Collaborative budgeting with budget utilization tracking",
     "Income, expense, and transfer logging",
     "Two-level categories and sub-categories",
     "Analytics dashboards and net-worth trends",
   ],
 };
 
-const faqPage = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
-    },
-  })),
-};
-
 /**
  * Landing page structured data.
  *
- * Render once inside the landing page; all four JSON-LD entities are emitted
+ * Render once inside the landing page; all three JSON-LD entities are emitted
  * from here so structured data has exactly one home in the codebase.
  */
 export function StructuredData() {
@@ -90,7 +73,6 @@ export function StructuredData() {
       <JsonLd data={organization} />
       <JsonLd data={website} />
       <JsonLd data={softwareApplication} />
-      <JsonLd data={faqPage} />
     </>
   );
 }

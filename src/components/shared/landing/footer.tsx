@@ -40,8 +40,8 @@ export function Footer({ className }: { className?: string }) {
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Smart financial tracking for individuals and small teams.
-              Collaborative, secure, and simple to use.
+              Track income, expenses, and budgets in personal or shared
+              workspaces.
             </p>
           </div>
 

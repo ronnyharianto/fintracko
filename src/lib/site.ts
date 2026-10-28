@@ -10,7 +10,8 @@
  * 1. `NEXT_PUBLIC_APP_URL` — explicit override (documented in `.env.example`).
  * 2. `VERCEL_PROJECT_PRODUCTION_URL` — auto-set by Vercel deployments (the
  *    free-plan `*.vercel.app` domain); provided without a protocol.
- * 3. `http://localhost:3000` — local development fallback.
+ * 3. `http://localhost:3000` — local development fallback. Production builds
+ *    must provide one of the public origins above to avoid localhost canonicals.
  */
 
 function normalizeOrigin(raw: string): string {
@@ -29,6 +30,12 @@ function resolveSiteUrl(): string {
     return normalizeOrigin(vercel);
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Set NEXT_PUBLIC_APP_URL or VERCEL_PROJECT_PRODUCTION_URL for production SEO metadata.",
+    );
+  }
+
   return "http://localhost:3000";
 }
 
@@ -37,7 +44,7 @@ export const siteConfig = {
   url: resolveSiteUrl(),
   title: "Fintracko — Free Budget & Expense Tracker for Teams & Families",
   description:
-    "Track income, expenses, and budgets together — Fintracko is a collaborative budget tracker with shared workspaces for families and small teams.",
+    "Track income, expenses, and budgets with Fintracko. Create personal, family, or small-business workspaces and invite collaborators.",
   keywords: [
     "budget tracker",
     "expense tracker",

@@ -83,26 +83,28 @@ export default function PrivacyPolicyPage() {
             2.2 Profile & Onboarding Data
           </h3>
           <p>
-            During mandatory onboarding, you provide your phone number
-            (optional), company name (optional), biography, date of birth,
-            gender, and currency preference. This information is stored in your
-            Profile record.
+            During onboarding, you provide your name and currency preference.
+            You may also add a phone number, company name, biography, date of
+            birth, or gender through profile settings. This information is
+            stored in your Profile record.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">2.3 Financial Data</h3>
           <p>
             As you use the Service, you input financial data including account
             names, transaction amounts, categories, budgets, payee/payer names,
-            tags, descriptions, and optional receipt image attachments. All
-            financial amounts are stored as high-precision decimal values.
+            tags, descriptions, and optional receipt image attachments.
+            Financial amounts are stored as decimal values with four decimal
+            places.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">
             2.4 Usage & Technical Data
           </h3>
           <p>
-            We automatically collect certain technical information when you
-            access the Service, including your IP address, browser type,
-            operating system, and access timestamps. This data is used for
-            security monitoring and abuse prevention purposes.
+            When you access the Service, our hosting and analytics providers
+            may process technical information such as IP address, browser or
+            device information, and request or page-view metadata as part of
+            operating and measuring the Service. Their handling of this
+            information is subject to their own privacy policies.
           </p>
         </section>
 
@@ -121,10 +123,7 @@ export default function PrivacyPolicyPage() {
             <li>
               Enforce workspace isolation and multi-tenancy access control.
             </li>
-            <li>
-              Detect, prevent, and address technical issues or security
-              vulnerabilities.
-            </li>
+            <li>Operate and troubleshoot the Service.</li>
             <li>
               Comply with legal obligations and enforce our Terms of Service.
             </li>
@@ -140,7 +139,7 @@ export default function PrivacyPolicyPage() {
             4.1 Application Hosting (Vercel)
           </h3>
           <p>
-            The Service is hosted on Vercel. Requests to the Service, including
+            The production Service is hosted on Vercel. Requests to the Service, including
             information you submit, are processed by infrastructure used to run
             the application. Vercel may process technical and diagnostic data,
             such as IP address and request metadata, to deliver, secure, and
@@ -150,10 +149,10 @@ export default function PrivacyPolicyPage() {
             4.2 Database Hosting (Neon)
           </h3>
           <p>
-            Persistent data is stored in a PostgreSQL database hosted on
-            Neon. This includes profile, authentication, and financial
-            data. Your data is logically isolated by workspace-level access
-            control enforced at the application tier.
+            The production Service stores persistent data, including profile,
+            authentication, and financial data, in a PostgreSQL database
+            hosted on Neon. The application uses workspace-level access checks
+            to control access to workspace data.
           </p>
           <h3 className="mb-2 mt-4 text-lg font-medium">
             4.3 Image Attachments (Imgur)
@@ -179,13 +178,11 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-3 text-xl font-semibold">5. Cookies & Tracking</h2>
           <p>
-            We use a single HttpOnly session cookie to maintain your
-            authenticated session with the Service. This cookie is not
-            accessible to client-side JavaScript and is transmitted only over
-            secure HTTPS connections. We do not use tracking or advertising
-            cookies. We use Vercel Web Analytics, a cookie-less, privacy-focused
-            service that records aggregate page-view metrics without storing
-            personal identifiers or tracking you across other sites.
+            Authentication uses cookies to maintain your session; cookie
+            attributes may vary by environment. The site includes Vercel Web
+            Analytics to measure page-view activity. For details about
+            information processed by Vercel, see its current privacy
+            documentation.
           </p>
         </section>
 
@@ -193,12 +190,15 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-3 text-xl font-semibold">6. Data Retention</h2>
           <p>
-            We retain your profile and financial data for as long as your
-            account remains active. If you delete your account (an irreversible
-            action requiring explicit confirmation), all associated User,
-            Profile, and workspace-owned data is permanently removed from the
-            database via cascade deletion. Session tokens expire automatically
-            after their configured Time-To-Live (TTL).
+            We retain account data while your account is active. If you delete
+            your account, the application deletes your account records and
+            workspaces you own, including their associated records, from its
+            database. Your membership is removed from workspaces owned by
+            others, but those workspaces remain. Receipt images uploaded to
+            Imgur are not deleted by this database operation; their handling
+            and retention are governed by Imgur&apos;s policies. Third-party
+            providers may also retain copies under their own retention
+            practices.
           </p>
         </section>
 
@@ -208,17 +208,16 @@ export default function PrivacyPolicyPage() {
           <p>Depending on your jurisdiction, you may have the right to:</p>
           <ul className="mt-3 list-inside list-disc space-y-1">
             <li>
-              Access the personal data we hold about you through your profile
-              management interface.
+              View and update the profile information available in account
+              settings.
             </li>
             <li>
-              Rectify inaccurate or incomplete personal data by updating your
-              profile.
+              Delete your account through account settings.
             </li>
-            <li>Delete your account and all associated data (irreversible).</li>
             <li>
-              Export your transaction data in a machine-readable format (planned
-              for a future release).
+              Request access to, correction of, or a copy of personal data,
+              where applicable under local law. The Service does not currently
+              provide a self-service data export.
             </li>
           </ul>
         </section>
@@ -227,14 +226,12 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-3 text-xl font-semibold">8. Data Security</h2>
           <p>
-            We implement strict security measures to protect your data: all API
-            requests undergo session validation via HttpOnly cookies, every
-            database query enforces workspace-level multi-tenancy isolation
-            (Anti-IDOR), all user inputs are validated against strict schemas
-            and sanitized to neutralize XSS vectors, and financial mutations
-            execute inside atomic database transactions. However, no method of
-            electronic storage or transmission is 100% secure; we cannot
-            guarantee absolute security.
+            The application uses controls such as session validation for
+            protected API requests, workspace-level access checks, input
+            validation and sanitization, and database transactions for related
+            financial changes. These controls are intended to reduce security
+            and data-integrity risks, but no method of electronic storage or
+            transmission is completely secure.
           </p>
         </section>
 

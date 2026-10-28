@@ -24,8 +24,8 @@ export function CtaSection({ className }: { className?: string }) {
               Ready to Simplify Your Finances?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/85">
-              Join thousands of users who trust Fintracko to keep their personal
-              and business finances organized — sign up in seconds.
+              Use Fintracko to track transactions, manage budgets, and organize
+              personal or shared finances.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link

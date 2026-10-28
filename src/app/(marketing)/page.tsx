@@ -17,16 +17,16 @@ import { StructuredData } from "@/components/shared/landing/structured-data";
  * than head terms dominated by incumbent budgeting apps.
  */
 export const metadata: Metadata = {
-  title: "Fintracko — Free Budget & Expense Tracker for Teams & Families",
+  title: "Free Budget & Expense Tracker for Teams & Families",
   description:
-    "Track income, expenses, and budgets together — Fintracko is a free collaborative budget tracker with shared workspaces for families and small teams.",
+    "Track income, expenses, and budgets with Fintracko. Create personal, family, or small-business workspaces and invite collaborators.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Fintracko — Free Budget & Expense Tracker",
     description:
-      "Track income, expenses, and budgets across multiple workspaces. Collaborative and secure — free to start.",
+      "Track income, expenses, and budgets across personal, family, and small-business workspaces.",
     siteName: "Fintracko",
     type: "website",
     url: "/",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Fintracko — Free Budget & Expense Tracker",
     description:
-      "Collaborative budget tracker with shared workspaces for families and small teams.",
+      "Track income, expenses, and budgets in shared workspaces for families and small businesses.",
   },
   robots: {
     index: true,

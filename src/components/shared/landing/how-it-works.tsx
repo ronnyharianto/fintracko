@@ -12,21 +12,21 @@ const STEPS: Step[] = [
     icon: UserPlus,
     title: "Sign Up & Onboard",
     description:
-      "Create your account, complete a quick profile setup, and choose your workspace template.",
+      "Create your account, complete your profile, and choose a workspace template.",
   },
   {
     number: 2,
     icon: FolderOpen,
     title: "Configure Your Workspace",
     description:
-      "Add financial accounts (bank, cash, wallet), set up categories, and invite collaborators. Your workspace is ready in minutes.",
+      "Add financial accounts, set up categories, and invite collaborators to a shared workspace.",
   },
   {
     number: 3,
     icon: TrendingUp,
     title: "Track, Budget & Grow",
     description:
-      "Log transactions daily, monitor budget utilization, and review analytics dashboards to make informed financial decisions.",
+      "Log transactions, review budget utilization, and explore analytics for your workspace.",
   },
 ];
 
@@ -68,11 +68,11 @@ export function HowItWorks({
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Get Started in{" "}
             <span className="bg-linear-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
-              Three Simple Steps
+              Set Up in Three Steps
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground mt-4">
-            No complicated setup. Just a clean workflow designed for real people.
+            Follow these steps to set up a workspace and start tracking.
           </p>
         </div>
 

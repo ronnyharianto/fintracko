@@ -54,17 +54,17 @@ Provides workspace collaboration, financial account management, budget tracking,
 
 All variables are documented inline in `.env.example`.
 
-| Variable                                  | Purpose                                                                                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                            | Application runtime connection. Use Neon's pooled connection string (host contains `-pooler`) in both development and production.                                         |
-| `DIRECT_URL`                              | Prisma CLI connection for migrations and schema changes. Use Neon's direct, non-pooled connection string. Falls back to `DATABASE_URL` when unset.                        |
-| `BETTER_AUTH_SECRET`                      | Random 32+ char secret signing session cookies (`openssl rand -base64 32`)                                                                                                |
-| `BETTER_AUTH_URL`                         | App origin used for OAuth callback URLs                                                                                                                                   |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`   | Google OAuth credentials                                                                                                                                                  |
-| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`   | GitHub OAuth credentials                                                                                                                                                  |
-| `IMGUR_CLIENT_ID`                         | Imgur API client id for receipt image uploads                                                                                                                             |
-| `NEXT_PUBLIC_APP_URL`                     | Optional. Public site origin for SEO surfaces; falls back to Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, then localhost                                                     |
-| `NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS` | Optional. Invitation polling interval (default 30000)                                                                                                                     |
+| Variable                                  | Purpose                                                                                                                                                              |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                            | Application runtime connection. Use Neon's pooled connection string (host contains `-pooler`) in both development and production.                                    |
+| `DIRECT_URL`                              | Prisma CLI connection for migrations and schema changes. Use Neon's direct, non-pooled connection string. Falls back to `DATABASE_URL` when unset.                   |
+| `BETTER_AUTH_SECRET`                      | Random 32+ char secret signing session cookies (`openssl rand -base64 32`)                                                                                           |
+| `BETTER_AUTH_URL`                         | App origin used for OAuth callback URLs                                                                                                                              |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`   | Google OAuth credentials                                                                                                                                             |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`   | GitHub OAuth credentials                                                                                                                                             |
+| `IMGUR_CLIENT_ID`                         | Imgur API client id for receipt image uploads                                                                                                                        |
+| `NEXT_PUBLIC_APP_URL`                     | Public site origin for SEO surfaces in non-Vercel production deployments; Vercel uses `VERCEL_PROJECT_PRODUCTION_URL` if unset. Development falls back to localhost. |
+| `NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS` | Optional. Invitation polling interval (default 30000)                                                                                                                |
 
 ## Application Execution
 
@@ -149,16 +149,16 @@ The application deploys to Vercel with Neon as the production PostgreSQL host.
 
 ### 2. Configure Vercel environment variables
 
-| Variable                                | Value                                                                                                 |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                          | Neon **pooled** connection string                                                                     |
-| `DIRECT_URL`                            | Not required for application runtime; use Neon **direct** connection locally when applying migrations |
-| `BETTER_AUTH_SECRET`                    | New random 32+ char secret (`openssl rand -base64 32`) — do not reuse the dev secret                  |
-| `BETTER_AUTH_URL`                       | Production origin, e.g. `https://your-app.vercel.app`                                                 |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth credentials                                                                              |
-| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | GitHub OAuth credentials                                                                              |
-| `IMGUR_CLIENT_ID`                       | Imgur API client id                                                                                   |
-| `NEXT_PUBLIC_APP_URL`                   | Optional; set explicitly once a custom domain is connected                                            |
+| Variable                                | Value                                                                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                          | Neon **pooled** connection string                                                                                     |
+| `DIRECT_URL`                            | Not required for application runtime; use Neon **direct** connection locally when applying migrations                 |
+| `BETTER_AUTH_SECRET`                    | New random 32+ char secret (`openssl rand -base64 32`) — do not reuse the dev secret                                  |
+| `BETTER_AUTH_URL`                       | Production origin, e.g. `https://your-app.vercel.app`                                                                 |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth credentials                                                                                              |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | GitHub OAuth credentials                                                                                              |
+| `IMGUR_CLIENT_ID`                       | Imgur API client id                                                                                                   |
+| `NEXT_PUBLIC_APP_URL`                   | Set to the preferred public origin, especially when using a custom domain; Vercel's production origin is the fallback |
 
 ### 3. Update the OAuth redirect URIs
 

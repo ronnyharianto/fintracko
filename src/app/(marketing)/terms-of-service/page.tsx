@@ -146,7 +146,7 @@ export default function TermsOfServicePage() {
           </h2>
           <p>
             The Service relies on third-party infrastructure including Vercel
-            (application hosting and cookie-less Web Analytics), Neon (database
+            (application hosting and Web Analytics), Neon (database
             hosting), Imgur (image attachment hosting), Google (OAuth provider),
             and GitHub (OAuth provider). We are not responsible for the availability,
             accuracy, or practices of these third-party services. Your use of
@@ -195,12 +195,15 @@ export default function TermsOfServicePage() {
           <h2 className="mb-3 text-xl font-semibold">9. Termination</h2>
           <p>
             You may terminate your account at any time through the profile
-            management interface. Account deletion is irreversible and will
-            permanently remove all associated data via cascade deletion. We
-            reserve the right to suspend or terminate your access to the Service
-            at our sole discretion, without prior notice, for conduct that we
-            believe violates these Terms or is otherwise harmful to other users,
-            third parties, or the Service itself.
+            management interface. Account deletion removes your account
+            records and workspaces you own from the Service&apos;s database.
+            Your membership is removed from workspaces owned by others, but
+            those workspaces remain. Deleting your account does not delete
+            receipt images hosted by Imgur or control data retention by
+            third-party providers. We reserve the right to suspend or terminate
+            your access to the Service, without prior notice, for conduct that
+            we believe violates these Terms or is otherwise harmful to other
+            users, third parties, or the Service itself.
           </p>
         </section>
 
