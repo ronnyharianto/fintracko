@@ -30,12 +30,21 @@ export const metadata: Metadata = {
     siteName: "Fintracko",
     type: "website",
     url: "/",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Fintracko — free collaborative budget and expense tracker",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Fintracko — Free Budget & Expense Tracker",
     description:
       "Track income, expenses, and budgets in shared workspaces for families and small businesses.",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
