@@ -9,7 +9,7 @@ import { ImageResponse } from "next/og";
  * tokens) and mirror the brand: teal `#0f766e`/`#14b8a6`, emerald `#00b87c`,
  * dark surface `#0f172a`.
  */
-export const alt = "Fintracko — free collaborative budget and expense tracker";
+export const alt = "Fintracko — budget and expense tracker for shared finances";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -62,9 +62,11 @@ export default async function OpenGraphImage() {
             color: "#14b8a6",
             textAlign: "center",
             display: "flex",
+            flexDirection: "column",
           }}
         >
-          Free budget &amp; expense tracker
+          <div>The Budget &amp; Expense Tracker</div>
+          <div>for Shared Finances</div>
         </div>
         <div
           style={{
