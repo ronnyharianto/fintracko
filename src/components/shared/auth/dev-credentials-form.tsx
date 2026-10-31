@@ -23,7 +23,7 @@ import { toast } from "sonner";
  * Calls Better Auth's `signIn.email` / `signUp.email` through the browser
  * client (`src/lib/auth-client.ts`) and hard-navigates to `/onboarding` on
  * success — the same landing the OAuth flow uses, which then redirects
- * completed users on to `/dashboard`.
+ * completed users on to `/transactions`.
  */
 export function DevCredentialsForm({ className }: { className?: string }) {
   const router = useRouter();

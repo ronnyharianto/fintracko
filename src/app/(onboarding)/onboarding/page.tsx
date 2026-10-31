@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
   const { profile, workspace } = await getOnboardingState();
 
   if (workspace) {
-    redirect("/dashboard");
+    redirect("/transactions");
   }
 
   if (profile) {

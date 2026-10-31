@@ -102,6 +102,8 @@ interface TransactionListViewProps {
   defaultAccountId?: string;
   /** Disables the New Transaction button (e.g. archived account scope). */
   createDisabled?: boolean;
+  /** Refreshes parent data affected by a transaction change. */
+  onTransactionChanged?: () => void;
 }
 
 export function TransactionListView({
@@ -110,6 +112,7 @@ export function TransactionListView({
   accountId,
   defaultAccountId,
   createDisabled = false,
+  onTransactionChanged,
 }: TransactionListViewProps) {
   const { activeWorkspaceId } = useWorkspace();
 
@@ -218,6 +221,11 @@ export function TransactionListView({
     select: (data) => data.transactions ?? [],
     fallbackMessage: "Failed to load transactions. Please try again.",
   });
+
+  const handleTransactionChanged = () => {
+    void refetch();
+    onTransactionChanged?.();
+  };
 
   // The period is enforced server-side, so only the in-memory type filter and
   // search narrow the (already complete) period rows here.
@@ -649,20 +657,20 @@ export function TransactionListView({
       <CreateTransactionDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onCreated={() => void refetch()}
+        onCreated={handleTransactionChanged}
         defaultAccountId={defaultAccountId}
       />
       <EditTransactionDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         transaction={editingTransaction}
-        onUpdated={() => void refetch()}
+        onUpdated={handleTransactionChanged}
       />
       <DeleteTransactionDialog
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         transaction={deletingTransaction}
-        onDeleted={() => void refetch()}
+        onDeleted={handleTransactionChanged}
       />
     </div>
   );

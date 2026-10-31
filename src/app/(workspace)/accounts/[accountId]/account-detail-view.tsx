@@ -89,7 +89,7 @@ export default function AccountDetailView({
     );
   }
 
-  if (isLoading || !account) {
+  if (!account) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -144,6 +144,7 @@ export default function AccountDetailView({
         accountId={accountId}
         defaultAccountId={accountId}
         createDisabled={account.isArchived}
+        onTransactionChanged={() => void refetch()}
       />
     </div>
   );

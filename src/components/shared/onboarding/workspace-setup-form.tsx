@@ -116,10 +116,9 @@ export function WorkspaceSetupForm() {
         },
       });
 
-      toast.success("Workspace created! Redirecting to dashboard...");
+      toast.success("Workspace created! Redirecting to transactions...");
 
-      // Redirect to dashboard after successful creation
-      router.push("/dashboard");
+      router.push("/transactions");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to create workspace.",

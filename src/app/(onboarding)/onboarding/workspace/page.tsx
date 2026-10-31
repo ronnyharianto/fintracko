@@ -22,7 +22,7 @@ export default async function WorkspaceSetupPage() {
   const { profile, workspace } = await getOnboardingState();
 
   if (workspace) {
-    redirect("/dashboard");
+    redirect("/transactions");
   }
 
   if (!profile) {
