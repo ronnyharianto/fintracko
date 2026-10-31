@@ -18,7 +18,6 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type {
   TransactionListResponse,
   TransactionView,
-  TransactionType,
 } from "@/features/transactions/types";
 import { sumTransactions } from "@/features/transactions/summary";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
@@ -40,9 +39,7 @@ import {
   ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  CalendarDays,
+  RotateCcw,
 } from "lucide-react";
 import { CreateTransactionDialog } from "./create-transaction-dialog";
 import { EditTransactionDialog } from "./edit-transaction-dialog";
@@ -52,15 +49,14 @@ import {
   TransactionTable,
   TransactionTableSkeleton,
 } from "./transaction-table";
-import { TransactionFilters } from "./transaction-filters";
 import { TransactionSearch } from "./transaction-search";
-import { TransactionGrouping } from "./transaction-grouping";
 import { buildListSections } from "./transaction-presentation";
 import {
-  TransactionSort,
+  TransactionActions,
   type SortField,
   type SortDirection,
-} from "./transaction-sort";
+  type TransactionFilterValue,
+} from "./transaction-actions";
 import { EmptyStateIllustration } from "./empty-state-illustrations";
 
 // ---------------------------------------------------------------------------
@@ -121,7 +117,7 @@ export function TransactionListView({
   const [refDate, setRefDate] = useState(() => new Date());
 
   // Filters
-  const [typeFilter, setTypeFilter] = useState<TransactionType | "ALL">("ALL");
+  const [typeFilter, setTypeFilter] = useState<TransactionFilterValue>("ALL");
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,19 +156,6 @@ export function TransactionListView({
       }
     } catch {
       // localStorage may be unavailable (private mode); keep the default.
-    }
-  }, []);
-
-  // Summary visibility
-  const [isSummaryVisible, setIsSummaryVisible] = useState(true);
-
-  // On mobile the Summary starts collapsed so the transaction list gets the
-  // vertical space; desktop keeps it expanded. useLayoutEffect runs before
-  // paint, so the expanded default never flashes on small screens.
-  useLayoutEffect(() => {
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSummaryVisible(false);
     }
   }, []);
 
@@ -366,56 +349,63 @@ export function TransactionListView({
           </h1>
         )}
         <Button
-          size="icon"
+          size="sm"
           onClick={() => setIsCreateOpen(true)}
           aria-label={
             createDisabled
-              ? "New Transaction (account archived)"
-              : "New Transaction"
+              ? "New transaction (account archived)"
+              : "New transaction"
           }
+          className="h-9 w-9 shrink-0 px-0 sm:h-8 sm:w-auto sm:px-2.5"
           disabled={createDisabled}
         >
           <Plus className="h-4 w-4" />
+          <span className="sr-only sm:not-sr-only">New transaction</span>
         </Button>
       </div>
 
       {/* View Mode + Date Navigation */}
       {!isInitialLoading && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:justify-between">
           {/* View mode pills */}
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:flex sm:w-auto">
+          <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-1 sm:gap-1">
             {VIEW_MODES.map((mode) => (
               <button
                 key={mode}
                 onClick={() => handleViewModeChange(mode)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                aria-label={mode.charAt(0).toUpperCase() + mode.slice(1)}
+                aria-pressed={viewMode === mode}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition-colors sm:px-3 ${
                   viewMode === mode
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                <span className="sm:hidden">{mode.charAt(0).toUpperCase()}</span>
+                <span className="hidden sm:inline">
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </span>
               </button>
             ))}
           </div>
 
           {/* Date navigation */}
-          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-center">
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-1 sm:flex-none sm:justify-center sm:gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0"
               onClick={() => setRefDate((d) => navigateDate(viewMode, d, -1))}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="min-w-0 flex-1 text-center text-sm font-medium sm:min-w-45 sm:flex-none">
+            <span className="min-w-0 flex-1 truncate text-center text-sm font-medium sm:min-w-45 sm:flex-none">
               {formatPeriodLabel(viewMode, refDate)}
             </span>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0"
               onClick={() => setRefDate((d) => navigateDate(viewMode, d, 1))}
               disabled={isToday}
             >
@@ -425,93 +415,66 @@ export function TransactionListView({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 w-8 shrink-0 px-0 sm:w-auto sm:px-2"
                 onClick={() => setRefDate(new Date())}
+                aria-label="Today"
               >
-                <CalendarDays className="mr-1 h-3 w-3" />
-                Today
+                <RotateCcw className="h-3 w-3 sm:mr-1" />
+                <span className="sr-only sm:not-sr-only">Today</span>
               </Button>
             )}
           </div>
         </div>
       )}
 
-      {/* Search and Sort */}
+      {/* Search and less-used list controls */}
       {!isInitialLoading && transactions.length > 0 && (
-        <div className="flex gap-2 items-center">
-          <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
             <TransactionSearch value={searchQuery} onChange={setSearchQuery} />
           </div>
-          <TransactionSort
+          <TransactionActions
             field={sortField}
             direction={sortDirection}
-            onChange={(field, direction) => {
+            grouped={groupByDay}
+            filter={typeFilter}
+            onSortChange={(field, direction) => {
               setSortField(field);
               setSortDirection(direction);
             }}
-          />
-          <TransactionGrouping
-            grouped={groupByDay}
-            onChange={handleGroupingChange}
+            onGroupingChange={handleGroupingChange}
+            onFilterChange={setTypeFilter}
           />
         </div>
       )}
 
-      {/* Type Filter */}
-      {!isInitialLoading && transactions.length > 0 && (
-        <TransactionFilters value={typeFilter} onChange={setTypeFilter} />
-      )}
-
       {/* Summary */}
       {!isInitialLoading && filteredTransactions.length > 0 && (
-        <Card className="gap-0 py-1.5">
-          <div className="flex items-center justify-between px-4 sm:px-6">
-            <span className="text-sm font-medium text-muted-foreground">
-              Summary
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setIsSummaryVisible((v) => !v)}
-              aria-expanded={isSummaryVisible}
-            >
-              {isSummaryVisible ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-              <span className="sr-only">
-                {isSummaryVisible ? "Hide summary" : "Show summary"}
+        <Card className="hidden gap-0 py-1.5 sm:flex">
+          <CardContent className="grid grid-cols-3 gap-x-2 px-4 py-2 sm:gap-4 sm:py-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">Income</span>
+              <span className="truncate text-sm font-semibold tabular-nums text-emerald-600">
+                {formatCurrency(summary.totalIncome)}
               </span>
-            </Button>
-          </div>
-          {isSummaryVisible && (
-            <CardContent className="divide-y divide-border pl-8 pr-4 sm:pl-10 sm:pr-6">
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-sm text-muted-foreground">Income</span>
-                <span className="text-sm font-semibold tabular-nums text-emerald-600">
-                  {formatCurrency(summary.totalIncome)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-sm text-muted-foreground">Expense</span>
-                <span className="text-sm font-semibold tabular-nums text-red-600">
-                  {formatCurrency(summary.totalExpense)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-sm text-muted-foreground">Net</span>
-                <span
-                  className={`text-sm font-semibold tabular-nums ${
-                    summary.net >= 0 ? "text-emerald-600" : "text-red-600"
-                  }`}
-                >
-                  {formatCurrency(summary.net)}
-                </span>
-              </div>
-            </CardContent>
-          )}
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">Expense</span>
+              <span className="truncate text-sm font-semibold tabular-nums text-red-600">
+                {formatCurrency(summary.totalExpense)}
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">Net</span>
+              <span
+                className={`truncate text-sm font-semibold tabular-nums ${
+                  summary.net >= 0 ? "text-emerald-600" : "text-red-600"
+                }`}
+              >
+                {formatCurrency(summary.net)}
+              </span>
+            </div>
+          </CardContent>
         </Card>
       )}
 
