@@ -39,7 +39,26 @@ const AMOUNT_SIGN: Record<TransactionType, string> = {
  */
 export function formatSignedAmount(txn: TransactionView): string {
   const amount = parseFloat(txn.amount) || 0;
-  return `${AMOUNT_SIGN[txn.type]}${formatCurrency(Math.abs(amount))}`;
+  const signedAmount =
+    txn.type === "EXPENSE" ? -amount : amount;
+  const sign =
+    signedAmount < 0 ? "-" : signedAmount > 0 ? "+" : AMOUNT_SIGN[txn.type];
+  return `${sign}${formatCurrency(Math.abs(amount))}`;
+}
+
+/**
+ * Amount color follows the displayed direction. Negative income and positive
+ * expenses are money leaving the account, while negative expenses are refunds.
+ */
+export function getAmountTextColor(txn: TransactionView): string {
+  if (txn.type === "TRANSFER") return TYPE_TEXT_COLOR.TRANSFER;
+
+  const amount = parseFloat(txn.amount) || 0;
+  const signedAmount = txn.type === "EXPENSE" ? -amount : amount;
+
+  if (signedAmount > 0) return TYPE_TEXT_COLOR.INCOME;
+  if (signedAmount < 0) return TYPE_TEXT_COLOR.EXPENSE;
+  return TYPE_TEXT_COLOR[txn.type];
 }
 
 /**
