@@ -14,9 +14,9 @@ import { formatDayHeading, formatMonthDay } from "@/lib/date-period";
 import { formatCurrency } from "@/lib/utils";
 import {
   TYPE_ICON,
-  TYPE_TEXT_COLOR,
   type TransactionListSection,
   formatSignedAmount,
+  getAmountTextColor,
   getAccountLabel,
   getDetailText,
 } from "./transaction-presentation";
@@ -303,7 +303,7 @@ function TransactionTableRow({
   onDelete,
 }: TransactionTableRowProps) {
   const Icon = TYPE_ICON[txn.type];
-  const colorClass = TYPE_TEXT_COLOR[txn.type];
+  const colorClass = getAmountTextColor(txn);
   const accountName = getAccountLabel(txn);
   const detail = getDetailText(txn);
 

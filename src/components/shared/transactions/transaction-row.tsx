@@ -12,8 +12,8 @@ import type { TransactionView } from "@/features/transactions/types";
 import { formatMonthDay } from "@/lib/date-period";
 import {
   TYPE_ICON,
-  TYPE_TEXT_COLOR,
   formatSignedAmount,
+  getAmountTextColor,
   getAccountLabel,
   getDetailText,
 } from "./transaction-presentation";
@@ -33,7 +33,7 @@ export function TransactionRow({
   onDelete,
 }: TransactionRowProps) {
   const Icon = TYPE_ICON[txn.type];
-  const colorClass = TYPE_TEXT_COLOR[txn.type];
+  const colorClass = getAmountTextColor(txn);
   const accountName = getAccountLabel(txn);
   const detail = getDetailText(txn);
   // Account and detail share one muted line so the card stays two lines tall,
