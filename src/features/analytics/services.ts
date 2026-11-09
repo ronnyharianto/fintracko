@@ -23,7 +23,9 @@ import {
   TransactionType,
 } from "../../../generated/prisma/enums";
 import { AnalyticsServiceError } from "./errors";
+import { buildTrendBuckets, bucketKeyForISODate } from "./periods";
 import type {
+  AnalyticsGranularity,
   AnalyticsSlice,
   AnalyticsSummary,
   AnalyticsTrendPoint,
@@ -372,62 +374,58 @@ export async function getDashboardSummary(
 }
 
 /**
- * Monthly totals for a transaction type over the trailing `months` window,
- * oldest first. Prisma cannot group by month without raw SQL, so the window's
- * rows are bucketed in JS with Decimal arithmetic.
+ * Totals for a transaction type across the selected range, oldest first.
+ *
+ * The bucket size adapts to the range length. Prisma cannot group by month or
+ * week, so rows are grouped by exact date in the database and rolled into the
+ * prepared buckets in JS with Decimal arithmetic. Grouping by date keeps the
+ * row count bounded by the number of distinct dates in the window.
  */
 export async function getTypeTrend(
   userId: string,
   workspaceId: string,
   type: TransactionType,
-  months: number = TREND_MONTHS,
-): Promise<AnalyticsTrendPoint[]> {
+  window: { from: string; to: string },
+): Promise<{
+  granularity: AnalyticsGranularity;
+  points: AnalyticsTrendPoint[];
+}> {
   await requireMembership(userId, workspaceId);
 
-  const now = new Date();
-  const monthStarts: Date[] = [];
-  for (let i = months - 1; i >= 0; i--) {
-    monthStarts.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
-  }
+  const { granularity, buckets } = buildTrendBuckets(window.from, window.to);
 
-  const windowFrom = toISODate(monthStarts[0]);
-  const windowTo = toISODate(now);
-
-  const transactions = await db.financialTransaction.findMany({
+  const grouped = await db.financialTransaction.groupBy({
+    by: ["date"],
     where: {
       workspaceId,
       type,
-      date: { gte: new Date(windowFrom), lte: new Date(windowTo) },
+      date: { gte: new Date(window.from), lte: new Date(window.to) },
     },
-    select: { amount: true, date: true },
+    _sum: { amount: true },
   });
 
-  const totalsByMonth = new Map<string, DecimalLike>();
-  for (const transaction of transactions) {
-    const key = transaction.date.toISOString().slice(0, 7);
-    const existing = totalsByMonth.get(key);
-    totalsByMonth.set(
-      key,
-      existing ? existing.add(transaction.amount) : transaction.amount,
+  const totalsByBucket = new Map<string, DecimalLike>();
+  for (const row of grouped) {
+    const amount = row._sum.amount;
+    if (!amount) continue;
+
+    const key = bucketKeyForISODate(
+      row.date.toISOString().slice(0, 10),
+      granularity,
     );
+    const existing = totalsByBucket.get(key);
+    totalsByBucket.set(key, existing ? existing.add(amount) : amount);
   }
 
-  return monthStarts.map((monthStart) => {
-    const month = toISODate(monthStart).slice(0, 7);
-    const amount = totalsByMonth.get(month);
-    return {
-      month,
-      label: monthStart.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      }),
-      axisLabel: monthStart.toLocaleDateString("en-US", {
-        month: "short",
-        year: "2-digit",
-      }),
-      amount: amount ? amount.toString() : "0",
-    };
-  });
+  return {
+    granularity,
+    points: buckets.map((bucket) => ({
+      bucket: bucket.key,
+      label: bucket.label,
+      axisLabel: bucket.axisLabel,
+      amount: totalsByBucket.get(bucket.key)?.toString() ?? "0",
+    })),
+  };
 }
 
 /** Compose the analytics page payload for one type and window. */
@@ -443,15 +441,19 @@ export async function getAnalyticsSummary(
       from: input.from,
       to: input.to,
     }),
-    getTypeTrend(userId, workspaceId, input.type, TREND_MONTHS),
+    getTypeTrend(userId, workspaceId, input.type, {
+      from: input.from,
+      to: input.to,
+    }),
   ]);
 
   return {
     type: input.type,
     from: input.from,
     to: input.to,
+    granularity: trend.granularity,
     total,
     categories,
-    trend,
+    trend: trend.points,
   };
 }

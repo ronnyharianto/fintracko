@@ -4,35 +4,46 @@
  * Analytics page.
  *
  * Deeper than the dashboard's expense breakdown: browse any transaction type
- * (expense, income, transfer) by month, see the distribution by parent
- * category, drill into a category for its subcategory split, and compare
- * against a rolling monthly trend.
+ * (expense, income, transfer) by an arbitrary date range, see the distribution
+ * by parent category, drill into a category for its subcategory split, and
+ * compare against a trend for the selected window.
+ *
+ * The date range is echoed back by the API, so labels on stale data always
+ * describe the payload that is actually on screen.
  */
 
 import { useMemo, useState } from "react";
 import {
   BarChart3,
-  CalendarDays,
   ChevronLeft,
-  ChevronRight,
   Loader2,
+  RotateCcw,
   TriangleAlert,
 } from "lucide-react";
 import type { TransactionType } from "@/features/transactions/types";
+import type {
+  AnalyticsGranularity,
+  AnalyticsSummary,
+  AnalyticsTrendPoint,
+} from "@/features/analytics/types";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
-import type { AnalyticsSummary } from "@/features/analytics/types";
+import { formatRangeLabel } from "@/features/analytics/periods";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import {
-  formatPeriodLabel,
-  getDateRange,
-  navigateDate,
-} from "@/lib/date-period";
+import { getDateRange, toISODate } from "@/lib/date-period";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DonutChart } from "@/components/ui/donut-chart";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   FilterPills,
   type FilterPillOption,
@@ -41,10 +52,24 @@ import { LineChart } from "@/components/ui/line-chart";
 
 type AnalyticsType = TransactionType;
 
+type RangePreset =
+  | "this-month"
+  | "last-30"
+  | "last-90"
+  | "this-year"
+  | "custom";
+
 const TYPE_OPTIONS: readonly FilterPillOption<AnalyticsType>[] = [
   { value: "EXPENSE", label: "Expense" },
   { value: "INCOME", label: "Income" },
   { value: "TRANSFER", label: "Transfer" },
+];
+
+const RANGE_PRESETS: readonly FilterPillOption<RangePreset>[] = [
+  { value: "this-month", label: "This month" },
+  { value: "last-30", label: "Last 30 days" },
+  { value: "last-90", label: "Last 90 days" },
+  { value: "this-year", label: "This year" },
 ];
 
 /** Plural noun for the selected type, used in captions and empty states. */
@@ -54,44 +79,81 @@ const TYPE_NOUN: Record<AnalyticsType, string> = {
   TRANSFER: "transfers",
 };
 
-/**
- * Months plotted on mobile so point labels stay legible on a narrow screen.
- * Matches the dashboard's trend window for a consistent mobile experience.
- */
-const MOBILE_TREND_MONTHS = 3;
+/** Adjective for the trend bucket size. */
+const GRANULARITY_LABEL: Record<AnalyticsGranularity, string> = {
+  day: "Daily",
+  week: "Weekly",
+  month: "Monthly",
+};
 
 /** Whole units: analytics is a monitoring view, so cents only add noise. */
 function formatAmount(value: number): string {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
+function currentMonthRange(): { from: string; to: string } {
+  return getDateRange("month", new Date());
+}
+
+function lastDaysRange(days: number): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - (days - 1));
+  return { from: toISODate(from), to: toISODate(to) };
+}
+
+function currentYearRange(): { from: string; to: string } {
+  const now = new Date();
+  return {
+    from: toISODate(new Date(now.getFullYear(), 0, 1)),
+    to: toISODate(new Date(now.getFullYear(), 11, 31)),
+  };
+}
+
+function rangeForPreset(
+  preset: RangePreset,
+): { from: string; to: string } | null {
+  switch (preset) {
+    case "this-month":
+      return currentMonthRange();
+    case "last-30":
+      return lastDaysRange(30);
+    case "last-90":
+      return lastDaysRange(90);
+    case "this-year":
+      return currentYearRange();
+    default:
+      return null;
+  }
+}
+
+/** Which preset (if any) the current range matches. */
+function detectPreset(range: { from: string; to: string }): RangePreset {
+  for (const preset of RANGE_PRESETS) {
+    const candidate = rangeForPreset(preset.value);
+    if (candidate?.from === range.from && candidate?.to === range.to) {
+      return preset.value;
+    }
+  }
+  return "custom";
+}
+
 /**
- * Type and month of the payload on screen. Charts render from this rather
- * than the pending selection, so a refetch never labels stale data with the
- * new filter's type or month.
+ * Blank axis labels when there are more buckets than the chart can label
+ * legibly. The first and last buckets always keep a label, and tooltips keep
+ * the full label for every point.
  */
-interface PayloadIdentity {
-  type: AnalyticsType;
-  /** First day of the payload's window, `YYYY-MM-DD`. */
-  from: string;
-}
-
-function samePayloadIdentity(
-  a: PayloadIdentity,
-  b: PayloadIdentity,
-): boolean {
-  return a.type === b.type && a.from === b.from;
-}
-
-/** Parse a YYYY-MM-DD string to a local Date (no timezone shift). */
-function parseDay(iso: string): Date {
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-/** Check if two dates fall in the same calendar month. */
-function isSameMonth(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+function thinAxisLabels(
+  points: AnalyticsTrendPoint[],
+  maxLabels: number,
+): AnalyticsTrendPoint[] {
+  if (points.length <= maxLabels) return points;
+  const step = Math.ceil((points.length - 1) / (maxLabels - 1));
+  return points.map((point, index) => {
+    const keep =
+      index === 0 || index === points.length - 1 || index % step === 0;
+    return keep ? point : { ...point, axisLabel: "" };
+  });
 }
 
 export default function AnalyticsPage() {
@@ -99,44 +161,43 @@ export default function AnalyticsPage() {
   const isMobile = useIsMobile();
 
   const [type, setType] = useState<AnalyticsType>("EXPENSE");
-  const [refDate, setRefDate] = useState(() => new Date());
+  const [range, setRange] = useState(currentMonthRange);
   // Drill-down state is stamped with the current view key, so changing the
-  // type or month resets it without a state-syncing effect.
+  // type, range, or workspace resets it without a state-syncing effect.
   const [drill, setDrill] = useState<{
     key: string;
     categoryId: string;
   } | null>(null);
 
-  const range = useMemo(() => getDateRange("month", refDate), [refDate]);
-  const viewKey = `${type}|${range.from}`;
+  const viewKey = `${activeWorkspaceId ?? ""}|${type}|${range.from}|${range.to}`;
 
-  const query = useMemo(
-    () =>
-      new URLSearchParams({
-        type,
-        from: range.from,
-        to: range.to,
-      }).toString(),
-    [type, range],
-  );
+  const query = useMemo(() => {
+    const params = new URLSearchParams({
+      type,
+      from: range.from,
+      to: range.to,
+    });
+    return params.toString();
+  }, [type, range]);
 
   const { response, isLoading, isRefreshing, error, refetch } =
     useWorkspaceCollection<AnalyticsSummary, AnalyticsSummary>({
-    workspaceId: activeWorkspaceId,
-    getPath: (id) => `/api/v1/workspaces/${id}/analytics/summary`,
-    query,
-    select: (data) => (data ? [data] : []),
-    fallbackMessage: "Failed to load analytics. Please try again.",
-  });
+      workspaceId: activeWorkspaceId,
+      getPath: (id) => `/api/v1/workspaces/${id}/analytics/summary`,
+      query,
+      select: (data) => (data ? [data] : []),
+      fallbackMessage: "Failed to load analytics. Please try again.",
+    });
 
   // What is on screen. `response` survives query refetches, so charts keep
-  // rendering the previous month/type while the new one loads.
+  // rendering the previous range/type while the new selection loads.
   const loaded = response;
+  const currentFilterKey = `${type}|${range.from}|${range.to}`;
+  const loadedFilterKey = loaded
+    ? `${loaded.type}|${loaded.from}|${loaded.to}`
+    : null;
   const isStale =
-    isRefreshing &&
-    loaded !== null &&
-    !samePayloadIdentity(loaded, { type, from: range.from });
-  const loadedIdentity: PayloadIdentity = loaded ?? { type, from: range.from };
+    isRefreshing && loaded !== null && loadedFilterKey !== currentFilterKey;
 
   const drilledCategoryId = drill?.key === viewKey ? drill.categoryId : null;
   const drilledCategory = useMemo(
@@ -164,24 +225,14 @@ export default function AnalyticsPage() {
     ? Number(drilledCategory.amount)
     : Number(loaded?.total ?? 0);
 
-  const trendPoints = useMemo(
-    () =>
-      (loaded?.trend ?? []).map((point) => ({
-        label: point.label,
-        axisLabel: point.axisLabel,
-        value: Number(point.amount),
-      })),
-    [loaded],
-  );
-
-  // Mobile shows only the most recent months at a phone-sized scale; desktop
-  // keeps the full six-month window.
-  const visibleTrend = useMemo(
-    () => (isMobile ? trendPoints.slice(-MOBILE_TREND_MONTHS) : trendPoints),
-    [trendPoints, isMobile],
-  );
-
-  const isCurrent = isSameMonth(refDate, new Date());
+  const trendPoints = useMemo(() => {
+    const points = thinAxisLabels(loaded?.trend ?? [], isMobile ? 4 : 6);
+    return points.map((point) => ({
+      label: point.label,
+      axisLabel: point.axisLabel,
+      value: Number(point.amount),
+    }));
+  }, [loaded, isMobile]);
 
   const canDrill =
     !drilledCategory &&
@@ -198,6 +249,39 @@ export default function AnalyticsPage() {
     if (category && category.subCategories.length > 0) {
       setDrill({ key: viewKey, categoryId: category.id });
     }
+  };
+
+  const activePreset = detectPreset(range);
+  const defaultRange = currentMonthRange();
+  const isDefaultSelection =
+    type === "EXPENSE" &&
+    range.from === defaultRange.from &&
+    range.to === defaultRange.to;
+
+  const handleRangePreset = (preset: RangePreset) => {
+    const next = rangeForPreset(preset);
+    if (next) setRange(next);
+  };
+
+  const handleFromChange = (value: string) => {
+    if (!value) return;
+    setRange((current) => ({
+      from: value,
+      to: value > current.to ? value : current.to,
+    }));
+  };
+
+  const handleToChange = (value: string) => {
+    if (!value) return;
+    setRange((current) => ({
+      from: value < current.from ? value : current.from,
+      to: value,
+    }));
+  };
+
+  const handleReset = () => {
+    setType("EXPENSE");
+    setRange(currentMonthRange());
   };
 
   if (!activeWorkspaceId) {
@@ -248,49 +332,68 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <FilterPills
-          options={TYPE_OPTIONS}
-          value={type}
-          onChange={setType}
-          ariaLabel="Transaction type"
-        />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <FilterPills
+            options={TYPE_OPTIONS}
+            value={type}
+            onChange={setType}
+            ariaLabel="Transaction type"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={handleReset}
+            disabled={isDefaultSelection}
+          >
+            <RotateCcw className="mr-1 h-3 w-3" />
+            Reset filters
+          </Button>
+        </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() =>
-              setRefDate((date) => navigateDate("month", date, -1))
-            }
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="min-w-40 text-center text-sm font-medium">
-            {formatPeriodLabel("month", refDate)}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setRefDate((date) => navigateDate("month", date, 1))}
-            aria-label="Next month"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {!isCurrent && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setRefDate(new Date())}
-            >
-              <CalendarDays className="mr-1 h-3 w-3" />
-              This month
-            </Button>
-          )}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <FilterPills
+            options={RANGE_PRESETS}
+            value={activePreset}
+            onChange={handleRangePreset}
+            ariaLabel="Date range presets"
+          />
+
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <Label
+                htmlFor="analytics-from"
+                className="text-xs text-muted-foreground"
+              >
+                From
+              </Label>
+              <Input
+                id="analytics-from"
+                type="date"
+                value={range.from}
+                max={range.to}
+                onChange={(event) => handleFromChange(event.target.value)}
+                className="h-9 w-36"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="analytics-to"
+                className="text-xs text-muted-foreground"
+              >
+                To
+              </Label>
+              <Input
+                id="analytics-to"
+                type="date"
+                value={range.to}
+                min={range.from}
+                onChange={(event) => handleToChange(event.target.value)}
+                className="h-9 w-36"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -310,7 +413,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {!isLoading && (
+      {(loaded || !isLoading) && (
         <div className="space-y-4">
           {error && loaded && (
             <div
@@ -347,97 +450,96 @@ export default function AnalyticsPage() {
             >
               <Card className="gap-4 py-5">
                 <CardHeader className="px-6">
-                  <CardTitle className="text-base">
-                    {drilledCategory ? "Subcategory breakdown" : "By category"}
+                  <CardTitle className="min-w-0 truncate text-base">
+                    {drilledCategory ? drilledCategory.name : "By category"}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {samePayloadIdentity(loadedIdentity, {
-                      type,
-                      from: range.from,
-                    })
-                      ? drilledCategory
-                        ? `${drilledCategory.name} · ${formatPeriodLabel(
-                            "month",
-                            refDate,
-                          )}`
-                        : `Level 1 categories · ${formatPeriodLabel(
-                            "month",
-                            refDate,
-                          )}`
-                      : `${TYPE_NOUN[loadedIdentity.type]} · ${formatPeriodLabel(
-                          "month",
-                          parseDay(loadedIdentity.from),
+                    {drilledCategory
+                      ? `Subcategory breakdown · ${formatRangeLabel(
+                          loaded.from,
+                          loaded.to,
+                        )}`
+                      : `Level 1 categories · ${formatRangeLabel(
+                          loaded.from,
+                          loaded.to,
                         )}`}
+                  </p>
+                  {drilledCategory && (
+                    <CardAction>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => setDrill(null)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        All categories
+                      </Button>
+                    </CardAction>
+                  )}
+                </CardHeader>
+                <CardContent className="px-6">
+                  {!drilledCategory && canDrill && (
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      Click a slice to inspect it. Click a category name to see
+                      its subcategories.
+                    </p>
+                  )}
+
+                  <DonutChart
+                    // Remount on level or filter change so the donut's
+                    // internal selection does not carry a stale index into the
+                    // new slice set.
+                    key={`${viewKey}|${drilledCategoryId ?? "all"}`}
+                    slices={slices}
+                    total={donutTotal}
+                    showShare
+                    onSliceClick={canDrill ? handleSliceClick : undefined}
+                    centerLabel={
+                      drilledCategory
+                        ? "This category"
+                        : `Total ${TYPE_NOUN[loaded.type]}`
+                    }
+                    centerValue={formatAmount(donutTotal)}
+                    valueFormatter={formatAmount}
+                    emptyMessage={`No ${TYPE_NOUN[loaded.type]} in this date range.`}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="gap-4 py-5">
+                <CardHeader className="px-6">
+                  <CardTitle className="text-base">Trend</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {GRANULARITY_LABEL[loaded.granularity]}{" "}
+                    {TYPE_NOUN[loaded.type]} ·{" "}
+                    {formatRangeLabel(loaded.from, loaded.to)}
                   </p>
                 </CardHeader>
                 <CardContent className="px-6">
-              {drilledCategory ? (
-                <div className="mb-4 flex items-center gap-1 text-sm">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => setDrill(null)}
-                  >
-                    <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-                    All categories
-                  </Button>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="truncate font-medium">
-                    {drilledCategory.name}
-                  </span>
-                </div>
-              ) : (
-                canDrill && (
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    Click a category to see its subcategories.
-                  </p>
-                )
-              )}
-
-              <DonutChart
-                // Remount on level change so the donut's internal selection
-                // does not carry a stale index into the new slice set.
-                key={drilledCategoryId ?? "all"}
-                slices={slices}
-                total={donutTotal}
-                showShare
-                onSliceClick={canDrill ? handleSliceClick : undefined}
-                centerLabel={
-                  drilledCategory
-                    ? "This category"
-                    : `Total ${TYPE_NOUN[loadedIdentity.type]}`
-                }
-                centerValue={formatAmount(donutTotal)}
-                valueFormatter={formatAmount}
-                emptyMessage={`No ${TYPE_NOUN[loadedIdentity.type]} this month.`}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="gap-4 py-5">
-            <CardHeader className="px-6">                  <CardTitle className="text-base">Trend</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Monthly {TYPE_NOUN[loadedIdentity.type]} over the last 6
-                    months
-                  </p>
-            </CardHeader>
-            <CardContent className="px-6">
-              {/* Same behaviour as the dashboard's balance trend: the month
-                  amounts stay hidden until the user hovers or taps a point. */}
-              <LineChart
-                points={visibleTrend}
-                valueFormatter={formatAmount}
-                showValueLabels={false}
-                compact={isMobile}
-                emptyMessage="No data to trend yet."
-              />
-              {visibleTrend.length > 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Hover or tap a point for the exact amount.
-                </p>
-              )}
-            </CardContent>
+                  {/* Same behaviour as the dashboard's balance trend: the
+                      amounts stay hidden until the user hovers or taps a
+                      point. Daily and monthly buckets keep every point; only
+                      the axis labels are thinned. */}
+                  <LineChart
+                    points={trendPoints}
+                    valueFormatter={formatAmount}
+                    showValueLabels={false}
+                    compact={isMobile}
+                    emptyMessage="No data to trend yet."
+                    ariaLabel={`${GRANULARITY_LABEL[loaded.granularity]} ${
+                      TYPE_NOUN[loaded.type]
+                    } trend from ${formatRangeLabel(
+                      loaded.from,
+                      loaded.to,
+                    )}`}
+                  />
+                  {trendPoints.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Hover or tap a point for the exact amount.
+                    </p>
+                  )}
+                </CardContent>
               </Card>
             </div>
           )}

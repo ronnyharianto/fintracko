@@ -10,8 +10,14 @@ import type { TransactionType } from "@/features/transactions/types";
 export type { TransactionType };
 
 /**
- * One Level 1 (parent category) slice of the expense breakdown for the current
- * calendar month.
+ * Bucket size of the analytics trend, chosen from the selected date range:
+ * daily for short ranges, weekly for medium ranges, monthly for long ones.
+ */
+export type AnalyticsGranularity = "day" | "week" | "month";
+
+/**
+ * One Level 1 (parent category) slice of the expense breakdown for a summary
+ * window.
  */
 export interface ExpenseBreakdownSlice {
   categoryId: string;
@@ -55,15 +61,18 @@ export interface AnalyticsSlice {
   subCategories: AnalyticsSlice[];
 }
 
-/** One month of the analytics trend for the selected transaction type. */
+/** One bucket of the analytics trend for the selected transaction type. */
 export interface AnalyticsTrendPoint {
-  /** Year-month key, `YYYY-MM`. */
-  month: string;
-  /** Full display label, e.g. `"Apr 2026"`. Used in tooltips and summaries. */
+  /**
+   * Bucket key: `YYYY-MM-DD` for daily and weekly buckets, `YYYY-MM` for
+   * monthly buckets.
+   */
+  bucket: string;
+  /** Full display label, e.g. `"Apr 2026"` or `"Week of Apr 6, 2026"`. */
   label: string;
-  /** Short axis label, e.g. `"Apr 26"`. */
+  /** Short axis label, e.g. `"Apr 26"`, to keep chart ticks compact. */
   axisLabel: string;
-  /** Net total for the month, as a decimal string. */
+  /** Net total for the bucket, as a decimal string. */
   amount: string;
 }
 
@@ -72,11 +81,13 @@ export interface AnalyticsSummary {
   type: TransactionType;
   from: string;
   to: string;
+  /** Bucket size used by `trend`, chosen from the selected range. */
+  granularity: AnalyticsGranularity;
   /** Sum of the level-1 slice amounts, as a decimal string. */
   total: string;
   /** Ranked level-1 slices, largest first, each carrying its subcategories. */
   categories: AnalyticsSlice[];
-  /** Monthly totals for `type`, oldest first. */
+  /** Buckets covering `from` to `to`, oldest first. */
   trend: AnalyticsTrendPoint[];
 }
 
