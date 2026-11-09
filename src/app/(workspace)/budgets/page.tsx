@@ -11,9 +11,14 @@ import {
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import type {
+  BudgetAlert,
+  BudgetAlertListResponse,
   BudgetListResponse,
   BudgetView,
 } from "@/features/budgets/types";
+import { alertLevelFor } from "@/features/budgets/alerts";
+import { BudgetAlertPanel } from "@/components/shared/budgets/budget-alert-panel";
+import { budgetBarClass } from "@/components/shared/budgets/alert-presentation";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,6 +118,21 @@ export default function BudgetsPage() {
     fallbackMessage: "Failed to load budgets. Please try again.",
   });
 
+  // Alerts always describe the current period, even while another month or
+  // year is being reviewed, so they come from their own endpoint rather than
+  // from the viewed window's budgets.
+  const {
+    data: alerts,
+    isLoading: isAlertsLoading,
+    error: alertsError,
+    refetch: refetchAlerts,
+  } = useWorkspaceCollection<BudgetAlert, BudgetAlertListResponse>({
+    workspaceId: activeWorkspaceId,
+    getPath: (id) => `/api/v1/workspaces/${id}/budgets/alerts`,
+    select: (data) => data.alerts ?? [],
+    fallbackMessage: "Failed to load budget alerts. Please try again.",
+  });
+
   // Whether the workspace has any budget at all, so an empty month keeps the
   // period navigation instead of stranding the user.
   const hasAnyBudget = (response?.totalInWorkspace ?? 0) > 0;
@@ -163,6 +183,13 @@ export default function BudgetsPage() {
   );
 
   const isCurrent = isCurrentView(viewMode, refDate);
+
+  // Budget changes move budgets across thresholds, so the alerts feed is
+  // refreshed together with the list it describes.
+  const refreshBudgets = () => {
+    void refetch();
+    void refetchAlerts();
+  };
 
   const handleEdit = (budget: BudgetView) => {
     setEditingBudget(budget);
@@ -238,6 +265,14 @@ export default function BudgetsPage() {
           <span className="hidden sm:inline">New Budget</span>
         </Button>
       </div>
+
+      {!isAlertsLoading && alertsError && (
+        <p className="text-xs text-muted-foreground" role="status">
+          Budget alerts are unavailable right now.
+        </p>
+      )}
+
+      {!isAlertsLoading && !alertsError && <BudgetAlertPanel alerts={alerts} />}
 
       {!isLoading && hasAnyBudget && (
         <>
@@ -338,13 +373,9 @@ export default function BudgetsPage() {
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${
-                      summary.utilization > 100
-                        ? "bg-red-500"
-                        : summary.utilization >= 80
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
-                    }`}
+                    className={`h-full rounded-full ${budgetBarClass(
+                      alertLevelFor(summary.utilization),
+                    )}`}
                     style={{
                       width: `${Math.min(Math.max(summary.utilization, 0), 100)}%`,
                     }}
@@ -456,20 +487,20 @@ export default function BudgetsPage() {
       <CreateBudgetDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onCreated={() => void refetch()}
+        onCreated={refreshBudgets}
         initialStartDate={range.from}
       />
       <EditBudgetDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         budget={editingBudget}
-        onUpdated={() => void refetch()}
+        onUpdated={refreshBudgets}
       />
       <DeleteBudgetDialog
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         budget={deletingBudget}
-        onDeleted={() => void refetch()}
+        onDeleted={refreshBudgets}
       />
     </div>
   );

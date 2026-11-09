@@ -2,6 +2,12 @@
 
 import { CalendarDays, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import type { BudgetInterval, BudgetView } from "@/features/budgets/types";
+import { alertLevelFor } from "@/features/budgets/alerts";
+import {
+  BUDGET_ALERT_BADGE_VARIANT,
+  BUDGET_ALERT_LABEL,
+  budgetBarClass,
+} from "@/components/shared/budgets/alert-presentation";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,18 +51,15 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
   // amount multiplied by the periods the view resolved to.
   const limit = Number(budget.limit);
   const isMultiPeriod = budget.periods > 1;
-  const isOver = budget.utilization > 100;
+  const level = alertLevelFor(budget.utilization);
+  const isOver = level === "EXCEEDED";
   const clampedPercent = Math.min(Math.max(budget.utilization, 0), 100);
   const hasUsage = spent > 0;
   const barPercent = hasUsage
     ? Math.max(clampedPercent, MIN_VISIBLE_BAR_PERCENT)
     : 0;
 
-  const barColor = isOver
-    ? "bg-red-500"
-    : budget.utilization >= 80
-      ? "bg-amber-500"
-      : "bg-emerald-500";
+  const barColor = budgetBarClass(level);
 
   return (
     <Card className="gap-4 py-5">
@@ -144,13 +147,23 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <span
-              className={cn(
-                "text-xs font-medium tabular-nums",
-                isOver ? "text-red-600" : "text-muted-foreground",
+            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span
+                className={cn(
+                  "text-xs font-medium tabular-nums",
+                  isOver ? "text-red-600" : "text-muted-foreground",
+                )}
+              >
+                {budget.utilization.toFixed(1)}% used
+              </span>
+              {level && (
+                <Badge
+                  size="sm"
+                  variant={BUDGET_ALERT_BADGE_VARIANT[level]}
+                >
+                  {BUDGET_ALERT_LABEL[level]}
+                </Badge>
               )}
-            >
-              {budget.utilization.toFixed(1)}% used
             </span>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5 shrink-0" />

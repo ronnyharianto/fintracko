@@ -6,7 +6,10 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import type { BudgetView } from "@/features/budgets/types";
+import { alertLevelFor } from "@/features/budgets/alerts";
 import type { DashboardSummary } from "@/features/analytics/types";
+import { BudgetAlertPanel } from "@/components/shared/budgets/budget-alert-panel";
+import { budgetBarClass } from "@/components/shared/budgets/alert-presentation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -169,6 +172,10 @@ export default function DashboardPage() {
           {monthLabel}
         </p>
       </div>
+
+      {!isLoading && response && (
+        <BudgetAlertPanel alerts={response.budgetAlerts} />
+      )}
 
       {isLoading && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -350,16 +357,13 @@ function TopBudgetsCard({
 function TopBudgetRow({ budget }: { budget: BudgetView }) {
   const spent = Number(budget.spent);
   const limit = Number(budget.limit);
-  const isOver = budget.utilization > 100;
+  const level = alertLevelFor(budget.utilization);
+  const isOver = level === "EXCEEDED";
   const clampedPercent = Math.min(Math.max(budget.utilization, 0), 100);
   const barPercent =
     spent > 0 ? Math.max(clampedPercent, MIN_VISIBLE_BAR_PERCENT) : 0;
 
-  const barColor = isOver
-    ? "bg-red-500"
-    : budget.utilization >= 80
-      ? "bg-amber-500"
-      : "bg-emerald-500";
+  const barColor = budgetBarClass(level);
 
   return (
     <li className="space-y-2">
