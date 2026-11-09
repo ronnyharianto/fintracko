@@ -2,6 +2,8 @@
 
 import { ChevronDown } from "lucide-react";
 import type { BudgetView } from "@/features/budgets/types";
+import { alertLevelFor } from "@/features/budgets/alerts";
+import { budgetBarClass } from "@/components/shared/budgets/alert-presentation";
 import { cn, formatCurrency } from "@/lib/utils";
 import { BudgetCard } from "./budget-card";
 import type { BudgetCategorySection } from "./budget-sections";
@@ -26,13 +28,10 @@ export function BudgetSection({
   onEdit,
   onDelete,
 }: BudgetSectionProps) {
-  const isOver = section.utilization > 100;
+  const level = alertLevelFor(section.utilization);
+  const isOver = level === "EXCEEDED";
   const barPercent = Math.min(Math.max(section.utilization, 0), 100);
-  const barColor = isOver
-    ? "bg-red-500"
-    : section.utilization >= 80
-      ? "bg-amber-500"
-      : "bg-emerald-500";
+  const barColor = budgetBarClass(level);
 
   return (
     <div className="space-y-3">
