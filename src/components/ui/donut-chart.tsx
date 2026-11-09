@@ -12,10 +12,11 @@ import { cn } from "@/lib/utils";
  * `stroke-chart-N` / `bg-chart-N` utilities). Keeping the class strings literal
  * here lets Tailwind's compiler see them; never build them dynamically.
  *
- * Every arc is interactive: hovering, focusing, or tapping it (or its legend
- * row) highlights that slice, dims the others, and swaps the center readout for
- * the slice's share and amount. This is the only place the percentage is shown,
- * so the legend stays clean.
+ * Every arc is interactive: hovering, focusing, or tapping it highlights that
+ * slice, dims the others, and swaps the center readout for the slice's share
+ * and amount. Arcs only focus a slice; callers that pass `onSliceClick` get the
+ * drill-down action from the legend rows instead, keeping inspection and
+ * navigation on separate targets.
  */
 
 /** The donut's rendered size in px (Tailwind `h-48` / `w-48`). */
@@ -67,8 +68,8 @@ interface DonutChartProps {
    */
   showShare?: boolean;
   /**
-   * Called when a slice is clicked (arc or legend row). Use for drill-down;
-   * hovering still only previews the slice in the center.
+   * Called when a legend row is clicked. Use for drill-down; clicking an arc
+   * still only focuses that slice in the center.
    */
   onSliceClick?: (index: number) => void;
   /** Message shown when there are no slices. */
@@ -231,7 +232,6 @@ export function DonutChart({
                 onClick={(event) => {
                   event.stopPropagation();
                   setActiveIndex(index);
-                  onSliceClick?.(index);
                 }}
               />
             ))}

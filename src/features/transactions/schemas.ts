@@ -113,3 +113,23 @@ export const TransactionQuerySchema = z.object({
 });
 
 export type TransactionQueryInput = z.infer<typeof TransactionQuerySchema>;
+
+/**
+ * Query parameters that make the transactions page open with a fixed analytics
+ * filter. Keep this schema limited to the fields the page understands; an
+ * incomplete or malformed preset falls back to the normal list.
+ */
+export const TransactionListPresetSchema = z
+  .object({
+    type: TransactionTypeEnum.optional(),
+    subCategoryId: z.uuid(),
+    from: z.iso.date(),
+    to: z.iso.date(),
+  })
+  .refine((data) => data.from <= data.to, {
+    message: "The start date must be on or before the end date",
+  });
+
+export type TransactionListPresetInput = z.infer<
+  typeof TransactionListPresetSchema
+>;
