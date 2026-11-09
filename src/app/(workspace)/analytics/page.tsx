@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BarChart3,
   ChevronLeft,
@@ -157,6 +158,7 @@ function thinAxisLabels(
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const { activeWorkspaceId } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -241,8 +243,29 @@ export default function AnalyticsPage() {
     ) ??
       false);
 
+  // In the drilled view, legend rows navigate to the filtered transaction
+  // list instead of drilling any further.
+  const hasSliceAction = drilledCategory
+    ? drilledCategory.subCategories.length > 0
+    : canDrill;
+
   const handleSliceClick = (index: number) => {
-    if (!loaded || drilledCategory) return;
+    if (!loaded) return;
+
+    if (drilledCategory) {
+      const subCategory = drilledCategory.subCategories[index];
+      if (!subCategory) return;
+
+      const params = new URLSearchParams({
+        type: loaded.type,
+        subCategoryId: subCategory.id,
+        from: loaded.from,
+        to: loaded.to,
+      });
+      router.push(`/transactions?${params.toString()}`);
+      return;
+    }
+
     const category = loaded.categories[index];
     // Only drill when there is a subcategory level to show; otherwise the
     // donut would come up empty.
@@ -485,6 +508,11 @@ export default function AnalyticsPage() {
                       its subcategories.
                     </p>
                   )}
+                  {drilledCategory && (
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      Click a subcategory name to view its transactions.
+                    </p>
+                  )}
 
                   <DonutChart
                     // Remount on level or filter change so the donut's
@@ -494,7 +522,7 @@ export default function AnalyticsPage() {
                     slices={slices}
                     total={donutTotal}
                     showShare
-                    onSliceClick={canDrill ? handleSliceClick : undefined}
+                    onSliceClick={hasSliceAction ? handleSliceClick : undefined}
                     centerLabel={
                       drilledCategory
                         ? "This category"

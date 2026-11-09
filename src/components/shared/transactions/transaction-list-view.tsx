@@ -11,17 +11,25 @@
  * Pass `accountId` to scope the list to one account. The scope is enforced
  * server-side by the transactions endpoint (`accountId` query parameter),
  * so the client cannot show transactions outside the account.
+ *
+ * Pass `preset` to open a fixed analytics filter (subcategory + date range).
+ * The server enforces the same query parameters; the preset only controls the
+ * request and the filter summary shown to the user.
  */
 
 import { useLayoutEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import type {
+  TransactionListPreset,
   TransactionListResponse,
+  TransactionType,
   TransactionView,
 } from "@/features/transactions/types";
 import { sumTransactions } from "@/features/transactions/summary";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import {
+  formatDateRangeLabel,
   formatDayHeading,
   formatPeriodLabel,
   getDateRange,
@@ -39,7 +47,9 @@ import {
   ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
+  Filter,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { CreateTransactionDialog } from "./create-transaction-dialog";
 import { EditTransactionDialog } from "./edit-transaction-dialog";
@@ -78,6 +88,13 @@ const VIEW_MODES = ["day", "week", "month"] as const;
 const VIEW_MODE_STORAGE_KEY = "fintracko_transactions_view_mode";
 const VIEW_MODE_DEFAULT: ViewMode = "month";
 
+/** Labels used in the fixed-filter summary. */
+const TYPE_LABELS: Record<TransactionType, string> = {
+  EXPENSE: "Expense",
+  INCOME: "Income",
+  TRANSFER: "Transfer",
+};
+
 /** Narrow a stored string back to a known view mode. */
 function isViewMode(value: string): value is ViewMode {
   return (VIEW_MODES as readonly string[]).includes(value);
@@ -94,6 +111,8 @@ interface TransactionListViewProps {
   header?: React.ReactNode;
   /** Scope the list to transactions touching this account. */
   accountId?: string;
+  /** Fixed filter supplied by another surface, such as analytics. */
+  preset?: TransactionListPreset;
   /** Account preselected when creating a transaction from this view. */
   defaultAccountId?: string;
   /** Disables the New Transaction button (e.g. archived account scope). */
@@ -106,6 +125,7 @@ export function TransactionListView({
   title = "Transactions",
   header,
   accountId,
+  preset,
   defaultAccountId,
   createDisabled = false,
   onTransactionChanged,
@@ -116,8 +136,10 @@ export function TransactionListView({
   const [viewMode, setViewMode] = useState<ViewMode>(VIEW_MODE_DEFAULT);
   const [refDate, setRefDate] = useState(() => new Date());
 
-  // Filters
-  const [typeFilter, setTypeFilter] = useState<TransactionFilterValue>("ALL");
+  // Filters. A preset pins the type; its type control is hidden below.
+  const [typeFilter, setTypeFilter] = useState<TransactionFilterValue>(
+    preset?.type ?? "ALL",
+  );
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,8 +196,11 @@ export function TransactionListView({
   // see the complete period even when it exceeds one page. `accountId` narrows
   // the same request to one account.
   const dateRange = useMemo(
-    () => getDateRange(viewMode, refDate),
-    [viewMode, refDate],
+    () =>
+      preset
+        ? { from: preset.from, to: preset.to }
+        : getDateRange(viewMode, refDate),
+    [preset, viewMode, refDate],
   );
 
   const query = useMemo(() => {
@@ -184,8 +209,12 @@ export function TransactionListView({
       to: dateRange.to,
     });
     if (accountId) params.set("accountId", accountId);
+    if (preset) {
+      params.set("subCategoryId", preset.subCategoryId);
+      if (preset.type) params.set("type", preset.type);
+    }
     return params.toString();
-  }, [accountId, dateRange]);
+  }, [accountId, dateRange, preset]);
 
   const {
     data: transactions,
@@ -209,6 +238,16 @@ export function TransactionListView({
     void refetch();
     onTransactionChanged?.();
   };
+
+  // The names arrive with the filtered rows; until then the fixed type is a
+  // useful, honest description of what the list is showing.
+  const presetLabel = preset
+    ? transactions[0]
+      ? `${transactions[0].categoryName} › ${transactions[0].subCategoryName}`
+      : preset.type
+        ? `${TYPE_LABELS[preset.type]} transactions`
+        : "Filtered transactions"
+    : null;
 
   // The period is enforced server-side, so only the in-memory type filter and
   // search narrow the (already complete) period rows here.
@@ -364,8 +403,36 @@ export function TransactionListView({
         </Button>
       </div>
 
+      {/* Fixed analytics filter summary */}
+      {preset && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <Filter
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span className="min-w-0 truncate font-medium">{presetLabel}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">
+              {formatDateRangeLabel(preset.from, preset.to)}
+            </span>
+          </div>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 px-2 text-muted-foreground"
+          >
+            <Link href="/transactions">
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Link>
+          </Button>
+        </div>
+      )}
+
       {/* View Mode + Date Navigation */}
-      {!isInitialLoading && (
+      {!isInitialLoading && !preset && (
         <div className="flex items-center gap-2 sm:justify-between">
           {/* View mode pills */}
           <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-1 sm:gap-1">
@@ -438,6 +505,7 @@ export function TransactionListView({
             direction={sortDirection}
             grouped={groupByDay}
             filter={typeFilter}
+            showTypeFilter={!preset}
             onSortChange={(field, direction) => {
               setSortField(field);
               setSortDirection(direction);
@@ -507,8 +575,25 @@ export function TransactionListView({
         </Card>
       )}
 
+      {/* Empty State — a fixed analytics filter has no matching rows */}
+      {!isInitialLoading && preset && transactions.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+          <EmptyStateIllustration icon="no-period" className="mb-4" />
+          <p className="text-center text-lg font-medium">
+            No transactions for this subcategory
+          </p>
+          <p className="text-center text-sm text-muted-foreground">
+            There are no matching transactions in the selected date range.
+          </p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link href="/transactions">Clear filters</Link>
+          </Button>
+        </div>
+      )}
+
       {/* Empty State — this scope has no transactions at all */}
       {!isInitialLoading &&
+        !preset &&
         transactions.length === 0 &&
         !hasAnyTransactions && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
@@ -533,7 +618,10 @@ export function TransactionListView({
         )}
 
       {/* Empty State — this scope has transactions, but none in this period */}
-      {!isInitialLoading && transactions.length === 0 && hasAnyTransactions && (
+      {!isInitialLoading &&
+        !preset &&
+        transactions.length === 0 &&
+        hasAnyTransactions && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <EmptyStateIllustration icon="no-period" className="mb-4" />
           <p className="text-center text-lg font-medium">
@@ -555,7 +643,9 @@ export function TransactionListView({
               No matching transactions
             </p>
             <p className="text-center text-sm text-muted-foreground">
-              Try clearing the search or changing the type filter.
+              {preset
+                ? "Try clearing the search."
+                : "Try clearing the search or changing the type filter."}
             </p>
           </div>
         )}

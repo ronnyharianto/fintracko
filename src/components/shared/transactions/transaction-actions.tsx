@@ -80,6 +80,8 @@ interface TransactionActionsProps {
   direction: SortDirection;
   grouped: boolean;
   filter: TransactionFilterValue;
+  /** Hide the type filter when an external preset already fixes it. */
+  showTypeFilter?: boolean;
   onSortChange: (field: SortField, direction: SortDirection) => void;
   onGroupingChange: (grouped: boolean) => void;
   onFilterChange: (filter: TransactionFilterValue) => void;
@@ -90,6 +92,7 @@ export function TransactionActions({
   direction,
   grouped,
   filter,
+  showTypeFilter = true,
   onSortChange,
   onGroupingChange,
   onFilterChange,
@@ -140,24 +143,29 @@ export function TransactionActions({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
-            Filter by type
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup
-              value={filter}
-              onValueChange={handleFilterChange}
-            >
-              {FILTER_OPTIONS.map((option) => (
-                <DropdownMenuRadioItem key={option.value} value={option.value}>
-                  {option.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {showTypeFilter && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+              Filter by type
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={filter}
+                onValueChange={handleFilterChange}
+              >
+                {FILTER_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuCheckboxItem
           checked={grouped}
           onCheckedChange={(checked) => onGroupingChange(checked === true)}

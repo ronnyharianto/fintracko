@@ -46,6 +46,17 @@ export interface TransactionFormData {
   attachmentUrl?: string;
 }
 
+/**
+ * Filter preset used when another surface (e.g. analytics) deep-links into
+ * the transaction list. The API remains the authority for which rows match.
+ */
+export interface TransactionListPreset {
+  type?: TransactionType;
+  subCategoryId: string;
+  from: string;
+  to: string;
+}
+
 /** Response shape from the transactions list endpoint. */
 export interface TransactionListResponse {
   transactions: TransactionView[];
