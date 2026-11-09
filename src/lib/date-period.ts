@@ -71,6 +71,34 @@ export function getDateRange(mode: ViewMode, refDate: Date): { from: string; to:
   return { from: toISODate(start), to: toISODate(end) };
 }
 
+/** Format an inclusive `YYYY-MM-DD` range for a filter summary. */
+export function formatDateRangeLabel(from: string, to: string): string {
+  const start = parseDate(from);
+  const end = parseDate(to);
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+  const startMonth = start.toLocaleDateString("en-US", { month: "short" });
+  const endMonth = end.toLocaleDateString("en-US", { month: "short" });
+
+  if (from === to) {
+    return end.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  if (startYear === endYear && start.getMonth() === end.getMonth()) {
+    return `${startMonth} ${start.getDate()}–${end.getDate()}, ${endYear}`;
+  }
+
+  if (startYear === endYear) {
+    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${endYear}`;
+  }
+
+  return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
+}
+
 /** Format the period label for display. */
 export function formatPeriodLabel(mode: ViewMode, refDate: Date): string {
   if (mode === "day") {

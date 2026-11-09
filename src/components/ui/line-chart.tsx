@@ -53,6 +53,11 @@ interface LineChartProps {
   compact?: boolean;
   /** Message shown when there are no points. */
   emptyMessage?: string;
+  /**
+   * Accessible description of the series. Defaults to a balance-trend summary
+   * so existing callers keep their current announcement.
+   */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -182,6 +187,7 @@ export function LineChart({
   showValueLabels = true,
   compact = false,
   emptyMessage = "No data to display.",
+  ariaLabel,
   className,
 }: LineChartProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -275,9 +281,11 @@ export function LineChart({
   const active =
     activeIndex !== null && activeIndex < points.length ? activeIndex : null;
 
-  const ariaLabel = `Balance trend from ${points[0].label} (${valueTexts[0]}) to ${
-    points[points.length - 1].label
-  } (${valueTexts[valueTexts.length - 1]}).`;
+  const accessibleLabel =
+    ariaLabel ??
+    `Balance trend from ${points[0].label} (${valueTexts[0]}) to ${
+      points[points.length - 1].label
+    } (${valueTexts[valueTexts.length - 1]}).`;
 
   // Width of the clickable column centered on each point.
   const bandWidth =
@@ -304,7 +312,7 @@ export function LineChart({
         viewBox={`0 0 ${dim.width} ${dim.height}`}
         className="h-auto w-full"
         role="group"
-        aria-label={ariaLabel}
+        aria-label={accessibleLabel}
       >
         {/* Gridlines and value-axis ticks */}
         {scale.ticks.map((tick) => {
