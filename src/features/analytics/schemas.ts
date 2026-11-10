@@ -29,3 +29,48 @@ export const AnalyticsQuerySchema = z
   });
 
 export type AnalyticsQueryInput = z.infer<typeof AnalyticsQuerySchema>;
+
+/** Transaction type stored in the analytics page URL. */
+export type AnalyticsViewType =
+  (typeof TransactionType)[keyof typeof TransactionType];
+
+/** Parsed state that the analytics page keeps in its URL. */
+export interface AnalyticsViewParams {
+  type: AnalyticsViewType;
+  range: { from: string; to: string };
+  /** Drilled category, restored when returning from the transactions page. */
+  categoryId?: string;
+}
+
+const AnalyticsViewDateSchema = z.iso.date();
+const AnalyticsViewCategorySchema = z.uuid();
+
+/**
+ * Parse the analytics view from page query parameters.
+ *
+ * Each field falls back independently so one malformed parameter does not
+ * discard the rest of the view. The date range only survives when both dates
+ * are valid ISO dates in the correct order.
+ */
+export function parseAnalyticsViewParams(
+  params: { get(name: string): string | null },
+  fallback: { type: AnalyticsViewType; from: string; to: string },
+): AnalyticsViewParams {
+  const type = TransactionTypeEnum.safeParse(params.get("type"));
+  const from = AnalyticsViewDateSchema.safeParse(params.get("from"));
+  const to = AnalyticsViewDateSchema.safeParse(params.get("to"));
+  const categoryId = AnalyticsViewCategorySchema.safeParse(
+    params.get("categoryId"),
+  );
+
+  const range =
+    from.success && to.success && from.data <= to.data
+      ? { from: from.data, to: to.data }
+      : { from: fallback.from, to: fallback.to };
+
+  return {
+    type: type.success ? (type.data as AnalyticsViewType) : fallback.type,
+    range,
+    categoryId: categoryId.success ? categoryId.data : undefined,
+  };
+}
