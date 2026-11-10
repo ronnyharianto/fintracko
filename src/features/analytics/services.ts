@@ -6,6 +6,7 @@
  *   2. Top 5 yearly budgets closest to exhaustion this year
  *   3. Expense breakdown by Level 1 (parent) category for this month
  *   4. Aggregated net balance at each month end over a rolling window
+ *   5. Budget threshold alerts for the current period
  *
  * All reads enforce workspace membership through `requireMembership`. Budget
  * lists reuse `getBudgets`, so their per-period limit/spend resolution cannot
@@ -15,7 +16,10 @@
 
 import { db } from "@/lib/db";
 import { findWorkspaceMembership } from "@/lib/auth/membership";
-import { getBudgets } from "@/features/budgets/services";
+import {
+  getBudgetAlerts,
+  getBudgets,
+} from "@/features/budgets/services";
 import type { BudgetView } from "@/features/budgets/types";
 import { getDateRange, toISODate } from "@/lib/date-period";
 import {
@@ -348,7 +352,11 @@ export async function getBalanceTrend(
   });
 }
 
-/** Compose all four dashboard sections for the current month/year windows. */
+/**
+ * Compose every dashboard section, including budget alerts, for the current
+ * month/year windows. Budget alerts are part of the payload so the dashboard
+ * keeps a single loading and error state.
+ */
 export async function getDashboardSummary(
   userId: string,
   workspaceId: string,
@@ -362,15 +370,22 @@ export async function getDashboardSummary(
     to: toISODate(new Date(now.getFullYear(), 11, 31)),
   };
 
-  const [topMonthly, topYearly, expenseBreakdown, balanceTrend] =
+  const [topMonthly, topYearly, expenseBreakdown, balanceTrend, alerts] =
     await Promise.all([
       getTopBudgets(userId, workspaceId, BudgetInterval.MONTHLY, month),
       getTopBudgets(userId, workspaceId, BudgetInterval.YEARLY, year),
       getExpenseBreakdown(userId, workspaceId, month),
       getBalanceTrend(userId, workspaceId, TREND_MONTHS),
+      getBudgetAlerts(userId, workspaceId),
     ]);
 
-  return { topMonthly, topYearly, expenseBreakdown, balanceTrend };
+  return {
+    topMonthly,
+    topYearly,
+    expenseBreakdown,
+    balanceTrend,
+    budgetAlerts: alerts.alerts,
+  };
 }
 
 /**

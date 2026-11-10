@@ -12,6 +12,8 @@
 import React from "react";
 import { AlertTriangle, CalendarDays } from "lucide-react";
 import type { BudgetView } from "@/features/budgets/types";
+import { alertLevelFor } from "@/features/budgets/alerts";
+import { budgetBarClass } from "@/components/shared/budgets/alert-presentation";
 import { parseDate } from "@/lib/date-period";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -53,7 +55,8 @@ export function BudgetSnapshot({
   const contribution = newAmount - oldAmount;
   const projectedSpend = spent + contribution;
   const utilization = limit !== 0 ? (projectedSpend / limit) * 100 : 0;
-  const isOver = projectedSpend > limit;
+  const level = alertLevelFor(utilization);
+  const isOver = level === "EXCEEDED";
   // Warn only when the user's own input pushes the period budget to empty or
   // negative (creation contributes the full amount, editing only the delta),
   // not when the budget was already exhausted and the edit shrinks the spend.
@@ -62,11 +65,7 @@ export function BudgetSnapshot({
   const barPercent = projectedSpend
     ? Math.max(clampPercent(utilization), MIN_VISIBLE_BAR_PERCENT)
     : 0;
-  const barColor = isOver
-    ? "bg-red-500"
-    : utilization >= 80
-      ? "bg-amber-500"
-      : "bg-emerald-500";
+  const barColor = budgetBarClass(level);
   const remaining = limit - projectedSpend;
   const periodNoun =
     budget.interval === "YEARLY" ? "year" : "month";

@@ -11,6 +11,8 @@
  * - Ranges must be period-aligned and must not overlap for the same subcategory
  * - Utilization is measured against the periods the viewed window resolves to
  * - Hard delete is allowed; budgets are not referenced by transactions
+ * - Threshold alerts are derived from live spend in `./alerts`, so they never
+ *   need to be stored or reconciled
  */
 
 import { db } from "@/lib/db";
@@ -21,6 +23,7 @@ import {
 } from "../../../generated/prisma/enums";
 import type { CreateBudgetInput, UpdateBudgetInput } from "./schemas";
 import { BudgetServiceError } from "./errors";
+import { buildBudgetAlerts } from "./alerts";
 import {
   OPEN_ENDED_DATE,
   budgetStatus,
@@ -30,7 +33,7 @@ import {
   previousDay,
   resolvePeriods,
 } from "./utilization";
-import type { BudgetStatus, BudgetView } from "./types";
+import type { BudgetAlert, BudgetStatus, BudgetView } from "./types";
 
 /** Aligned periods a budget covers for a given view. */
 type ResolvedPeriods = NonNullable<ReturnType<typeof resolvePeriods>>;
@@ -282,6 +285,30 @@ export async function getBudgets(
   const totalInWorkspace = await db.budget.count({ where: { workspaceId } });
 
   return { budgets: filtered, total: filtered.length, totalInWorkspace };
+}
+
+/**
+ * Threshold alerts for the budgets active today.
+ *
+ * Each budget is measured against the interval period containing today (month
+ * for MONTHLY, year for YEARLY) through the same `getBudgets` resolution the
+ * budgets page and dashboard use, so an alert always agrees with the card it
+ * points at. Because alerts are derived from live spend, no delivery state is
+ * stored here; a future push worker can reuse this output and record its own
+ * sends against `dedupeKey`.
+ */
+export async function getBudgetAlerts(
+  userId: string,
+  workspaceId: string,
+): Promise<{ alerts: BudgetAlert[]; total: number }> {
+  const today = isoDate(new Date());
+  const { budgets } = await getBudgets(userId, workspaceId, {
+    from: today,
+    to: today,
+  });
+
+  const alerts = buildBudgetAlerts(budgets);
+  return { alerts, total: alerts.length };
 }
 
 /** Retrieves one budget scoped by both workspace and budget id. */

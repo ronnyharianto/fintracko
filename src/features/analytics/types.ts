@@ -4,7 +4,7 @@
  * Client-safe: type definitions only, no server-only imports.
  */
 
-import type { BudgetView } from "@/features/budgets/types";
+import type { BudgetAlert, BudgetView } from "@/features/budgets/types";
 import type { TransactionType } from "@/features/transactions/types";
 
 export type { TransactionType };
@@ -101,4 +101,6 @@ export interface DashboardSummary {
   expenseBreakdown: ExpenseBreakdownSlice[];
   /** Aggregated net balance at each month end, oldest first. */
   balanceTrend: BalanceTrendPoint[];
+  /** Budgets at or past their alert threshold in the current period. */
+  budgetAlerts: BudgetAlert[];
 }

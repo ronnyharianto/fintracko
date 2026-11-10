@@ -9,11 +9,13 @@
  * compare against a trend for the selected window.
  *
  * The date range is echoed back by the API, so labels on stale data always
- * describe the payload that is actually on screen.
+ * describe the payload that is actually on screen. The current filters and
+ * drilled category live in the URL so browser back from the filtered
+ * transaction list restores the same analytics view.
  */
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   ChevronLeft,
@@ -31,6 +33,7 @@ import { useWorkspace } from "@/components/shared/workspace/workspace-context";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useWorkspaceCollection } from "@/lib/hooks/use-workspace-collection";
 import { formatRangeLabel } from "@/features/analytics/periods";
+import { parseAnalyticsViewParams } from "@/features/analytics/schemas";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { getDateRange, toISODate } from "@/lib/date-period";
@@ -52,6 +55,21 @@ import {
 import { LineChart } from "@/components/ui/line-chart";
 
 type AnalyticsType = TransactionType;
+
+/** Build the canonical URL for the current analytics view. */
+function buildAnalyticsUrl(
+  type: AnalyticsType,
+  range: { from: string; to: string },
+  categoryId?: string | null,
+): string {
+  const params = new URLSearchParams({
+    type,
+    from: range.from,
+    to: range.to,
+  });
+  if (categoryId) params.set("categoryId", categoryId);
+  return `/analytics?${params.toString()}`;
+}
 
 type RangePreset =
   | "this-month"
@@ -158,20 +176,49 @@ function thinAxisLabels(
 }
 
 export default function AnalyticsPage() {
+  // `useSearchParams` must be read inside a Suspense boundary so this route
+  // can be rendered without a client-side bailout error.
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsContent />
+    </Suspense>
+  );
+}
+
+function AnalyticsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { activeWorkspaceId } = useWorkspace();
   const isMobile = useIsMobile();
 
-  const [type, setType] = useState<AnalyticsType>("EXPENSE");
-  const [range, setRange] = useState(currentMonthRange);
-  // Drill-down state is stamped with the current view key, so changing the
-  // type, range, or workspace resets it without a state-syncing effect.
-  const [drill, setDrill] = useState<{
-    key: string;
-    categoryId: string;
-  } | null>(null);
+  const urlView = useMemo(
+    () =>
+      parseAnalyticsViewParams(searchParams, {
+        type: "EXPENSE",
+        ...currentMonthRange(),
+      }),
+    [searchParams],
+  );
+
+  const [type, setType] = useState<AnalyticsType>(urlView.type);
+  const [range, setRange] = useState(urlView.range);
+  const [drilledCategoryId, setDrilledCategoryId] = useState<string | null>(
+    urlView.categoryId ?? null,
+  );
 
   const viewKey = `${activeWorkspaceId ?? ""}|${type}|${range.from}|${range.to}`;
+
+  // The URL is the restore source for browser back/forward and direct links.
+  // Adjust state during render (rather than in an effect) so an external URL
+  // change replaces the local view before it paints.
+  const urlViewKey = `${urlView.type}|${urlView.range.from}|${urlView.range.to}|${urlView.categoryId ?? ""}`;
+  const [lastUrlViewKey, setLastUrlViewKey] = useState(urlViewKey);
+  if (urlViewKey !== lastUrlViewKey) {
+    setLastUrlViewKey(urlViewKey);
+    setType(urlView.type);
+    setRange(urlView.range);
+    setDrilledCategoryId(urlView.categoryId ?? null);
+  }
 
   const query = useMemo(() => {
     const params = new URLSearchParams({
@@ -201,7 +248,6 @@ export default function AnalyticsPage() {
   const isStale =
     isRefreshing && loaded !== null && loadedFilterKey !== currentFilterKey;
 
-  const drilledCategoryId = drill?.key === viewKey ? drill.categoryId : null;
   const drilledCategory = useMemo(
     () =>
       loaded?.categories.find(
@@ -270,7 +316,10 @@ export default function AnalyticsPage() {
     // Only drill when there is a subcategory level to show; otherwise the
     // donut would come up empty.
     if (category && category.subCategories.length > 0) {
-      setDrill({ key: viewKey, categoryId: category.id });
+      setDrilledCategoryId(category.id);
+      router.replace(buildAnalyticsUrl(type, range, category.id), {
+        scroll: false,
+      });
     }
   };
 
@@ -281,30 +330,52 @@ export default function AnalyticsPage() {
     range.from === defaultRange.from &&
     range.to === defaultRange.to;
 
+  const handleTypeChange = (nextType: AnalyticsType) => {
+    setType(nextType);
+    setDrilledCategoryId(null);
+    router.replace(buildAnalyticsUrl(nextType, range), { scroll: false });
+  };
+
   const handleRangePreset = (preset: RangePreset) => {
     const next = rangeForPreset(preset);
-    if (next) setRange(next);
+    if (!next) return;
+    setRange(next);
+    setDrilledCategoryId(null);
+    router.replace(buildAnalyticsUrl(type, next), { scroll: false });
   };
 
   const handleFromChange = (value: string) => {
     if (!value) return;
-    setRange((current) => ({
+    const next = {
       from: value,
-      to: value > current.to ? value : current.to,
-    }));
+      to: value > range.to ? value : range.to,
+    };
+    setRange(next);
+    setDrilledCategoryId(null);
+    router.replace(buildAnalyticsUrl(type, next), { scroll: false });
   };
 
   const handleToChange = (value: string) => {
     if (!value) return;
-    setRange((current) => ({
-      from: value < current.from ? value : current.from,
+    const next = {
+      from: value < range.from ? value : range.from,
       to: value,
-    }));
+    };
+    setRange(next);
+    setDrilledCategoryId(null);
+    router.replace(buildAnalyticsUrl(type, next), { scroll: false });
   };
 
   const handleReset = () => {
     setType("EXPENSE");
     setRange(currentMonthRange());
+    setDrilledCategoryId(null);
+    router.replace("/analytics", { scroll: false });
+  };
+
+  const handleAllCategories = () => {
+    setDrilledCategoryId(null);
+    router.replace(buildAnalyticsUrl(type, range), { scroll: false });
   };
 
   if (!activeWorkspaceId) {
@@ -360,7 +431,7 @@ export default function AnalyticsPage() {
           <FilterPills
             options={TYPE_OPTIONS}
             value={type}
-            onChange={setType}
+            onChange={handleTypeChange}
             ariaLabel="Transaction type"
           />
           <Button
@@ -493,7 +564,7 @@ export default function AnalyticsPage() {
                         variant="outline"
                         size="sm"
                         className="h-8"
-                        onClick={() => setDrill(null)}
+                        onClick={handleAllCategories}
                       >
                         <ChevronLeft className="h-4 w-4" />
                         All categories
