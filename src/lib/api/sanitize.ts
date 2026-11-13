@@ -64,6 +64,8 @@ const PLAIN_TEXT_CONFIG: {
  *   - empty string is returned as empty string (no spurious whitespace).
  *   - any `<script>` / `<iframe>` / on* attribute is stripped and only the
  *     surviving plain text is returned.
+ *   - the surviving text is exactly what the user typed: `<`, `>` and `&`
+ *     are NOT entity-encoded. See the implementation note below.
  */
 export function sanitizeString(value: string): string;
 export function sanitizeString(value: null | undefined): null | undefined;
@@ -83,7 +85,27 @@ export function sanitizeString(
     // downstream code sees the type mismatch loudly.
     return value as unknown as string;
   }
-  return DOMPurify.sanitize(value, PLAIN_TEXT_CONFIG) as string;
+  // Read the sanitized fragment's *text content* instead of DOMPurify's
+  // default return value. The default return is an HTML serialization, which
+  // entity-encodes `<`, `>` and `&`; those entities were then persisted and
+  // re-escaped by React, so a description of `5 < 10` was stored and displayed
+  // as `5 &lt; 10`. Reading `textContent` lets the DOM resolve character
+  // references, so the user's text round-trips exactly while all markup is
+  // still stripped.
+  //
+  // Do NOT "simplify" this back to `DOMPurify.sanitize(value, config)`: that
+  // returns the serialized string again and reintroduces the corruption.
+  const result = DOMPurify.sanitize(value, {
+    ...PLAIN_TEXT_CONFIG,
+    RETURN_DOM_FRAGMENT: true,
+  });
+
+  // Defensive: if the fragment flag were ever ignored, fall back to the
+  // returned string rather than reading `.textContent` off a string.
+  if (typeof result === 'string') {
+    return result;
+  }
+  return result.textContent ?? '';
 }
 
 /**
