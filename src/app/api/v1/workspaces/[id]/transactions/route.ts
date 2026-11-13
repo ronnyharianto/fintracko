@@ -1,11 +1,11 @@
 /**
  * GET  /api/v1/workspaces/[id]/transactions — List transactions
- * POST /api/v1/workspaces/[id]/transactions — Create transaction
+ * POST /api/v1/workspaces/[id]/transactions — Create transaction (201 Created)
  */
 
 import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
-import { success, failure } from "@/lib/api/envelope";
+import { success, successWithStatus, failure } from "@/lib/api/envelope";
 import { getTransactions, createTransaction } from "@/features/transactions/services";
 import { handleTransactionErrors } from "@/features/transactions/errors";
 import { CreateTransactionSchema, TransactionQuerySchema } from "@/features/transactions/schemas";
@@ -82,7 +82,7 @@ export async function POST(
       async ({ userId }, data) => {
         const { id: workspaceId } = await params;
         const result = await createTransaction(userId, workspaceId, data);
-        return success({ transaction: result });
+        return successWithStatus({ transaction: result }, 201);
       },
     ),
   );
