@@ -28,6 +28,10 @@ const errorMappings = {
     code: "BAD_REQUEST" as const,
     message: "Invalid or archived subcategory.",
   },
+  INVALID_ACCOUNT_DIRECTION: {
+    code: "BAD_REQUEST" as const,
+    message: "The selected accounts do not match the transaction type.",
+  },
   SOURCE_DESTINATION_SAME: {
     code: "BAD_REQUEST" as const,
     message: "Source and destination accounts must be different.",
