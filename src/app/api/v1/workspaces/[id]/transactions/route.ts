@@ -73,6 +73,10 @@ export async function POST(
           code: "BAD_REQUEST",
           message: "Invalid or archived subcategory.",
         },
+        INVALID_ACCOUNT_DIRECTION: {
+          code: "BAD_REQUEST",
+          message: "The selected accounts do not match the transaction type.",
+        },
         SOURCE_DESTINATION_SAME: {
           code: "BAD_REQUEST",
           message: "Source and destination accounts must be different.",

@@ -5,9 +5,10 @@
  * Balance updates are atomic via Prisma $transaction blocks (§4).
  *
  * Business rules:
- * - INCOME → destinationAccountId required, adds to destination balance
- * - EXPENSE → sourceAccountId required, subtracts from source balance
- * - TRANSFER → both required, subtracts from source, adds to destination
+ * - INCOME → destinationAccountId required and sourceAccountId empty
+ * - EXPENSE → sourceAccountId required and destinationAccountId empty
+ * - TRANSFER → both required and different, subtracts from source, adds to destination
+ * - The direction rule is re-checked on update against the merged row
  * - Amount can be positive or negative (supports investment tracking)
  * - Archived accounts/subcategories cannot be used for new transactions
  */
@@ -18,6 +19,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import { TransactionType } from "../../../generated/prisma/enums";
 import type { CreateTransactionInput, UpdateTransactionInput } from "./schemas";
 import { TransactionServiceError } from "./errors";
+import { checkAccountDirection } from "./account-direction";
 
 /**
  * Verify the user is a member of the workspace, or throw FORBIDDEN.
@@ -31,6 +33,26 @@ async function requireMembership(userId: string, workspaceId: string) {
     );
   }
   return membership;
+}
+
+/**
+ * Throw the matching domain error when the account tuple contradicts the
+ * transaction type. Enforced on write so rows cannot drift from the model.
+ */
+function assertAccountDirection(
+  type: TransactionType,
+  sourceAccountId: string | null,
+  destinationAccountId: string | null,
+) {
+  const error = checkAccountDirection(type, sourceAccountId, destinationAccountId);
+  if (!error) return;
+
+  throw new TransactionServiceError(
+    error,
+    error === "SOURCE_DESTINATION_SAME"
+      ? "Source and destination accounts must be different"
+      : "The selected accounts do not match the transaction type",
+  );
 }
 
 /**
@@ -280,17 +302,12 @@ export async function createTransaction(
     }
   }
 
-  // Validate source != destination
-  if (
-    data.sourceAccountId &&
-    data.destinationAccountId &&
-    data.sourceAccountId === data.destinationAccountId
-  ) {
-    throw new TransactionServiceError(
-      "SOURCE_DESTINATION_SAME",
-      "Source and destination accounts must be different",
-    );
-  }
+  // Validate the account tuple matches the transaction type
+  assertAccountDirection(
+    data.type as TransactionType,
+    data.sourceAccountId ?? null,
+    data.destinationAccountId ?? null,
+  );
 
   const [sourceDelta, destDelta] = balanceEffect(
     data.type as TransactionType,
@@ -443,13 +460,9 @@ export async function updateTransaction(
     }
   }
 
-  // Validate source != destination
-  if (newSourceId && newDestId && newSourceId === newDestId) {
-    throw new TransactionServiceError(
-      "SOURCE_DESTINATION_SAME",
-      "Source and destination accounts must be different",
-    );
-  }
+  // Validate the merged tuple still matches the (immutable) transaction type.
+  // Checking only the patch would let an EXPENSE gain a destination, etc.
+  assertAccountDirection(newType, newSourceId, newDestId);
 
   const [oldSourceDelta, oldDestDelta] = balanceEffect(
     existing.type,

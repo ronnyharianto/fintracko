@@ -19,6 +19,7 @@ export type TransactionServiceErrorCode =
   | "TRANSACTION_NOT_FOUND"
   | "INVALID_ACCOUNT"
   | "INVALID_CATEGORY"
+  | "INVALID_ACCOUNT_DIRECTION"
   | "SOURCE_DESTINATION_SAME";
 
 /**
