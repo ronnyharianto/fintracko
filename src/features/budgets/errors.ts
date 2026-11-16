@@ -19,7 +19,8 @@ export type BudgetServiceErrorCode =
   | "BUDGET_NOT_FOUND"
   | "INVALID_SUBCATEGORY"
   | "OVERLAPPING_BUDGET"
-  | "INVALID_PERIOD";
+  | "INVALID_PERIOD"
+  | "CONCURRENT_BUDGET_CHANGE";
 
 /**
  * Domain error thrown by `src/features/budgets/services.ts`. The `code` field

@@ -82,6 +82,11 @@ export async function POST(
           message:
             "This subcategory already has a budget covering part of this period.",
         },
+        CONCURRENT_BUDGET_CHANGE: {
+          code: "CONFLICT",
+          message:
+            "Another change to this budget is in progress. Please try again.",
+        },
       },
       "Failed to create budget. Please try again.",
       async ({ userId }, data) => {
