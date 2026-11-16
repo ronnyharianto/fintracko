@@ -21,6 +21,7 @@ import {
   BudgetInterval,
   TransactionType,
 } from "../../../generated/prisma/enums";
+import { Prisma } from "../../../generated/prisma/client";
 import type { CreateBudgetInput, UpdateBudgetInput } from "./schemas";
 import { BudgetServiceError } from "./errors";
 import { buildBudgetAlerts } from "./alerts";
@@ -102,6 +103,51 @@ async function requireMembership(userId: string, workspaceId: string) {
     );
   }
   return membership;
+}
+
+/** Attempts allowed before a serialization conflict is reported to the client. */
+const MAX_SERIALIZABLE_ATTEMPTS = 3;
+
+/** Postgres serialization and deadlock failures surface as Prisma P2034. */
+function isTransactionWriteConflict(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "P2034"
+  );
+}
+
+/**
+ * Run a budget write at SERIALIZABLE isolation, retrying a bounded number of
+ * times when Postgres aborts the transaction with a serialization conflict.
+ *
+ * At the default READ COMMITTED a `COUNT` cannot see a concurrent uncommitted
+ * budget and takes no predicate lock, so two overlap pre-checks can both read
+ * zero and commit overlapping ranges. SERIALIZABLE makes Postgres abort one of
+ * them; the retry re-reads the committed row and the existing overlap guard
+ * then rejects it. Domain errors are never retried, and exhaustion reports its
+ * own conflict rather than claiming the range is free.
+ */
+async function serializableBudgetTransaction<T>(
+  work: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await db.$transaction(work, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (!isTransactionWriteConflict(error)) {
+        throw error;
+      }
+      if (attempt >= MAX_SERIALIZABLE_ATTEMPTS) {
+        throw new BudgetServiceError(
+          "CONCURRENT_BUDGET_CHANGE",
+          "Another change to this budget is in progress. Please try again.",
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -353,8 +399,9 @@ export async function getBudget(
 }
 
 /**
- * Creates a budget. The overlap guard and the insert run in one transaction so
- * the check cannot observe a partially applied competing write.
+ * Creates a budget. The overlap guard and the insert run in one serializable
+ * transaction, so a competing write is either visible to the guard or aborts
+ * this attempt, which is then retried.
  */
 export async function createBudget(
   userId: string,
@@ -377,7 +424,7 @@ export async function createBudget(
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  const created = await db.$transaction(async (tx) => {
+  const created = await serializableBudgetTransaction(async (tx) => {
     const overlap = await tx.budget.count({
       where: {
         workspaceId,
@@ -429,7 +476,7 @@ export async function createBudget(
  *
  * When `splitFrom` is supplied the earlier periods are preserved: the current
  * range is ended the day before `splitFrom` and a new range starts there with
- * the new values. Both writes happen in one transaction.
+ * the new values. Both writes happen in one serializable transaction.
  */
 export async function updateBudget(
   userId: string,
@@ -482,7 +529,7 @@ export async function updateBudget(
     }
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await serializableBudgetTransaction(async (tx) => {
     if (splitFrom) {
       const overlap = await tx.budget.count({
         where: {

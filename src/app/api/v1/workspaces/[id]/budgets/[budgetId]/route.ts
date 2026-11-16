@@ -36,6 +36,10 @@ const errorMappings = {
     code: "CONFLICT" as const,
     message: "This subcategory already has a budget covering part of this period.",
   },
+  CONCURRENT_BUDGET_CHANGE: {
+    code: "CONFLICT" as const,
+    message: "Another change to this budget is in progress. Please try again.",
+  },
 };
 
 export async function GET(
