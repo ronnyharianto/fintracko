@@ -7,6 +7,7 @@
 
 import { db } from "@/lib/db";
 import { WorkspaceServiceError } from "../errors";
+import { throwIfUniqueConstraint } from "@/lib/api/service-errors";
 import { findWorkspaceOwner } from "./helpers";
 
 /**
@@ -69,24 +70,35 @@ export async function inviteCollaborator(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  return await db.workspaceInvitation.create({
-    data: {
-      workspaceId,
-      inviterId: userId,
-      inviteeId: targetUser.id,
-      expiresAt,
-    },
-    include: {
-      invitee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
+  try {
+    return await db.workspaceInvitation.create({
+      data: {
+        workspaceId,
+        inviterId: userId,
+        inviteeId: targetUser.id,
+        expiresAt,
+      },
+      include: {
+        invitee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    // A concurrent invite or a membership created in the meantime loses the
+    // pre-check race; the constraint tells us which one it was.
+    throwIfUniqueConstraint(error, (fields) =>
+      fields.includes("userId")
+        ? new WorkspaceServiceError("ALREADY_MEMBER")
+        : new WorkspaceServiceError("INVITATION_EXISTS"),
+    );
+    throw error;
+  }
 }
 
 /**
@@ -130,25 +142,35 @@ export async function acceptInvitation(
       throw new WorkspaceServiceError("INVITATION_NOT_FOUND");
     }
 
-    const member = await tx.workspaceMember.create({
-      data: {
-        workspaceId: invitation.workspaceId,
-        userId,
-        role: "COLLABORATOR",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
+    try {
+      const member = await tx.workspaceMember.create({
+        data: {
+          workspaceId: invitation.workspaceId,
+          userId,
+          role: "COLLABORATOR",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    return member;
+      return member;
+    } catch (error) {
+      // Membership is unique per workspace: a second acceptance, or a member
+      // added through another path, collides here instead of double-inserting.
+      throwIfUniqueConstraint(
+        error,
+        () => new WorkspaceServiceError("ALREADY_MEMBER"),
+      );
+      throw error;
+    }
   });
 }
 

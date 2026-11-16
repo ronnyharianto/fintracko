@@ -14,6 +14,7 @@ import { findWorkspaceMembership } from "@/lib/auth/membership";
 import type { AccountType } from "../../../generated/prisma/enums";
 import type { CreateAccountInput, UpdateAccountInput } from "./schemas";
 import { AccountServiceError } from "./errors";
+import { throwIfUniqueConstraint } from "@/lib/api/service-errors";
 
 /**
  * Verify the user is a member of the workspace, or throw FORBIDDEN.
@@ -101,23 +102,35 @@ export async function createAccount(
     throw new AccountServiceError("NAME_TAKEN", "An account with this name already exists");
   }
 
-  return db.financialAccount.create({
-    data: {
-      workspaceId,
-      name: data.name,
-      type: data.type as AccountType,
-      initialBalance: data.initialBalance,
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      initialBalance: true,
-      netTransactionSum: true,
-      isArchived: true,
-      createdAt: true,
-    },
-  });
+  try {
+    return await db.financialAccount.create({
+      data: {
+        workspaceId,
+        name: data.name,
+        type: data.type as AccountType,
+        initialBalance: data.initialBalance,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        initialBalance: true,
+        netTransactionSum: true,
+        isArchived: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new AccountServiceError(
+          "NAME_TAKEN",
+          "An account with this name already exists",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
@@ -156,22 +169,34 @@ export async function updateAccount(
     }
   }
 
-  return db.financialAccount.update({
-    where: { id: accountId },
-    data: {
-      name: data.name,
-      initialBalance: data.initialBalance,
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      initialBalance: true,
-      netTransactionSum: true,
-      isArchived: true,
-      createdAt: true,
-    },
-  });
+  try {
+    return await db.financialAccount.update({
+      where: { id: accountId },
+      data: {
+        name: data.name,
+        initialBalance: data.initialBalance,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        initialBalance: true,
+        netTransactionSum: true,
+        isArchived: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new AccountServiceError(
+          "NAME_TAKEN",
+          "An account with this name already exists",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
