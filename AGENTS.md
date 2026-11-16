@@ -77,7 +77,12 @@ remaining limitations.
 
 ## Style
 
-- Write source, documentation, names, and user-facing text in English.
+- Use English for everything that outlives the conversation: source code,
+  identifiers, comments, user-facing UI text, documentation, commit
+  messages, pull request titles and descriptions, GitHub issues, and review
+  comments.
+- The live conversation with the user is the only exception; reply in the
+  language the user writes in.
 - Preserve local formatting; avoid unrelated reformatting. Use ASCII by
   default and add comments only to explain non-obvious constraints or
   decisions.

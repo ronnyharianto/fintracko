@@ -31,6 +31,10 @@ export async function POST(
           code: 'BAD_REQUEST',
           message: 'This invitation has expired.',
         },
+        ALREADY_MEMBER: {
+          code: 'CONFLICT',
+          message: 'You are already a member of this workspace.',
+        },
       },
       'Failed to accept invitation. Please try again.',
       async ({ userId }) => {
