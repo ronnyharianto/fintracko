@@ -17,6 +17,7 @@ import { withPipeline } from '@/lib/api/pipeline';
 import { success, failure } from '@/lib/api/envelope';
 import { CompleteOnboardingSchema } from '@/features/onboarding/schemas';
 import { completeOnboarding } from '@/features/onboarding/services';
+import { isUniqueConstraintError } from '@/lib/api/service-errors';
 
 export async function POST(request: NextRequest) {
   return withPipeline(
@@ -33,10 +34,15 @@ export async function POST(request: NextRequest) {
             currencyPreference: result.profile.currencyPreference,
           },
         });
-      } catch {
-        // Defensive: any failure here (e.g. a unique-constraint race between
-        // the guard and the insert) surfaces as a generic 500 — the common
-        // double-submission case is already caught by the pipeline guard.
+      } catch (error) {
+        // The pipeline guard catches the common double submission; a request
+        // that races past it still hits the unique Profile.userId constraint.
+        if (isUniqueConstraintError(error)) {
+          return failure(
+            'CONFLICT',
+            'Onboarding has already been completed for this account.'
+          );
+        }
         return failure(
           'INTERNAL_SERVER_ERROR',
           'Failed to complete onboarding. Please try again.'

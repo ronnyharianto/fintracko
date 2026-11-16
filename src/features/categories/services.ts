@@ -20,6 +20,7 @@ import type {
   UpdateSubCategoryInput,
 } from "./schemas";
 import { CategoryServiceError } from "./errors";
+import { throwIfUniqueConstraint } from "@/lib/api/service-errors";
 
 /**
  * Verify the user is a member of the workspace, or throw FORBIDDEN.
@@ -92,24 +93,36 @@ export async function createCategory(
     );
   }
 
-  return db.category.create({
-    data: {
-      workspaceId,
-      name: data.name,
-      type: data.type as TransactionType,
-    },
-    include: {
-      subCategories: {
-        orderBy: { name: "asc" },
-        select: {
-          id: true,
-          name: true,
-          isArchived: true,
-          createdAt: true,
+  try {
+    return await db.category.create({
+      data: {
+        workspaceId,
+        name: data.name,
+        type: data.type as TransactionType,
+      },
+      include: {
+        subCategories: {
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            isArchived: true,
+            createdAt: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new CategoryServiceError(
+          "NAME_TAKEN",
+          "A category with this name already exists for this type",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
@@ -154,21 +167,33 @@ export async function updateCategory(
     }
   }
 
-  return db.category.update({
-    where: { id: categoryId },
-    data: { name: data.name },
-    include: {
-      subCategories: {
-        orderBy: { name: "asc" },
-        select: {
-          id: true,
-          name: true,
-          isArchived: true,
-          createdAt: true,
+  try {
+    return await db.category.update({
+      where: { id: categoryId },
+      data: { name: data.name },
+      include: {
+        subCategories: {
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            isArchived: true,
+            createdAt: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new CategoryServiceError(
+          "NAME_TAKEN",
+          "A category with this name already exists for this type",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
@@ -278,19 +303,31 @@ export async function createSubCategory(
     );
   }
 
-  return db.subCategory.create({
-    data: {
-      workspaceId: category.workspaceId,
-      categoryId,
-      name: data.name,
-    },
-    select: {
-      id: true,
-      name: true,
-      isArchived: true,
-      createdAt: true,
-    },
-  });
+  try {
+    return await db.subCategory.create({
+      data: {
+        workspaceId: category.workspaceId,
+        categoryId,
+        name: data.name,
+      },
+      select: {
+        id: true,
+        name: true,
+        isArchived: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new CategoryServiceError(
+          "NAME_TAKEN",
+          "A subcategory with this name already exists in this category",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
@@ -339,16 +376,28 @@ export async function updateSubCategory(
     }
   }
 
-  return db.subCategory.update({
-    where: { id: subCategoryId },
-    data: { name: data.name },
-    select: {
-      id: true,
-      name: true,
-      isArchived: true,
-      createdAt: true,
-    },
-  });
+  try {
+    return await db.subCategory.update({
+      where: { id: subCategoryId },
+      data: { name: data.name },
+      select: {
+        id: true,
+        name: true,
+        isArchived: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    throwIfUniqueConstraint(
+      error,
+      () =>
+        new CategoryServiceError(
+          "NAME_TAKEN",
+          "A subcategory with this name already exists in this category",
+        ),
+    );
+    throw error;
+  }
 }
 
 /**
