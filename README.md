@@ -65,6 +65,7 @@ All variables are documented inline in `.env.example`.
 | `IMGUR_CLIENT_ID`                         | Imgur API client id for receipt image uploads                                                                                                                        |
 | `NEXT_PUBLIC_APP_URL`                     | Public site origin for SEO surfaces in non-Vercel production deployments; Vercel uses `VERCEL_PROJECT_PRODUCTION_URL` if unset. Development falls back to localhost. |
 | `NEXT_PUBLIC_INVITATION_POLL_INTERVAL_MS` | Optional. Invitation polling interval (default 30000)                                                                                                                |
+| `LOG_PRISMA_QUERIES`                      | Optional. Set to `1` to log SQL statements with bound parameters (development only, off by default; never in production). |
 
 ## Application Execution
 
