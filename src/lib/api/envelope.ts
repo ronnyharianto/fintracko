@@ -49,7 +49,8 @@ export type ApiErrorCode =
   | 'ONBOARDING_REQUIRED'
   | 'UNAUTHORIZED_WORKSPACE_ACCESS'
   | 'SERVICE_UNAVAILABLE'
-  | 'INTERNAL_SERVER_ERROR';
+  | 'INTERNAL_SERVER_ERROR'
+  | 'PAYLOAD_TOO_LARGE';
 
 /** Shape of the `error` block inside a failure envelope. */
 export interface ApiErrorBody {
@@ -119,6 +120,7 @@ export const HTTP_STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> =
     UNAUTHORIZED_WORKSPACE_ACCESS: 403,
     SERVICE_UNAVAILABLE: 503,
     INTERNAL_SERVER_ERROR: 500,
+    PAYLOAD_TOO_LARGE: 413,
   });
 
 /**

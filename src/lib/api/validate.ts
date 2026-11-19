@@ -29,11 +29,31 @@
  *   - An absent body (e.g. POST requests with no payload) parses to `null`
  *     and is handed to the schema — the schema is solely responsible for
  *     rejecting that case (e.g. via `.refine` or `.nonNull`).
+ *   - The body is read through a hard byte cap ({@link MAX_JSON_BODY_BYTES})
+ *     so an oversized document is rejected with `PAYLOAD_TOO_LARGE` (HTTP
+ *     413) instead of being buffered whole. `Content-Length` is only used for
+ *     early rejection; the cap is re-enforced while streaming because the
+ *     header can be absent or lie.
  */
 import type { NextRequest } from 'next/server';
 import type { NextResponse } from 'next/server';
 import { ZodError, type ZodType } from 'zod';
 import { failure, validationFailure, type FailureEnvelope } from './envelope';
+import {
+  readBoundedBody,
+  RequestBodyTooLargeError,
+} from './read-bounded-form-data';
+
+/**
+ * Hard cap on JSON request bodies, shared by every route that validates a
+ * body through {@link validateBody}. The largest legitimate payload today (a
+ * transaction with a 500-character description, 10 tags and a URL) is well
+ * under 1 KiB, so 64 KiB leaves ample headroom while bounding memory use.
+ */
+export const MAX_JSON_BODY_BYTES = 64 * 1024;
+
+/** Failure reason returned when a body exceeds {@link MAX_JSON_BODY_BYTES}. */
+const JSON_BODY_TOO_LARGE_REASON = 'Request body exceeds the 64 KB limit.';
 
 /**
  * Result of {@link validateBody}. A discriminated union so callers MUST
@@ -45,31 +65,62 @@ export type ValidateBodyResult<T> =
   | { success: false; response: NextResponse<FailureEnvelope> };
 
 /**
- * Read the JSON body of a request, swallowed to a symmetric BAD_REQUEST
- * envelope whenever the body is not parseable JSON. Returns `null` for
- * empty/absent bodies so the upstream Zod schema can decide whether that
- * is acceptable (it usually isn't for mutating routes).
+ * Result of {@link readJsonBody}. `tooLarge` distinguishes a body that
+ * exceeded the byte cap from one that was merely unreadable or malformed.
+ */
+export type JsonBodyReadResult =
+  | { ok: true; data: unknown }
+  | { ok: false; tooLarge: boolean; reason: string };
+
+/**
+ * Read the JSON body of a request under a byte cap, swallowed to a symmetric
+ * failure result whenever the body is unreadable, oversized, or not valid
+ * JSON. Returns `null` for empty/absent bodies so the upstream Zod schema can
+ * decide whether that is acceptable (it usually isn't for mutating routes).
+ *
+ * `tooLarge` is reported separately so {@link validateBody} can answer with
+ * `PAYLOAD_TOO_LARGE` (HTTP 413) instead of a generic bad-request failure.
  *
  * Extracted from the main validator so the error-handling branches stay
  * readable and the syntactic-vs-semantic failure split stays testable in
  * isolation.
  */
 export async function readJsonBody(
-  request: NextRequest
-): Promise<{ ok: true; data: unknown } | { ok: false; reason: string }> {
-  let rawText: string;
-  try {
-    rawText = await request.text();
-  } catch {
-    return { ok: false, reason: 'Request body could not be read.' };
+  request: NextRequest,
+  maxBytes: number = MAX_JSON_BODY_BYTES
+): Promise<JsonBodyReadResult> {
+  // An absent body is not a size failure: the schema decides whether it is
+  // acceptable, matching the previous empty-string path.
+  if (!request.body) {
+    return { ok: true, data: null };
   }
+
+  let rawBytes: Uint8Array<ArrayBuffer>;
+  try {
+    rawBytes = await readBoundedBody(request, maxBytes);
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return { ok: false, tooLarge: true, reason: JSON_BODY_TOO_LARGE_REASON };
+    }
+    return {
+      ok: false,
+      tooLarge: false,
+      reason: 'Request body could not be read.',
+    };
+  }
+
+  const rawText = new TextDecoder().decode(rawBytes);
   if (rawText.length === 0) {
     return { ok: true, data: null };
   }
   try {
     return { ok: true, data: JSON.parse(rawText) };
   } catch {
-    return { ok: false, reason: 'Request body is not valid JSON.' };
+    return {
+      ok: false,
+      tooLarge: false,
+      reason: 'Request body is not valid JSON.',
+    };
   }
 }
 
@@ -95,7 +146,10 @@ export async function validateBody<S extends ZodType>(
   if (!read.ok) {
     return {
       success: false,
-      response: failure('BAD_REQUEST', read.reason),
+      response: failure(
+        read.tooLarge ? 'PAYLOAD_TOO_LARGE' : 'BAD_REQUEST',
+        read.reason
+      ),
     };
   }
   try {
