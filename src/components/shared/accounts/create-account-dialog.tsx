@@ -49,7 +49,7 @@ export function CreateAccountDialog({
 
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("CHECKING");
-  const [initialBalance, setInitialBalance] = useState("");
+  const [initialBalance, setInitialBalance] = useState("0");
   const { isPending: isCreating, error, run } = useAsyncFormAction();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +64,7 @@ export function CreateAccountDialog({
           body: {
             name: name.trim(),
             type,
-            initialBalance: parseFloat(initialBalance) || 0,
+            initialBalance: initialBalance || "0",
           },
         },
       );
@@ -73,7 +73,7 @@ export function CreateAccountDialog({
 
     setName("");
     setType("CHECKING");
-    setInitialBalance("");
+    setInitialBalance("0");
     onOpenChange(false);
     onCreated();
   };

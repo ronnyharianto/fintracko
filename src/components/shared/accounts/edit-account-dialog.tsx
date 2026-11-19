@@ -83,7 +83,7 @@ export function EditAccountDialog({
           method: "PATCH",
           body: {
             name: name.trim(),
-            initialBalance: parseFloat(initialBalance) || 0,
+            initialBalance: initialBalance || "0",
           },
         },
       );
