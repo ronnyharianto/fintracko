@@ -22,7 +22,6 @@ import {
 /** Stable machine-readable codes thrown by the workspace services. */
 export type WorkspaceServiceErrorCode =
   | 'FORBIDDEN'
-  | 'USER_NOT_FOUND'
   | 'ALREADY_MEMBER'
   | 'MEMBER_NOT_FOUND'
   | 'CANNOT_REMOVE_OWNER'
