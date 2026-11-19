@@ -6,7 +6,7 @@
 
 import { NextRequest } from "next/server";
 import { withPipeline } from "@/lib/api/pipeline";
-import { success } from "@/lib/api/envelope";
+import { failure, success } from "@/lib/api/envelope";
 import { getTransaction, updateTransaction, deleteTransaction } from "@/features/transactions/services";
 import { handleTransactionErrors } from "@/features/transactions/errors";
 import { UpdateTransactionSchema } from "@/features/transactions/schemas";
@@ -53,7 +53,7 @@ export async function GET(
         const transaction = await getTransaction(userId, workspaceId, transactionId);
 
         if (!transaction) {
-          return success({ transaction: null });
+          return failure("NOT_FOUND", "Transaction not found.");
         }
 
         return success({
