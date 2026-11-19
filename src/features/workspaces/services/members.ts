@@ -13,6 +13,10 @@ import { findWorkspaceOwner } from "./helpers";
 /**
  * Sends a collaboration invitation by email to an owned workspace.
  * Creates a pending invitation instead of immediate membership.
+ *
+ * Returns `null` when no account matches the address. The caller must not
+ * distinguish that case from a real invitation: reporting it would turn this
+ * endpoint into a user-enumeration oracle for arbitrary email addresses.
  */
 export async function inviteCollaborator(
   userId: string,
@@ -29,7 +33,7 @@ export async function inviteCollaborator(
     select: { id: true },
   });
   if (!targetUser) {
-    throw new WorkspaceServiceError("USER_NOT_FOUND");
+    return null;
   }
 
   const existingMember = await db.workspaceMember.findUnique({
