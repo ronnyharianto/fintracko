@@ -473,7 +473,16 @@ function AccountSettingsContent() {
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         onConfirm={async () => {
-          await apiFetch("/api/v1/account", { method: "DELETE" });
+          // The DELETE route refuses to run without a fresh, bound token, so
+          // the confirmation below is what authorizes the deletion.
+          const { token } = await apiFetch<{ token: string }>(
+            "/api/v1/deletion-tokens",
+            { method: "POST", body: { scope: "ACCOUNT" } },
+          );
+          await apiFetch("/api/v1/account", {
+            method: "DELETE",
+            headers: { "x-deletion-confirmation": token },
+          });
           await authClient.signOut();
         }}
         onSuccess={async () => {
@@ -489,6 +498,7 @@ function AccountSettingsContent() {
         loadingLabel="Deleting..."
         successMessage="Account deleted."
         errorMessage="Failed to delete account."
+        confirmationPhrase={user?.email}
       />
     </div>
   );

@@ -136,8 +136,19 @@ export default function WorkspaceSettingsPage() {
           open={!!deleteWorkspaceId}
           onOpenChange={(open) => !open && setDeleteWorkspaceId(null)}
           onConfirm={async () => {
+            if (!deleteWorkspaceId) return;
+            // A fresh token bound to this workspace is the server-side
+            // confirmation; the typed name below is the human one.
+            const { token } = await apiFetch<{ token: string }>(
+              '/api/v1/deletion-tokens',
+              {
+                method: 'POST',
+                body: { scope: 'WORKSPACE', workspaceId: deleteWorkspaceId },
+              },
+            );
             await apiFetch(`/api/v1/workspaces/${deleteWorkspaceId}`, {
               method: 'DELETE',
+              headers: { 'x-deletion-confirmation': token },
             });
           }}
           onSuccess={handleActionComplete}
@@ -155,6 +166,9 @@ export default function WorkspaceSettingsPage() {
           loadingLabel="Deleting..."
           successMessage="Workspace deleted."
           errorMessage="Failed to delete workspace."
+          confirmationPhrase={
+            workspaces.find((w) => w.id === deleteWorkspaceId)?.name
+          }
         />
 
         <ConfirmDialog
