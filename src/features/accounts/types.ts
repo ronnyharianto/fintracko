@@ -25,12 +25,13 @@ export interface AccountView {
 }
 
 /**
- * Form data for creating or editing an account.
+ * Form data for creating or editing an account. `initialBalance` is a decimal
+ * string so the submitted value matches the API contract exactly.
  */
 export interface AccountFormData {
   name: string;
   type: AccountType;
-  initialBalance: number;
+  initialBalance: string;
 }
 
 /**
