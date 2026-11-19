@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { AccountType } from "../../../generated/prisma/enums";
+import { MoneyAmountSchema } from "@/lib/money";
 
 /**
  * Account type enum derived from the Prisma-generated AccountType
@@ -31,11 +32,13 @@ export const AccountNameSchema = z
  * Create account request schema.
  *
  * Validates the payload sent to POST /api/v1/workspaces/[workspaceId]/accounts.
+ * `initialBalance` uses the shared decimal-string contract so precision and
+ * range match `Decimal(18,4)`; zero and negative balances are valid.
  */
 export const CreateAccountSchema = z.object({
   name: AccountNameSchema,
   type: AccountTypeEnum,
-  initialBalance: z.number(),
+  initialBalance: MoneyAmountSchema,
 });
 
 /**
@@ -46,7 +49,7 @@ export const CreateAccountSchema = z.object({
  */
 export const UpdateAccountSchema = z.object({
   name: AccountNameSchema,
-  initialBalance: z.number(),
+  initialBalance: MoneyAmountSchema,
 });
 
 /**

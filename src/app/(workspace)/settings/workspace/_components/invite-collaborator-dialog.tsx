@@ -39,6 +39,8 @@ export function InviteCollaboratorDialog({
         method: 'POST',
         body: { email: email.trim() },
       });
+      // The API answers identically for unknown addresses, so a plain
+      // confirmation keeps the result from revealing account existence.
       toast.success('Invitation sent.');
       setEmail('');
       onOpenChange(false);
@@ -63,7 +65,7 @@ export function InviteCollaboratorDialog({
         <DialogHeader>
           <DialogTitle>Invite Collaborator</DialogTitle>
           <DialogDescription>
-            Enter the registered email address of the user you want to invite.
+            Enter the email address of the person you want to invite.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2">

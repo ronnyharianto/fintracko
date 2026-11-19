@@ -42,6 +42,7 @@ const API_ERROR_CODES: ReadonlySet<string> = new Set([
   "UNAUTHORIZED_WORKSPACE_ACCESS",
   "SERVICE_UNAVAILABLE",
   "INTERNAL_SERVER_ERROR",
+  "PAYLOAD_TOO_LARGE",
 ]);
 
 function isApiErrorCode(value: string): value is ApiErrorCode {

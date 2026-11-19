@@ -45,8 +45,11 @@ declare global {
  * Lazily-instantiated Prisma Client. Reused across HMR reloads in dev via the
  * `__prismaClient` cache on `globalThis`.
  *
- * In development we surface `query` logs to ease debugging of generated SQL;
- * production only logs `error` to avoid noisy stdout on Vercel.
+ * Outside production we log `warn` and `error`; production only logs `error`
+ * to avoid noisy stdout on Vercel. Prisma `query` logs include the bound
+ * parameters (transaction amounts, payees, descriptions, account names and
+ * email addresses), so they are never enabled by `NODE_ENV` alone: an operator
+ * must set `LOG_PRISMA_QUERIES=1`, and the flag is ignored in production.
  *
  * The `adapter` (PrismaPg driver adapter) carries the runtime connection
  * string — this mirrors what `prisma.config.ts` provides to the CLI at
@@ -58,14 +61,23 @@ const adapter = new PrismaPg({
   connectionString: requireEnv("DATABASE_URL"),
 });
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// Opt-in only: query logs embed bound financial and personal parameters, so a
+// shared dev or staging environment must not emit them merely because it runs
+// with NODE_ENV !== "production".
+const logPrismaQueries =
+  !isProduction && process.env.LOG_PRISMA_QUERIES === "1";
+
 const db: PrismaClient =
   globalThis.__prismaClient ??
   new PrismaClient({
     adapter,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
+    log: logPrismaQueries
+      ? ["query", "warn", "error"]
+      : isProduction
+        ? ["error"]
+        : ["warn", "error"],
   });
 
 if (process.env.NODE_ENV !== "production") {

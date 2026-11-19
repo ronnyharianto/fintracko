@@ -25,10 +25,6 @@ export async function POST(
           message:
             'You do not have permission to invite collaborators to this workspace.',
         },
-        USER_NOT_FOUND: {
-          code: 'NOT_FOUND',
-          message: 'User with this email does not exist.',
-        },
         ALREADY_MEMBER: {
           code: 'CONFLICT',
           message: 'User is already a member of this workspace.',
@@ -41,6 +37,8 @@ export async function POST(
       'Failed to send invitation. Please try again.',
       async ({ userId }, data) => {
         const { id: workspaceId } = await params;
+        // `null` means no account matches the address. It answers like a sent
+        // invitation so owners cannot probe which emails are registered.
         const invitation = await inviteCollaborator(userId, workspaceId, data.email);
         return successWithStatus({ invitation }, 201);
       },

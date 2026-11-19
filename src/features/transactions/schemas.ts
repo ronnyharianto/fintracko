@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { TransactionType } from "../../../generated/prisma/enums";
+import { MoneyAmountSchema } from "@/lib/money";
 
 /**
  * Transaction type enum derived from the Prisma-generated TransactionType
@@ -16,13 +17,10 @@ export const TransactionTypeEnum = z.enum(
   Object.values(TransactionType) as [string, ...string[]],
 );
 
-const TransactionAmountSchema = z
-  .string()
-  .regex(
-    /^-?\d{1,14}(?:\.\d{1,4})?$/,
-    "Amount must fit within 14 digits and 4 decimal places",
-  )
-  .refine((value) => /[1-9]/.test(value), "Amount must not be zero");
+const TransactionAmountSchema = MoneyAmountSchema.refine(
+  (value) => /[1-9]/.test(value),
+  "Amount must not be zero",
+);
 
 /**
  * Create transaction request schema.
